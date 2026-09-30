@@ -1,10 +1,22 @@
+"""
+Test for legacy FullModel architecture to ensure backwards compatibility.
+"""
+
+import os
+import sys
+from pathlib import Path
+import pytest
 import torch
 from torch_geometric.data import HeteroData
-import sys, os
-sys.path.append(os.getcwd())
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 from models.full_model import FullModel
 
-def make_fake_snapshot(num_domains=20, num_ip=10):
+
+def make_fake_snapshot(num_domains: int = 20, num_ip: int = 10) -> HeteroData:
     data = HeteroData()
     data["domain"].x = torch.randn(num_domains, 8)
     data["ip"].x = torch.randn(num_ip, 2)
@@ -27,10 +39,11 @@ def make_fake_snapshot(num_domains=20, num_ip=10):
     data["asn", "rev_belongs_to_asn", "ip"].edge_index = belongs_asn.flip(0)
     return data
 
-snapshots = [make_fake_snapshot() for _ in range(3)]
-domain_snapshot_id = torch.randint(0, 3, (20,))   # each fake domain assigned to one of 3 snapshots
-model = FullModel(hidden_dim=32)
-out = model(snapshots, domain_snapshot_id)
-print("Output shape:", out.shape)
-assert not torch.isnan(out).any()
-print("PASSED")
+
+def test_legacy_full_model_forward() -> None:
+    snapshots = [make_fake_snapshot() for _ in range(3)]
+    domain_snapshot_id = torch.randint(0, 3, (20,))
+    model = FullModel(hidden_dim=32)
+    out = model(snapshots, domain_snapshot_id)
+    assert out.shape == (20, 2)
+    assert not torch.isnan(out).any()

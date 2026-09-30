@@ -1,0 +1,95 @@
+# Malicious-HDG Pipeline Configuration
+# Faithful to Zenodo DomainRadar v2 schema & leak-free evaluation protocol
+
+randomness:
+  seed: 42
+  evaluation_seeds: [42, 1337, 2024, 777, 999]
+
+paths:
+  raw_data_dir: "data_raw/zenodo"
+  processed_data_dir: "data_processed"
+  results_dir: "results"
+  fixture_raw_dir: "data_fixture/zenodo"
+  fixture_processed_dir: "data_fixture/data_processed"
+  fixture_results_dir: "results_fixture"
+
+profiling:
+  min_distinct_months_for_time_split: 4
+  top_sources_count: 30
+  top_families_count: 50
+  max_profile_markdown_lines: 200
+
+parsing:
+  normalize_to_e2LD: true
+  include_has_subdomain: false # Default false: only enable if shortcut audit proves not a proxy
+  benign_ratio: 2.0 # Negative-to-positive sampling ratio (1:1 to 3:1)
+  max_per_class: null # null keeps all records
+  asn_candidate_keys: ["asn", "autonomous_system_number", "number"]
+  registrar_candidate_keys: ["name", "handle", "organization"]
+
+graph:
+  hub_degree: 500
+  hub_percentile: 99.9
+  max_domains: 100000
+  node_types:
+    - domain
+    - ip
+    - nameserver
+    - registrar
+    - asn
+    - certificate
+  edge_types:
+    - ["domain", "resolves_to", "ip"]
+    - ["nameserver", "ns_ip", "ip"]
+    - ["domain", "uses_ns", "nameserver"]
+    - ["domain", "registered_by", "registrar"]
+    - ["ip", "belongs_to_asn", "asn"]
+    - ["domain", "uses_cert", "certificate"]
+  features:
+    use_lexical: true
+    lexical_stats:
+      - length
+      - entropy
+      - digit_ratio
+      - vowel_ratio
+      - longest_consonant_run
+
+model:
+  sage:
+    hidden_dim: 64
+    out_dim: 32
+    num_layers: 2
+    dropout: 0.2
+  attn:
+    hidden_dim: 64
+    out_dim: 32
+    num_heads: 4
+    num_layers: 2
+    dropout: 0.2
+  training:
+    epochs: 30
+    patience: 5
+    lr: 0.005
+    weight_decay: 0.0001
+    batch_size: 1024
+
+baselines:
+  tfidf:
+    analyzer: "char"
+    ngram_range: [2, 5]
+    min_df: 5
+    max_features: 10000
+    C: 1.0
+  xgboost:
+    n_estimators: 100
+    max_depth: 6
+    learning_rate: 0.1
+    subsample: 0.8
+    eval_metric: "logloss"
+
+evaluation:
+  bootstrap_samples: 1000
+  ci_level: 0.95
+  target_fprs: [0.01, 0.001] # 1% and 0.1%
+  min_fp_warning_threshold: 10
+  attack_budgets: [1, 2, 5]

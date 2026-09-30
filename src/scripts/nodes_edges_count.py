@@ -19,7 +19,7 @@ for etype in ["resolves_to", "shares_ns", "registered_by", "belongs_asn"]:
         f = d / f"edges_{etype}.csv"
         if f.exists() and f.stat().st_size > 0:
             try:
-                total += max(len(pd.read_csv(f)) - 1, 0)  # -1 header row artifact safeguard, adjust if needed
+                total += len(pd.read_csv(f))
             except pd.errors.EmptyDataError:
                 pass
     edge_counts[etype] = total

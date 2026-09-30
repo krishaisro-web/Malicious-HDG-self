@@ -1,8 +1,12 @@
 .venv-laptop/
+venv/
 __pycache__/
 *.pyc
+*.pt
+results_paper_ready.zip
 data_raw/
 data_processed/
+data_fixture/
+results_fixture/
 models/checkpoints/
-*.ptresults_paper_ready.zip
-venv/
+.pytest_cache/
