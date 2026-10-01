@@ -259,12 +259,27 @@ def profile_file(path: Path, acc: ClassProfileAccumulator) -> None:
     if not path.exists():
         raise FileNotFoundError(f"Input file not found for profiling: {path}")
 
+    total_seen = 0
+    malformed_count = 0
     with open(path, "rb") as f:
         # Avoid Decimal conversion with use_float=True
         records = ijson.items(f, "item", use_float=True)
         for rec in records:
-            if isinstance(rec, dict):
+            total_seen += 1
+            if not isinstance(rec, dict):
+                malformed_count += 1
+                continue
+            try:
                 acc.update(rec)
+            except Exception as e:
+                malformed_count += 1
+                if total_seen > 100 and (malformed_count / total_seen) > 0.01:
+                    raise ValueError(
+                        f"Malformed records exceeded 1% threshold in {path.name}: "
+                        f"{malformed_count}/{total_seen} malformed records. Last error: {e}"
+                    )
+                continue
+
 
 
 def profile_dataset(

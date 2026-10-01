@@ -53,6 +53,18 @@ graph:
       - digit_ratio
       - vowel_ratio
       - longest_consonant_run
+  degree_mode: "transductive" # "transductive" (default) or "train_visible"
+  cert_key_mode: "cn" # "cn" (includes common_name) or "coissue" (hash excluding common_name)
+  include_bgp_prefix: false # Optional BGP prefix node
+
+temporal:
+  min_distinct_months: 3 # Relaxed threshold for rolling-origin evaluation
+  min_per_class_per_window: 200 # Minimum instances per class per month window
+
+group:
+  joint_grouping: false # Joint bipartite components across IP, NS, registrar, cert
+  hub_cutoff: 500
+  max_prevalence_discrepancy: 0.05 # Stratified split tolerance (within 5 percentage points)
 
 model:
   sage:
@@ -66,12 +78,21 @@ model:
     num_heads: 4
     num_layers: 2
     dropout: 0.2
+  sage_guard:
+    hidden_dim: 64
+    out_dim: 32
+    num_layers: 2
+    dropout: 0.2
+    prune_threshold: 0.1
   training:
-    epochs: 30
-    patience: 5
+    epochs: 200
+    patience: 20
     lr: 0.005
+    lr_grid: [0.001, 0.003, 0.005]
     weight_decay: 0.0001
     batch_size: 1024
+    use_class_weights: false
+    scheduler: "plateau" # "plateau" or null
 
 baselines:
   tfidf:
@@ -87,9 +108,28 @@ baselines:
     subsample: 0.8
     eval_metric: "logloss"
 
+attack:
+  rho_list: [1.0, 0.5]
+  budgets: [1, 2, 5, 10]
+  surfaces: ["ip", "nameserver", "registrar", "certificate"]
+  manipulate_features: true
+
+streaming:
+  strategies: ["retrain_from_scratch", "naive_finetune", "replay"]
+  replay_reservoir_size: 1000
+
+latency:
+  warmup: 20
+  num_queries: 500
+  batch_sizes: [1, 32]
+
 evaluation:
   bootstrap_samples: 1000
   ci_level: 0.95
   target_fprs: [0.01, 0.001] # 1% and 0.1%
   min_fp_warning_threshold: 10
-  attack_budgets: [1, 2, 5]
+  prevalence_pi_list: [0.01, 0.001] # 1% and 0.1% production prevalence
+
+preflight:
+  sample_ratio: 0.10
+

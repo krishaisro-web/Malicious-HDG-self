@@ -13,7 +13,8 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from models.full_model import FullModel
+from src.hdg.models.legacy.full_model import FullModel
+from models.full_model import FullModel as RootFullModel
 
 
 def make_fake_snapshot(num_domains: int = 20, num_ip: int = 10) -> HeteroData:

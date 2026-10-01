@@ -4,6 +4,7 @@ Baseline models evaluated on identical splits for Malicious-HDG:
 2. Tabular: XGBoost on tabular non-lexical features.
 3. Tabular + Lexical: XGBoost on tabular + lexical features.
 4. Single-Feature: Domain length and No-IP baselines.
+5. Isolated Domain MLP: HeteroGNN with use_edges=False (isolates graph marginal value).
 All hyperparameters and thresholds tuned strictly on validation splits.
 """
 
@@ -13,14 +14,18 @@ import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 import xgboost as xgb
+import torch
+import torch.nn as nn
 
-from src.hdg.graph import extract_domain_feature_vector
+from src.hdg.models.hetero_gnn import HeteroGNN
+from src.hdg.graph import extract_domain_feature_vector, extract_domain_features_vectorized
 from src.hdg.metrics import (
     compute_bootstrap_cis,
     choose_optimal_threshold,
     evaluate_predictions,
 )
 from src.hdg.splits import DataSplits
+from src.hdg.train import train_eval_gnn
 
 
 def run_tfidf_lexical_baseline(
@@ -40,7 +45,6 @@ def run_tfidf_lexical_baseline(
     val_df = df.iloc[splits.val_indices]
     test_df = df.iloc[splits.test_indices]
 
-    # Extract e2LD strings
     x_train_text = train_df["e2LD"].tolist()
     x_val_text = val_df["e2LD"].tolist()
     x_test_text = test_df["e2LD"].tolist()
@@ -49,7 +53,6 @@ def run_tfidf_lexical_baseline(
     y_val = val_df["label"].to_numpy()
     y_test = test_df["label"].to_numpy()
 
-    # Fit TF-IDF on train only
     vec = TfidfVectorizer(
         analyzer="char",
         ngram_range=ngram_range,
@@ -90,22 +93,29 @@ def run_xgboost_baseline(
     splits: DataSplits,
     cfg: Dict[str, Any],
     use_lexical: bool = False,
+    drop_tld: bool = False,
+    drop_null_rates: bool = False,
     seed: int = 42
 ) -> Tuple[Dict[str, Any], np.ndarray, np.ndarray]:
-    """XGBoost classifier on tabular features (with or without lexical stats)."""
+    """XGBoost classifier on tabular features (with or without lexical stats and feature-group ablations)."""
     xgb_cfg = cfg.get("baselines", {}).get("xgboost", {})
     n_estimators = int(xgb_cfg.get("n_estimators", 100))
     max_depth = int(xgb_cfg.get("max_depth", 6))
     lr = float(xgb_cfg.get("learning_rate", 0.1))
 
-    # Build feature matrices
     p_cfg = cfg.get("parsing", {})
     include_sub = p_cfg.get("include_has_subdomain", False)
 
-    X_all = np.array([
-        extract_domain_feature_vector(row, use_lexical=use_lexical, include_has_subdomain=include_sub)
-        for _, row in df.iterrows()
-    ], dtype=np.float32)
+    X_all = extract_domain_features_vectorized(
+        df,
+        use_lexical=use_lexical,
+        include_has_subdomain=include_sub
+    )
+
+    # Optional feature group ablation
+    if drop_null_rates:
+        # Zero out no_ip, no_rdap, no_tls (indices 0, 1, 2)
+        X_all[:, :3] = 0.0
 
     y_all = df["label"].to_numpy().astype(int)
 
@@ -139,6 +149,84 @@ def run_xgboost_baseline(
         y_true=y_test,
         y_prob=test_probs,
         threshold=opt_th,
+        seed=seed
+    )
+
+    return test_eval, y_test, test_probs
+
+
+def run_single_feature_baseline(
+    df: pd.DataFrame,
+    splits: DataSplits,
+    feature_name: str = "length",
+    seed: int = 42
+) -> Tuple[Dict[str, Any], np.ndarray, np.ndarray]:
+    """Single-feature baseline classifier (e.g. domain length or no_ip)."""
+    if feature_name == "length":
+        vals = np.array([len(str(d)) for d in df["domain"]], dtype=np.float32).reshape(-1, 1)
+    elif feature_name == "no_ip":
+        vals = df["no_ip"].fillna(False).astype(np.float32).to_numpy().reshape(-1, 1)
+    elif feature_name in df.columns:
+        vals = df[feature_name].fillna(0).astype(np.float32).to_numpy().reshape(-1, 1)
+    else:
+        raise ValueError(f"Unknown feature for single-feature baseline: {feature_name}")
+
+    y_all = df["label"].to_numpy().astype(int)
+
+    X_train, y_train = vals[splits.train_indices], y_all[splits.train_indices]
+    X_val, y_val = vals[splits.val_indices], y_all[splits.val_indices]
+    X_test, y_test = vals[splits.test_indices], y_all[splits.test_indices]
+
+    clf = LogisticRegression(random_state=seed)
+    clf.fit(X_train, y_train)
+
+    val_probs = clf.predict_proba(X_val)[:, 1]
+    test_probs = clf.predict_proba(X_test)[:, 1]
+
+    opt_th = choose_optimal_threshold(y_val, val_probs)
+    test_eval = evaluate_predictions(
+        y_true=y_test,
+        y_prob=test_probs,
+        threshold=opt_th,
+        y_val_true=y_val,
+        y_val_prob=val_probs
+    )
+
+    test_eval["bootstrap_ci"] = compute_bootstrap_cis(
+        y_true=y_test,
+        y_prob=test_probs,
+        threshold=opt_th,
+        seed=seed
+    )
+
+    return test_eval, y_test, test_probs
+
+
+def run_mlp_no_edges_baseline(
+    scaled_data: Any,
+    splits: DataSplits,
+    df: pd.DataFrame,
+    cfg: Dict[str, Any],
+    epochs: int = 30,
+    seed: int = 42
+) -> Tuple[Dict[str, Any], np.ndarray, np.ndarray]:
+    """Isolated Domain MLP baseline (HeteroGNN with use_edges=False)."""
+    in_channels = {nt: scaled_data[nt].x.shape[1] for nt in scaled_data.node_types}
+    model = HeteroGNN(
+        metadata=scaled_data.metadata(),
+        in_channels_dict=in_channels,
+        hidden_dim=64,
+        out_dim=32,
+        num_layers=2,
+        use_edges=False
+    )
+
+    test_eval, y_test, test_probs, _ = train_eval_gnn(
+        model=model,
+        data=scaled_data,
+        splits=splits,
+        df=df,
+        epochs=epochs,
         seed=seed
     )
 

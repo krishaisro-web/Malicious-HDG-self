@@ -1,7 +1,8 @@
 """
 Models package for Malicious-HDG.
+Exposes HeteroGNN and GNNGuardLayer architectures.
 """
 
-from models.hetero_gnn import HeteroGNN
+from src.hdg.models.hetero_gnn import HeteroGNN, GNNGuardLayer
 
-__all__ = ["HeteroGNN"]
+__all__ = ["HeteroGNN", "GNNGuardLayer"]

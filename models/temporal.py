@@ -1,10 +1,7 @@
-import torch.nn as nn
+"""
+Backwards-compatibility shim for legacy temporal combiner.
+Canonical implementation resides in src.hdg.models.legacy.temporal.
+"""
+from src.hdg.models.legacy.temporal import TemporalCombiner
 
-class TemporalCombiner(nn.Module):
-    def __init__(self, hidden_dim):
-        super().__init__()
-        self.gru = nn.GRU(hidden_dim, hidden_dim, batch_first=True)
-
-    def forward(self, domain_seq):
-        out, _ = self.gru(domain_seq)
-        return out[:, -1, :]
+__all__ = ["TemporalCombiner"]

@@ -66,21 +66,21 @@ def test_leaf_certificate_selection() -> None:
             }
         ]
     }
-    cert_hash, valid_len = extract_leaf_certificate(tls_obj)
-    assert cert_hash is not None
+    cert_hash_cn, cert_hash_coissue, valid_len = extract_leaf_certificate(tls_obj)
+    assert cert_hash_cn is not None
     assert valid_len == 90
 
     # Test reverse order: leaf first, root second -> identical hash
     tls_obj_rev = {
         "certificates": [tls_obj["certificates"][1], tls_obj["certificates"][0]]
     }
-    cert_hash_rev, valid_len_rev = extract_leaf_certificate(tls_obj_rev)
-    assert cert_hash_rev == cert_hash
+    cert_hash_rev_cn, cert_hash_rev_coissue, valid_len_rev = extract_leaf_certificate(tls_obj_rev)
+    assert cert_hash_rev_cn == cert_hash_cn
     assert valid_len_rev == 90
 
     # No certs / null
-    assert extract_leaf_certificate(None) == (None, None)
-    assert extract_leaf_certificate({"certificates": []}) == (None, None)
+    assert extract_leaf_certificate(None) == (None, None, None)
+    assert extract_leaf_certificate({"certificates": []}) == (None, None, None)
 
 
 def test_asn_candidate_resolution() -> None:
@@ -88,19 +88,19 @@ def test_asn_candidate_resolution() -> None:
     counter = Counter()
 
     # Candidate 1: 'number'
-    asn1, org1 = resolve_asn({"number": 13335, "organization": "Cloudflare"}, ["asn", "autonomous_system_number", "number"], counter)
+    asn1, org1, bgp1 = resolve_asn({"number": 13335, "organization": "Cloudflare"}, ["asn", "autonomous_system_number", "number"], counter)
     assert asn1 == 13335
     assert org1 == "Cloudflare"
     assert counter["number"] == 1
 
     # Candidate 2: 'asn'
-    asn2, org2 = resolve_asn({"asn": 15169, "organization": "Google"}, ["asn", "autonomous_system_number", "number"], counter)
+    asn2, org2, bgp2 = resolve_asn({"asn": 15169, "organization": "Google"}, ["asn", "autonomous_system_number", "number"], counter)
     assert asn2 == 15169
     assert org2 == "Google"
     assert counter["asn"] == 1
 
     # Candidate 3: 'autonomous_system_number'
-    asn3, org3 = resolve_asn({"autonomous_system_number": 16509}, ["asn", "autonomous_system_number", "number"], counter)
+    asn3, org3, bgp3 = resolve_asn({"autonomous_system_number": 16509}, ["asn", "autonomous_system_number", "number"], counter)
     assert asn3 == 16509
     assert counter["autonomous_system_number"] == 1
 
@@ -156,7 +156,7 @@ def test_stream_parser_schema_handling() -> None:
         tmp_path = Path(tmp.name)
 
     try:
-        parsed, total, excluded = stream_parse_file(
+        parsed, total, excluded, malformed = stream_parse_file(
             file_path=tmp_path,
             label=1,
             default_source="test",
@@ -170,6 +170,7 @@ def test_stream_parser_schema_handling() -> None:
 
         assert total == 3
         assert excluded == 1
+        assert malformed == 0
         assert len(parsed) == 2
 
         # Check record 1

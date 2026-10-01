@@ -143,7 +143,7 @@ def test_splits_disjoint_and_leak_free() -> None:
     assert meta["giant_component_fraction"] >= 0.0
 
     # 4. Group Split ASN
-    asn_splits = group_split_by_asn(df, seed=42)
+    asn_splits, _ = group_split_by_asn(df, seed=42)
     asn_splits.assert_disjoint()
 
 

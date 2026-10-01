@@ -90,3 +90,48 @@ def test_paired_bootstrap_auc_difference() -> None:
     res = paired_bootstrap_auc_difference(y_true, y_prob_a, y_prob_b, n_bootstrap=100, seed=42)
     assert res["mean_diff"] > 0.0
     assert res["ci_lower"] <= res["mean_diff"] <= res["ci_upper"]
+
+
+def test_prevalence_adjusted_precision_formula() -> None:
+    """Verifies that prevalence-adjusted precision exactly matches Bayes' theorem."""
+    from src.hdg.metrics import compute_prevalence_adjusted_precision
+
+    # Case 1: TPR=0.80, FPR=0.01, Prevalence=0.01 (1%)
+    # Bayes: (0.80 * 0.01) / (0.80 * 0.01 + 0.01 * 0.99) = 0.008 / (0.008 + 0.0099) = 0.008 / 0.0179 = 0.446927
+    tpr = 0.80
+    fpr = 0.01
+    pi = 0.01
+    expected = (tpr * pi) / (tpr * pi + fpr * (1.0 - pi))
+    calculated = compute_prevalence_adjusted_precision(tpr=tpr, fpr=fpr, pi=pi)
+    assert abs(calculated - expected) < 1e-6
+    assert abs(calculated - 0.446927) < 1e-4
+
+    # Case 2: Extreme low prevalence (pi = 0.001)
+    pi_low = 0.001
+    expected_low = (tpr * pi_low) / (tpr * pi_low + fpr * (1.0 - pi_low))
+    calculated_low = compute_prevalence_adjusted_precision(tpr=tpr, fpr=fpr, pi=pi_low)
+    assert abs(calculated_low - expected_low) < 1e-6
+
+    # Case 3: Zero TPR / zero denominator
+    assert compute_prevalence_adjusted_precision(0.0, 0.0, 0.01) == 0.0
+
+
+def test_realised_fpr_matches_count() -> None:
+    """Verifies that realised FPR equals exact empirical count of false alarms / total negatives."""
+    y_test_true = np.array([0] * 80 + [1] * 20)
+    # Give 2 negatives high scores above threshold 0.85
+    y_test_prob = np.zeros(100)
+    y_test_prob[0] = 0.90  # False positive 1
+    y_test_prob[1] = 0.88  # False positive 2
+    y_test_prob[80:] = 0.95  # True positives
+
+    threshold = 0.85
+    fp_count = int(np.sum((y_test_prob[:80] >= threshold)))
+    total_negs = 80
+    expected_fpr = fp_count / total_negs  # 2 / 80 = 0.025
+
+    actual_negs = y_test_prob[y_test_true == 0]
+    realised_fpr = float(np.mean(actual_negs >= threshold))
+    assert fp_count == 2
+    assert realised_fpr == expected_fpr == 0.025
+

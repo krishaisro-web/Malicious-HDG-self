@@ -1,22 +1,27 @@
 """
 Cumulative, leak-free Heterogeneous Graph construction for Malicious-HDG.
-Builds PyG HeteroData with:
-- Node types: domain, ip, nameserver, registrar, asn, certificate
-- Edges: resolves_to, ns_ip, uses_ns, registered_by, belongs_to_asn, uses_cert + reverse edges
-- Train-only feature standardization
-- Strictly cumulative edges (no future edges beyond experiment timestamp)
+Provides:
+- build_base_graph: Cached raw feature matrices and graph topology (built once)
+- apply_split_scaling: Per-split z-score standardization strictly on training domains and train-incident infra nodes
+- Configurable infra degree modes: "transductive" (default) or "train_visible"
+- Configurable certificate key modes: "cn" (standard leaf) or "coissue" (co-issuance)
+- Optional BGP-prefix node support (ip -> prefix -> asn)
+- Fast vectorized domain feature extraction
 """
 
 from collections import Counter
+import copy
 import json
+import logging
 import math
 from pathlib import Path
-import re
 from typing import Any, Dict, List, Optional, Set, Tuple
 import numpy as np
 import pandas as pd
 import torch
 from torch_geometric.data import HeteroData
+
+logger = logging.getLogger(__name__)
 
 
 def compute_shannon_entropy(s: str) -> float:
@@ -87,6 +92,42 @@ def extract_domain_feature_vector(
     return np.array(feats, dtype=np.float32)
 
 
+def extract_domain_features_vectorized(
+    df: pd.DataFrame,
+    use_lexical: bool = True,
+    include_has_subdomain: bool = False
+) -> np.ndarray:
+    """Vectorized domain feature extraction replacing row-by-row iterrows."""
+    cols: List[np.ndarray] = [
+        df["no_ip"].fillna(False).astype(np.float32).to_numpy(),
+        df["no_rdap"].fillna(False).astype(np.float32).to_numpy(),
+        df["no_tls"].fillna(False).astype(np.float32).to_numpy(),
+        df["mx_count"].fillna(0).astype(np.float32).to_numpy(),
+        df["has_spf"].fillna(False).astype(np.float32).to_numpy(),
+        df["has_dmarc"].fillna(False).astype(np.float32).to_numpy(),
+        df["has_dkim"].fillna(False).astype(np.float32).to_numpy(),
+        df["dnssec"].fillna(False).astype(np.float32).to_numpy(),
+        np.log1p(np.maximum(0, df["ttl_a"].fillna(0).to_numpy(dtype=np.float32))),
+        np.log1p(np.maximum(0, df["ttl_ns"].fillna(0).to_numpy(dtype=np.float32))),
+        df["tls_cert_count"].fillna(0).astype(np.float32).to_numpy(),
+        np.log1p(np.maximum(0, df["cert_valid_len"].fillna(0).to_numpy(dtype=np.float32)))
+    ]
+
+    if include_has_subdomain:
+        cols.append(df["has_subdomain"].fillna(False).astype(np.float32).to_numpy())
+
+    if use_lexical:
+        d_strs = df["domain"].astype(str).tolist()
+        lengths = np.array([len(s) for s in d_strs], dtype=np.float32)
+        entropies = np.array([compute_shannon_entropy(s) for s in d_strs], dtype=np.float32)
+        digits = np.array([sum(c.isdigit() for c in s) / max(len(s), 1) for s in d_strs], dtype=np.float32)
+        vowels = np.array([sum(c in "aeiou" for c in s.lower()) / max(len(s), 1) for s in d_strs], dtype=np.float32)
+        consonants = np.array([float(compute_longest_consonant_run(s)) for s in d_strs], dtype=np.float32)
+        cols.extend([lengths, entropies, digits, vowels, consonants])
+
+    return np.column_stack(cols).astype(np.float32)
+
+
 class TrainOnlyStandardizer:
     """Standardizes feature matrices using statistics fit ONLY on training rows."""
 
@@ -95,6 +136,10 @@ class TrainOnlyStandardizer:
         self.std: Optional[np.ndarray] = None
 
     def fit(self, X: np.ndarray, train_idx: np.ndarray) -> "TrainOnlyStandardizer":
+        if len(train_idx) == 0:
+            self.mean = np.zeros(X.shape[1], dtype=np.float32)
+            self.std = np.ones(X.shape[1], dtype=np.float32)
+            return self
         X_train = X[train_idx]
         self.mean = np.nanmean(X_train, axis=0)
         self.std = np.nanstd(X_train, axis=0)
@@ -115,20 +160,25 @@ class TrainOnlyStandardizer:
         }
 
 
-def build_hetero_graph(
+def build_base_graph(
     df: pd.DataFrame,
-    train_indices: Optional[np.ndarray] = None,
-    t_max: Optional[str] = None,
-    use_lexical: bool = True,
-    include_has_subdomain: bool = False,
-    include_certificates: bool = True
-) -> Tuple[HeteroData, TrainOnlyStandardizer, Dict[str, Dict[str, int]]]:
+    config: Optional[Dict[str, Any]] = None,
+    t_max: Optional[str] = None
+) -> HeteroData:
     """
-    Constructs a PyG HeteroData object.
-    If t_max is provided, includes strictly domains with t <= t_max (cumulative, no future edges).
-    If train_indices is provided, standardizer is fit on train_indices only.
+    Constructs and caches the raw, unscaled HeteroData base graph topology.
+    Contains raw feature matrices, all edges, and entity ID mappings.
+    Saved once; fits no scalers on full data to eliminate leakage.
     """
-    # Filter cumulative time window
+    if config is None:
+        config = {}
+
+    g_cfg = config.get("graph", {})
+    cert_key_mode = g_cfg.get("cert_key_mode", "cn")
+    include_bgp_prefix = g_cfg.get("include_bgp_prefix", False)
+    include_sub = config.get("parsing", {}).get("include_has_subdomain", False)
+
+    # Filter cumulative time window if requested
     if t_max is not None:
         valid_df = df[df["t"] <= t_max].copy().reset_index(drop=True)
     else:
@@ -136,25 +186,21 @@ def build_hetero_graph(
 
     n_domains = len(valid_df)
 
-    # 1. Feature matrix extraction
-    raw_feats = np.array([
-        extract_domain_feature_vector(row, use_lexical, include_has_subdomain)
-        for _, row in valid_df.iterrows()
-    ], dtype=np.float32)
-
-    # Standardize on train indices only (or all if not specified)
-    scaler = TrainOnlyStandardizer()
-    fit_idx = train_indices if train_indices is not None else np.arange(n_domains)
-    scaler.fit(raw_feats, fit_idx)
-    norm_feats = scaler.transform(raw_feats)
+    # 1. Vectorized domain feature extraction (raw, unscaled)
+    raw_domain_feats = extract_domain_features_vectorized(
+        valid_df,
+        use_lexical=True,
+        include_has_subdomain=include_sub
+    )
 
     # 2. Entity maps
-    domain_to_id = {row["domain"]: idx for idx, row in valid_df.iterrows()}
+    domain_to_id = {dom: idx for idx, dom in enumerate(valid_df["domain"])}
     ip_to_id: Dict[str, int] = {}
     ns_to_id: Dict[str, int] = {}
     reg_to_id: Dict[str, int] = {}
     asn_to_id: Dict[int, int] = {}
     cert_to_id: Dict[str, int] = {}
+    prefix_to_id: Dict[str, int] = {}
 
     # Edges
     d_resolves_ip: List[Tuple[int, int]] = []
@@ -163,11 +209,16 @@ def build_hetero_graph(
     d_registered_reg: List[Tuple[int, int]] = []
     ip_belongs_asn: List[Tuple[int, int]] = []
     d_uses_cert: List[Tuple[int, int]] = []
+    ip_in_prefix: List[Tuple[int, int]] = []
+    prefix_belongs_asn: List[Tuple[int, int]] = []
+
+    # Map certificate key based on mode
+    cert_col = "leaf_cert_key_coissue" if cert_key_mode == "coissue" else "leaf_cert_key_cn"
 
     for d_idx, row in valid_df.iterrows():
         # Resolves_to (only A/AAAA IPs)
         res_ips = row.get("resolved_ips")
-        if res_ips is not None:
+        if res_ips is not None and isinstance(res_ips, (list, np.ndarray)):
             for ip in res_ips:
                 if ip not in ip_to_id:
                     ip_to_id[ip] = len(ip_to_id)
@@ -175,7 +226,7 @@ def build_hetero_graph(
 
         # Uses_ns
         ns_list = row.get("nameservers")
-        if ns_list is not None:
+        if ns_list is not None and isinstance(ns_list, (list, np.ndarray)):
             for ns in ns_list:
                 if ns not in ns_to_id:
                     ns_to_id[ns] = len(ns_to_id)
@@ -189,19 +240,22 @@ def build_hetero_graph(
             d_registered_reg.append((d_idx, reg_to_id[reg]))
 
         # Uses_cert
-        if include_certificates:
-            cert = row.get("leaf_cert_key")
-            if cert:
-                if cert not in cert_to_id:
-                    cert_to_id[cert] = len(cert_to_id)
-                d_uses_cert.append((d_idx, cert_to_id[cert]))
+        cert = row.get(cert_col) or row.get("leaf_cert_key")
+        if cert:
+            if cert not in cert_to_id:
+                cert_to_id[cert] = len(cert_to_id)
+            d_uses_cert.append((d_idx, cert_to_id[cert]))
 
-        # IP - ASN and NS - IP
+        # IP - ASN, NS - IP, and optional BGP prefix
         ip_recs = row.get("ip_records")
-        if ip_recs is not None:
+        if ip_recs is not None and isinstance(ip_recs, (list, np.ndarray)):
             for ip_rec in ip_recs:
+                if not isinstance(ip_rec, dict):
+                    continue
                 ip_val = ip_rec.get("ip")
                 asn_val = ip_rec.get("asn")
+                prefix_val = ip_rec.get("prefix")
+
                 if ip_val and asn_val is not None:
                     if ip_val not in ip_to_id:
                         ip_to_id[ip_val] = len(ip_to_id)
@@ -209,8 +263,14 @@ def build_hetero_graph(
                         asn_to_id[asn_val] = len(asn_to_id)
                     ip_belongs_asn.append((ip_to_id[ip_val], asn_to_id[asn_val]))
 
+                    if include_bgp_prefix and prefix_val:
+                        if prefix_val not in prefix_to_id:
+                            prefix_to_id[prefix_val] = len(prefix_to_id)
+                        ip_in_prefix.append((ip_to_id[ip_val], prefix_to_id[prefix_val]))
+                        prefix_belongs_asn.append((prefix_to_id[prefix_val], asn_to_id[asn_val]))
+
         ns_ips = row.get("ns_ip_pairs")
-        if ns_ips is not None:
+        if ns_ips is not None and isinstance(ns_ips, (list, np.ndarray)):
             for ns_host, ns_ip in ns_ips:
                 if ns_host not in ns_to_id:
                     ns_to_id[ns_host] = len(ns_to_id)
@@ -218,7 +278,7 @@ def build_hetero_graph(
                     ip_to_id[ns_ip] = len(ip_to_id)
                 ns_ns_ip.append((ns_to_id[ns_host], ip_to_id[ns_ip]))
 
-    # Deduplicate edges
+    # Deduplicate edges helper
     def to_edge_tensor(pairs: List[Tuple[int, int]]) -> torch.Tensor:
         if not pairs:
             return torch.empty((2, 0), dtype=torch.long)
@@ -227,63 +287,204 @@ def build_hetero_graph(
         dst = [p[1] for p in unique_pairs]
         return torch.tensor([src, dst], dtype=torch.long)
 
-    data = HeteroData()
-    data["domain"].x = torch.tensor(norm_feats, dtype=torch.float)
-    data["domain"].y = torch.tensor(valid_df["label"].to_numpy(), dtype=torch.long)
+    base = HeteroData()
+    base["domain"].raw_x = torch.tensor(raw_domain_feats, dtype=torch.float)
+    base["domain"].y = torch.tensor(valid_df["label"].to_numpy(), dtype=torch.long)
+    base["domain"].num_nodes = n_domains
 
-    # Infrastructure node features: experiment graph degree (log1p)
-    def make_infra_features(n_nodes: int, incident_edges: List[Tuple[int, int]], pos: int = 1) -> torch.Tensor:
-        if n_nodes == 0:
-            return torch.empty((0, 1), dtype=torch.float)
-        degs = Counter([p[pos] for p in incident_edges])
-        feat = np.array([[math.log1p(degs.get(i, 0))] for i in range(n_nodes)], dtype=np.float32)
-        return torch.tensor(feat, dtype=torch.float)
+    base["ip"].num_nodes = len(ip_to_id)
+    base["nameserver"].num_nodes = len(ns_to_id)
+    base["registrar"].num_nodes = len(reg_to_id)
+    base["asn"].num_nodes = len(asn_to_id)
+    base["certificate"].num_nodes = len(cert_to_id)
 
-    # IP features
-    data["ip"].x = make_infra_features(len(ip_to_id), d_resolves_ip + ns_ns_ip, pos=1)
-    # Nameserver features
-    data["nameserver"].x = make_infra_features(len(ns_to_id), d_uses_ns, pos=1)
-    # Registrar features
-    data["registrar"].x = make_infra_features(len(reg_to_id), d_registered_reg, pos=1)
-    # ASN features
-    data["asn"].x = make_infra_features(len(asn_to_id), ip_belongs_asn, pos=1)
-    # Certificate features
-    if include_certificates:
-        data["certificate"].x = make_infra_features(len(cert_to_id), d_uses_cert, pos=1)
-
-    # Assign forward and reverse edges
+    # Edge assignments (forward and reverse)
     e_res = to_edge_tensor(d_resolves_ip)
-    data["domain", "resolves_to", "ip"].edge_index = e_res
-    data["ip", "rev_resolves_to", "domain"].edge_index = torch.stack([e_res[1], e_res[0]]) if e_res.numel() > 0 else torch.empty((2, 0), dtype=torch.long)
+    base["domain", "resolves_to", "ip"].edge_index = e_res
+    base["ip", "rev_resolves_to", "domain"].edge_index = torch.stack([e_res[1], e_res[0]]) if e_res.numel() > 0 else torch.empty((2, 0), dtype=torch.long)
 
     e_ns_ip = to_edge_tensor(ns_ns_ip)
-    data["nameserver", "ns_ip", "ip"].edge_index = e_ns_ip
-    data["ip", "rev_ns_ip", "nameserver"].edge_index = torch.stack([e_ns_ip[1], e_ns_ip[0]]) if e_ns_ip.numel() > 0 else torch.empty((2, 0), dtype=torch.long)
+    base["nameserver", "ns_ip", "ip"].edge_index = e_ns_ip
+    base["ip", "rev_ns_ip", "nameserver"].edge_index = torch.stack([e_ns_ip[1], e_ns_ip[0]]) if e_ns_ip.numel() > 0 else torch.empty((2, 0), dtype=torch.long)
 
     e_ns = to_edge_tensor(d_uses_ns)
-    data["domain", "uses_ns", "nameserver"].edge_index = e_ns
-    data["nameserver", "rev_uses_ns", "domain"].edge_index = torch.stack([e_ns[1], e_ns[0]]) if e_ns.numel() > 0 else torch.empty((2, 0), dtype=torch.long)
+    base["domain", "uses_ns", "nameserver"].edge_index = e_ns
+    base["nameserver", "rev_uses_ns", "domain"].edge_index = torch.stack([e_ns[1], e_ns[0]]) if e_ns.numel() > 0 else torch.empty((2, 0), dtype=torch.long)
 
     e_reg = to_edge_tensor(d_registered_reg)
-    data["domain", "registered_by", "registrar"].edge_index = e_reg
-    data["registrar", "rev_registered_by", "domain"].edge_index = torch.stack([e_reg[1], e_reg[0]]) if e_reg.numel() > 0 else torch.empty((2, 0), dtype=torch.long)
+    base["domain", "registered_by", "registrar"].edge_index = e_reg
+    base["registrar", "rev_registered_by", "domain"].edge_index = torch.stack([e_reg[1], e_reg[0]]) if e_reg.numel() > 0 else torch.empty((2, 0), dtype=torch.long)
 
     e_asn = to_edge_tensor(ip_belongs_asn)
-    data["ip", "belongs_to_asn", "asn"].edge_index = e_asn
-    data["asn", "rev_belongs_to_asn", "ip"].edge_index = torch.stack([e_asn[1], e_asn[0]]) if e_asn.numel() > 0 else torch.empty((2, 0), dtype=torch.long)
+    base["ip", "belongs_to_asn", "asn"].edge_index = e_asn
+    base["asn", "rev_belongs_to_asn", "ip"].edge_index = torch.stack([e_asn[1], e_asn[0]]) if e_asn.numel() > 0 else torch.empty((2, 0), dtype=torch.long)
 
-    if include_certificates:
-        e_cert = to_edge_tensor(d_uses_cert)
-        data["domain", "uses_cert", "certificate"].edge_index = e_cert
-        data["certificate", "rev_uses_cert", "domain"].edge_index = torch.stack([e_cert[1], e_cert[0]]) if e_cert.numel() > 0 else torch.empty((2, 0), dtype=torch.long)
+    e_cert = to_edge_tensor(d_uses_cert)
+    base["domain", "uses_cert", "certificate"].edge_index = e_cert
+    base["certificate", "rev_uses_cert", "domain"].edge_index = torch.stack([e_cert[1], e_cert[0]]) if e_cert.numel() > 0 else torch.empty((2, 0), dtype=torch.long)
 
-    id_maps = {
+    if include_bgp_prefix and len(prefix_to_id) > 0:
+        base["prefix"].num_nodes = len(prefix_to_id)
+        e_pre = to_edge_tensor(ip_in_prefix)
+        base["ip", "in_prefix", "prefix"].edge_index = e_pre
+        base["prefix", "rev_in_prefix", "ip"].edge_index = torch.stack([e_pre[1], e_pre[0]]) if e_pre.numel() > 0 else torch.empty((2, 0), dtype=torch.long)
+        e_pasn = to_edge_tensor(prefix_belongs_asn)
+        base["prefix", "belongs_to_asn", "asn"].edge_index = e_pasn
+        base["asn", "rev_belongs_to_asn", "prefix"].edge_index = torch.stack([e_pasn[1], e_pasn[0]]) if e_pasn.numel() > 0 else torch.empty((2, 0), dtype=torch.long)
+
+    # Store raw domain pairs for split-visible degree computations
+    base.incident_pairs = {
+        "ip": d_resolves_ip + [(p[1], p[1]) for p in ns_ns_ip],
+        "nameserver": d_uses_ns,
+        "registrar": d_registered_reg,
+        "asn": [(d, a) for (d, ip) in d_resolves_ip for (i, a) in ip_belongs_asn if i == ip],
+        "certificate": d_uses_cert
+    }
+
+    base.id_maps = {
         "domain": domain_to_id,
         "ip": ip_to_id,
         "nameserver": ns_to_id,
         "registrar": reg_to_id,
         "asn": {str(k): v for k, v in asn_to_id.items()},
-        "certificate": cert_to_id
+        "certificate": cert_to_id,
+        "prefix": prefix_to_id
     }
+    base.cert_key_mode = cert_key_mode
 
-    return data, scaler, id_maps
+    # Log cert degree distribution
+    if len(cert_to_id) > 0:
+        cert_degs = [p[1] for p in d_uses_cert]
+        c_counts = list(Counter(cert_degs).values())
+        if c_counts:
+            p50 = float(np.percentile(c_counts, 50))
+            p90 = float(np.percentile(c_counts, 90))
+            p99 = float(np.percentile(c_counts, 99))
+            logger.info(f"Cert degree distribution ({cert_key_mode}): p50={p50:.1f}, p90={p90:.1f}, p99={p99:.1f}, max={max(c_counts)}")
+
+    return base
+
+
+def apply_split_scaling(
+    base: HeteroData,
+    train_indices: np.ndarray,
+    val_indices: Optional[np.ndarray] = None,
+    degree_mode: str = "transductive",
+    include_certificates: bool = True,
+    drop_edge_type: Optional[str] = None,
+    use_lexical: bool = True
+) -> Tuple[HeteroData, Dict[str, Any]]:
+    """
+    Applies per-split z-score scaling fit strictly on training domains and train-incident infra nodes.
+    Returns: (scaled_heterodata, scaler_stats_dict)
+    - degree_mode: "transductive" (counts all edges, scaler fit on train-incident nodes)
+                   or "train_visible" (counts only edges from train+val domains)
+    """
+    data = HeteroData()
+    scaler_stats: Dict[str, Any] = {}
+
+    train_set = set(train_indices.tolist())
+    visible_set = train_set.union(set(val_indices.tolist())) if val_indices is not None else train_set
+
+    # 1. Domain features scaling
+    raw_domain_x = base["domain"].raw_x.numpy()
+    if not use_lexical:
+        # Non-lexical features are the first 12 (or 13 if has_subdomain included)
+        dim_nonlex = 13 if base["domain"].raw_x.shape[1] in [13, 18] else 12
+        raw_domain_x = raw_domain_x[:, :dim_nonlex]
+
+    domain_scaler = TrainOnlyStandardizer().fit(raw_domain_x, train_indices)
+    scaled_domain_x = domain_scaler.transform(raw_domain_x)
+    data["domain"].x = torch.tensor(scaled_domain_x, dtype=torch.float)
+    data["domain"].y = base["domain"].y.clone()
+    data["domain"].num_nodes = base["domain"].num_nodes
+    scaler_stats["domain"] = domain_scaler.to_dict()
+
+    # 2. Infra-node degree feature calculation and standardization
+    infra_types = ["ip", "nameserver", "registrar", "asn"]
+    if include_certificates and "certificate" in base.node_types and base["certificate"].num_nodes > 0:
+        infra_types.append("certificate")
+    if "prefix" in base.node_types and base["prefix"].num_nodes > 0:
+        infra_types.append("prefix")
+
+    incident_pairs = getattr(base, "incident_pairs", {})
+
+    for nt in infra_types:
+        n_nodes = base[nt].num_nodes
+        if n_nodes == 0:
+            data[nt].x = torch.empty((0, 1), dtype=torch.float)
+            data[nt].num_nodes = 0
+            continue
+
+        pairs = incident_pairs.get(nt, [])
+
+        if degree_mode == "train_visible":
+            # Count only edges from train (and val) domains
+            visible_pairs = [p for p in pairs if p[0] in visible_set]
+            degs = Counter(p[1] for p in visible_pairs)
+        else:
+            # Transductive: count all graph edges
+            degs = Counter(p[1] for p in pairs)
+
+        # Log1p degree
+        log_degs = np.array([[math.log1p(degs.get(i, 0))] for i in range(n_nodes)], dtype=np.float32)
+
+        # Identify train-incident nodes (nodes with >=1 edge from train domains)
+        train_incident = np.array(list(set(p[1] for p in pairs if p[0] in train_set)), dtype=int)
+        if len(train_incident) == 0:
+            train_incident = np.arange(n_nodes)
+
+        # Fit standardizer strictly on train-incident nodes
+        infra_scaler = TrainOnlyStandardizer().fit(log_degs, train_incident)
+        scaled_degs = infra_scaler.transform(log_degs)
+        data[nt].x = torch.tensor(scaled_degs, dtype=torch.float)
+        data[nt].num_nodes = n_nodes
+        scaler_stats[nt] = infra_scaler.to_dict()
+
+    # 3. Relational Edges
+    for edge_type in base.edge_types:
+        src_t, rel, dst_t = edge_type
+        # Skip cert edges if certificates disabled
+        if not include_certificates and ("certificate" in (src_t, dst_t)):
+            continue
+        # Skip ablated edge type
+        if drop_edge_type and (drop_edge_type in rel or rel == drop_edge_type):
+            continue
+
+        data[edge_type].edge_index = base[edge_type].edge_index.clone()
+
+    data.id_maps = getattr(base, "id_maps", {})
+    return data, scaler_stats
+
+
+def build_hetero_graph(
+    df: pd.DataFrame,
+    train_indices: Optional[np.ndarray] = None,
+    t_max: Optional[str] = None,
+    use_lexical: bool = True,
+    include_has_subdomain: bool = False,
+    include_certificates: bool = True
+) -> Tuple[HeteroData, TrainOnlyStandardizer, Dict[str, Dict[str, int]]]:
+    """
+    Backwards-compatible wrapper.
+    Builds base graph and applies split scaling in one step.
+    """
+    cfg = {
+        "graph": {"cert_key_mode": "cn"},
+        "parsing": {"include_has_subdomain": include_has_subdomain}
+    }
+    base = build_base_graph(df, config=cfg, t_max=t_max)
+    fit_idx = train_indices if train_indices is not None else np.arange(base["domain"].num_nodes)
+    scaled, stats = apply_split_scaling(
+        base=base,
+        train_indices=fit_idx,
+        include_certificates=include_certificates,
+        use_lexical=use_lexical
+    )
+
+    # Reconstruct standalone domain standardizer for compatibility
+    scaler = TrainOnlyStandardizer()
+    scaler.mean = np.array(stats["domain"]["mean"])
+    scaler.std = np.array(stats["domain"]["std"])
+
+    return scaled, scaler, base.id_maps

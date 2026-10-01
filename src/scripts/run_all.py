@@ -1,18 +1,23 @@
 #!/usr/bin/env python3
 """
 End-to-end pipeline runner for Malicious-HDG.
-Executes the full pipeline sequence:
+Executes the full experimental sequence:
+0. Preflight checks & resource validation (00c_preflight)
 1. Dataset profiling (00_profile_dataset)
 2. Normalization & parsing (01_parse)
 3. Shortcut audit (00b_audit_shortcuts)
-4. Heterogeneous graph build (02_build_graph)
+4. Heterogeneous base graph build (02_build_graph)
 5. Baselines evaluation (03_run_baselines)
 6. HeteroGNN multi-split evaluation (04_train_gnn)
 7. Ablation study (05_ablation)
-8. Structural adversarial attack (06_attack_eval)
+8. Structural adversarial attack & GNNGuard (06_attack_eval)
 9. CPU latency benchmark (07_latency_eval)
+10. Provenance checks & shortcut audits (08_provenance_checks)
+11. Streaming continual learning evaluation (09_streaming_eval)
+12. BIND RPZ rule emission (10_emit_rpz)
+13. Comprehensive report compilation (11_make_report)
 
-Supports --fixture for fast CPU validation.
+Supports --fixture for fast CPU validation and --smoke for accelerated tests.
 """
 
 import argparse
@@ -40,13 +45,16 @@ def run_cmd(cmd: List[str]) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run complete Malicious-HDG pipeline.")
     parser.add_argument("--fixture", action="store_true", help="Execute against data_fixture/ (smoke test)")
+    parser.add_argument("--smoke", action="store_true", help="Run in accelerated smoke mode")
     parser.add_argument("--config", type=str, default=None, help="Path to config YAML")
     parser.add_argument("--epochs", type=int, default=None, help="Override epochs for GNN models")
     parser.add_argument("--single-seed", type=int, default=None, help="Run single seed only")
+    parser.add_argument("--max-domains", type=int, default=None, help="Cap total domain nodes")
+    parser.add_argument("--force", action="store_true", help="Force rerun of all completed stages")
     args = parser.parse_args()
 
     cfg = load_config(args.config)
-    paths = get_resolved_paths(cfg, is_fixture=args.fixture, root_dir=REPO_ROOT)
+    paths = get_resolved_paths(cfg, is_fixture=args.fixture, is_smoke=args.smoke, root_dir=REPO_ROOT)
 
     pfx = "[FIXTURE - meaningless] " if args.fixture else ""
     print(f"{pfx}Starting complete Malicious-HDG pipeline...")
@@ -60,6 +68,20 @@ def main() -> None:
 
     py_exe = sys.executable
 
+    common_flags: List[str] = []
+    if args.fixture:
+        common_flags.append("--fixture")
+    if args.smoke:
+        common_flags.append("--smoke")
+    if args.force:
+        common_flags.append("--force")
+    if args.config:
+        common_flags.extend(["--config", args.config])
+
+    # 0. Preflight
+    preflight_cmd = [py_exe, "-m", "src.scripts.00c_preflight"] + common_flags
+    run_cmd(preflight_cmd)
+
     # 1. Profile Dataset
     profile_cmd = [py_exe, "-m", "src.scripts.00_profile_dataset"]
     if args.fixture:
@@ -70,6 +92,8 @@ def main() -> None:
     parse_cmd = [py_exe, "-m", "src.scripts.01_parse"]
     if args.fixture:
         parse_cmd.append("--fixture")
+    if args.max_domains is not None:
+        parse_cmd.extend(["--limit", str(args.max_domains)])
     run_cmd(parse_cmd)
 
     # 3. Shortcut Audit
@@ -82,30 +106,28 @@ def main() -> None:
     graph_cmd = [py_exe, "-m", "src.scripts.02_build_graph"]
     if args.fixture:
         graph_cmd.append("--fixture")
+    if args.max_domains is not None:
+        graph_cmd.extend(["--max-domains", str(args.max_domains)])
     run_cmd(graph_cmd)
 
     # 5. Baselines
-    base_cmd = [py_exe, "-m", "src.scripts.03_run_baselines"]
-    if args.fixture:
-        base_cmd.append("--fixture")
+    base_cmd = [py_exe, "-m", "src.scripts.03_run_baselines"] + common_flags
     if args.single_seed is not None:
         base_cmd.extend(["--single-seed", str(args.single_seed)])
-    elif args.fixture:
+    elif args.fixture or args.smoke:
         base_cmd.extend(["--single-seed", "42"])
     run_cmd(base_cmd)
 
     # 6. GNN Evaluation
-    epochs_val = args.epochs if args.epochs is not None else (3 if args.fixture else 30)
+    epochs_val = args.epochs if args.epochs is not None else (3 if (args.fixture or args.smoke) else 30)
     gnn_cmd = [
         py_exe, "-m", "src.scripts.04_train_gnn",
         "--variant", "both",
         "--epochs", str(epochs_val)
-    ]
-    if args.fixture:
-        gnn_cmd.append("--fixture")
+    ] + common_flags
     if args.single_seed is not None:
         gnn_cmd.extend(["--single-seed", str(args.single_seed)])
-    elif args.fixture:
+    elif args.fixture or args.smoke:
         gnn_cmd.extend(["--single-seed", "42"])
     run_cmd(gnn_cmd)
 
@@ -113,12 +135,10 @@ def main() -> None:
     abl_cmd = [
         py_exe, "-m", "src.scripts.05_ablation",
         "--epochs", str(epochs_val)
-    ]
-    if args.fixture:
-        abl_cmd.append("--fixture")
+    ] + common_flags
     if args.single_seed is not None:
         abl_cmd.extend(["--single-seed", str(args.single_seed)])
-    elif args.fixture:
+    elif args.fixture or args.smoke:
         abl_cmd.extend(["--single-seed", "42"])
     run_cmd(abl_cmd)
 
@@ -126,23 +146,39 @@ def main() -> None:
     atk_cmd = [
         py_exe, "-m", "src.scripts.06_attack_eval",
         "--epochs", str(epochs_val)
-    ]
-    if args.fixture:
-        atk_cmd.append("--fixture")
+    ] + common_flags
     run_cmd(atk_cmd)
 
     # 9. Latency Benchmark
     lat_cmd = [
         py_exe, "-m", "src.scripts.07_latency_eval",
-        "--num-queries", "20" if args.fixture else "100"
-    ]
-    if args.fixture:
-        lat_cmd.append("--fixture")
+        "--num-queries", "20" if (args.fixture or args.smoke) else "500",
+        "--warmup", "5" if (args.fixture or args.smoke) else "20"
+    ] + common_flags
     run_cmd(lat_cmd)
+
+    # 10. Provenance Checks
+    prov_cmd = [py_exe, "-m", "src.scripts.08_provenance_checks"] + common_flags
+    run_cmd(prov_cmd)
+
+    # 11. Streaming Continual Learning
+    stream_cmd = [py_exe, "-m", "src.scripts.09_streaming_eval"] + common_flags
+    if args.fixture or args.smoke:
+        stream_cmd.extend(["--max-months", "3"])
+    run_cmd(stream_cmd)
+
+    # 12. BIND RPZ Rule Emission
+    rpz_cmd = [py_exe, "-m", "src.scripts.10_emit_rpz"] + common_flags
+    run_cmd(rpz_cmd)
+
+    # 13. Comprehensive Report Generation
+    report_cmd = [py_exe, "-m", "src.scripts.11_make_report"] + common_flags
+    run_cmd(report_cmd)
 
     print(f"\n{pfx}==================================================")
     print(f"{pfx}Malicious-HDG complete pipeline finished successfully!")
     print(f"{pfx}All artifacts generated in: {paths.results_dir}")
+    print(f"{pfx}Comprehensive report: {paths.results_dir / 'REPORT.md'}")
     print(f"{pfx}==================================================")
 
 

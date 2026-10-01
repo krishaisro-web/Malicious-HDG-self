@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 import torch
 
-from models.hetero_gnn import HeteroGNN
+from src.hdg.models.hetero_gnn import HeteroGNN
 from src.hdg.audit import run_shortcut_audit
 from src.hdg.config import load_config, get_resolved_paths
 from src.hdg.profiler import profile_dataset

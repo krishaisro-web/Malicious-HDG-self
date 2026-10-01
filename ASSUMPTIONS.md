@@ -18,6 +18,12 @@ When an assumption is violated on real data, the codebase is designed to **fail 
 | **6** | **Graph Hub Pruning & Connected Components** | The domain-infrastructure bipartite graph contains high-degree infrastructure hubs. Pruning nodes with degree > 500 (or top 0.1%) breaks global component collapse. | `giant_component_fraction` in `splits.metadata` | If `giant_component_fraction > 0.50` (giant component contains > 50% of domains), the code emits a warning and **automatically provides group split by primary ASN**. |
 | **7** | **Absence of Single-Feature Shortcuts** | Malware and benign domains are not trivially separable by single domain/infrastructure metadata features (e.g. length, label count, NXDOMAIN, TLS presence). | `single_feature_aucs`, `features_with_auc_ge_0_90` in `audit_shortcuts.json` | Any domain feature with ROC-AUC $\ge 0.90$ triggers a `[WARNING]` verdict. If `subdomain_flag` has AUC $\ge 0.90$, `include_has_subdomain` remains `false`. |
 | **8** | **Certificate Identification (No Fingerprint/Serial)** | Zenodo TLS records lack X.509 serial numbers or SHA-256 fingerprints. The leaf cert must be selected using the `is_root == False` flag. | `tls_cert_field_presence` in `profile_report.json` | First cert with `is_root == False` is hashed over `(common_name, organization, country, validity_start, validity_end)`. Collisions between identical metadata certificates are documented as expected. |
+| **9** | **2-Hop Ego-Subgraph Mathematical Equivalence** | For a 2-layer HeteroGNN, the representation of domain $u$ depends strictly on its 2-hop structural neighborhood $\mathcal{N}^2(u)$. | Verified in `tests/test_latency.py` | Extracts localized 2-hop ego-subgraph for inference on CPU, achieving $< 50$ ms query latency mathematically identical to full-graph slicing within $10^{-5}$. |
+| **10** | **Leak-Free Split Standardization** | Fitting standardizers globally across all domains leaks test distribution statistics into training features. | Verified in `tests/test_graph_and_splits.py` | The base graph is cached unscaled (`heterodata.pt`). `apply_split_scaling` fits mean and std strictly on training domains and train-incident infrastructure per split. |
+| **11** | **Stratified Group Prevalence Balancing** | Random component assignment causes severe class imbalance when clusters are predominantly pure. | `max_discrepancy` in `assign_groups_stratified` | Employs dual-pool distribution of positive-majority and negative-majority clusters to guarantee train/val/test prevalence within 5 percentage points of global. |
+| **12** | **Adversarial Threat Model Target Constraints** | In PPT threat model, attackers cannot observe future test infrastructure and must connect to known legitimate infrastructure. | Verified in `tests/test_attack.py` | Candidate target infrastructure for edge injection is strictly ranked using training benign domains only. |
+| **13** | **Operational Low-FPR Decision Calibration** | Real-world DNS resolvers require FPR $\le 0.1\%$ to prevent service disruption of legitimate traffic. | Verified in `src/scripts/10_emit_rpz.py` | Calibrates operational threshold strictly on validation negatives at the 99.9th percentile ($1 - \text{FPR}_{\text{target}}$). |
+| **14** | **Streaming JSON Parser Error Tolerance** | Malformed lines in raw multi-gigabyte JSON dumps should not abort ingestion unless systemic. | `malformed_count` in `parsing_summary.json` | Parser tolerates malformed records up to 1.0% of total lines. If malformed records exceed 1.0%, code aborts loudly. |
 
 ---
 
@@ -25,16 +31,20 @@ When an assumption is violated on real data, the codebase is designed to **fail 
 
 Prior to training models on the target machine, the operator must execute the verification protocol:
 
-1. **Step 1: Execute Dataset Profiling**:
+1. **Step 1: Execute Preflight System Verification**:
+   ```bash
+   python -m src.scripts.00c_preflight
+   ```
+2. **Step 2: Execute Dataset Profiling**:
    ```bash
    python -m src.scripts.00_profile_dataset
    ```
-2. **Step 2: Inspect Output Reports**:
+3. **Step 3: Inspect Output Reports**:
    - Check `results/profile/profile_report.md` (<= 200 lines).
    - Verify `time_split_valid.json` (`"time_split_valid": true`).
    - Check whether `malware` or `malware_type` was detected in raw records.
    - Verify that ASN keys and Registrar entity keys are non-empty.
-3. **Step 3: Execute Shortcut Audit**:
+4. **Step 4: Execute Shortcut Audit**:
    ```bash
    python -m src.scripts.01_parse
    python -m src.scripts.00b_audit_shortcuts

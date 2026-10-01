@@ -1,9 +1,7 @@
-import torch.nn as nn
+"""
+Backwards-compatibility shim for legacy classifier.
+Canonical implementation resides in src.hdg.models.legacy.classifier.
+"""
+from src.hdg.models.legacy.classifier import Classifier
 
-class Classifier(nn.Module):
-    def __init__(self, hidden_dim, num_classes=2):
-        super().__init__()
-        self.linear = nn.Linear(hidden_dim, num_classes)
-
-    def forward(self, x):
-        return self.linear(x)
+__all__ = ["Classifier"]

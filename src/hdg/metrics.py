@@ -2,11 +2,13 @@
 Evaluation metrics, bootstrap confidence intervals, and hypothesis testing for Malicious-HDG.
 Implements:
 - ROC-AUC, PR-AUC, F1, Precision, Recall, Specificity
-- TPR at target FPR (1% and 0.1%) with validation negative thresholding
-- Bootstrap 95% confidence intervals (1000 resamples)
-- Expected false positive threshold warnings
-- Exact McNemar test (statsmodels, exact=True, correctly labelled statistic)
-- Paired bootstrap AUC differences
+- Operating points (TPR at 1% and 0.1% target FPR) with validation negative thresholds
+- Realised test FPR and F1/Precision/Recall at operating points
+- Prevalence-adjusted precision at production prevalences pi in {1%, 0.1%}
+- Bootstrap 95% confidence intervals (empirical percentile bootstrap)
+- Expected false positive threshold warnings (< 10 expected false positives)
+- Exact McNemar test (statsmodels, exact=True, statistic = min(b, c))
+- Paired bootstrap AUC differences across evaluation seeds
 """
 
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -20,6 +22,18 @@ from sklearn.metrics import (
     roc_auc_score,
 )
 from statsmodels.stats.contingency_tables import mcnemar
+
+
+def compute_prevalence_adjusted_precision(tpr: float, fpr: float, pi: float) -> float:
+    """
+    Computes prevalence-adjusted precision for a target operating point:
+    precision = (TPR * pi) / (TPR * pi + FPR * (1 - pi))
+    Handles edge cases without division by zero.
+    """
+    denom = (tpr * pi) + (fpr * (1.0 - pi))
+    if denom <= 0.0:
+        return 0.0
+    return float((tpr * pi) / denom)
 
 
 def choose_optimal_threshold(
@@ -82,9 +96,10 @@ def evaluate_predictions(
     threshold: float = 0.5,
     y_val_true: Optional[np.ndarray] = None,
     y_val_prob: Optional[np.ndarray] = None,
-    target_fprs: List[float] = [0.01, 0.001]
+    target_fprs: List[float] = [0.01, 0.001],
+    prevalence_pis: List[float] = [0.01, 0.001]
 ) -> Dict[str, Any]:
-    """Computes comprehensive binary classification metrics."""
+    """Computes comprehensive binary classification metrics including operating points and prevalence adjustments."""
     y_pred = (y_prob >= threshold).astype(int)
 
     roc_auc = float(roc_auc_score(y_true, y_prob)) if len(np.unique(y_true)) > 1 else 0.5
@@ -96,15 +111,40 @@ def evaluate_predictions(
     tn, fp, fn, tp = confusion_matrix(y_true, y_pred, labels=[0, 1]).ravel()
     spec = float(tn / (tn + fp)) if (tn + fp) > 0 else 0.0
 
+    n_total = len(y_true)
+    n_pos = int(np.sum(y_true == 1))
+    n_neg = int(np.sum(y_true == 0))
+    sample_prevalence = float(n_pos / max(n_total, 1))
+
+    test_negs = y_prob[y_true == 0]
+
     fpr_metrics = {}
     if y_val_true is not None and y_val_prob is not None:
         for fpr_val in target_fprs:
             tpr_at_k, th_k, exp_fp, warn = compute_tpr_at_fpr(
                 y_true, y_prob, y_val_true, y_val_prob, target_fpr=fpr_val
             )
+            realised_fpr = float(np.mean(test_negs >= th_k)) if len(test_negs) > 0 else 0.0
+            pred_at_k = (y_prob >= th_k).astype(int)
+
+            f1_op = float(f1_score(y_true, pred_at_k, zero_division=0))
+            prec_op = float(precision_score(y_true, pred_at_k, zero_division=0))
+            rec_op = float(recall_score(y_true, pred_at_k, zero_division=0))
+
+            # Prevalence-adjusted precisions
+            adj_prec_dict = {}
+            for pi in prevalence_pis:
+                adj_p = compute_prevalence_adjusted_precision(tpr_at_k, realised_fpr, pi)
+                adj_prec_dict[f"pi_{pi*100:.1f}pct"] = round(adj_p, 4)
+
             fpr_metrics[f"tpr_at_{fpr_val*100:.1f}pct_fpr"] = {
                 "tpr": round(tpr_at_k, 4),
                 "threshold": round(th_k, 4),
+                "realised_test_fpr": round(realised_fpr, 6),
+                "f1_at_operating_point": round(f1_op, 4),
+                "precision_at_operating_point": round(prec_op, 4),
+                "recall_at_operating_point": round(rec_op, 4),
+                "prevalence_adjusted_precision": adj_prec_dict,
                 "expected_fp": exp_fp,
                 "warning": warn
             }
@@ -117,6 +157,12 @@ def evaluate_predictions(
         "recall": round(rec, 4),
         "specificity": round(spec, 4),
         "threshold": round(threshold, 4),
+        "test_counts": {
+            "total": n_total,
+            "positives": n_pos,
+            "negatives": n_neg,
+            "sample_prevalence": round(sample_prevalence, 4)
+        },
         "confusion_matrix": {
             "tp": int(tp),
             "tn": int(tn),
@@ -250,4 +296,57 @@ def paired_bootstrap_auc_difference(
         "ci_lower": round(lower, 4),
         "ci_upper": round(upper, 4),
         "pvalue_two_sided": round(p_val, 4)
+    }
+
+
+def multi_seed_paired_comparisons(
+    seeds: List[int],
+    predictions_a: Dict[int, Dict[str, np.ndarray]],
+    predictions_b: Dict[int, Dict[str, np.ndarray]],
+    n_bootstrap: int = 1000
+) -> Dict[str, Any]:
+    """
+    Computes McNemar and paired bootstrap AUC difference across ALL seeds,
+    reporting per-seed results and a pooled summary across seeds.
+    """
+    per_seed = {}
+    pooled_true: List[int] = []
+    pooled_pred_a: List[int] = []
+    pooled_pred_b: List[int] = []
+    pooled_prob_a: List[float] = []
+    pooled_prob_b: List[float] = []
+
+    for s in seeds:
+        if s not in predictions_a or s not in predictions_b:
+            continue
+        pa = predictions_a[s]
+        pb = predictions_b[s]
+        y_true = pa["y_true"]
+        y_pred_a = pa["y_pred"]
+        y_pred_b = pb["y_pred"]
+        y_prob_a = pa["y_prob"]
+        y_prob_b = pb["y_prob"]
+
+        mcn = paired_mcnemar_test(y_true, y_pred_a, y_pred_b)
+        auc_diff = paired_bootstrap_auc_difference(y_true, y_prob_a, y_prob_b, n_bootstrap=n_bootstrap, seed=s)
+        per_seed[str(s)] = {
+            "mcnemar": mcn,
+            "bootstrap_auc_diff": auc_diff
+        }
+
+        pooled_true.extend(y_true.tolist())
+        pooled_pred_a.extend(y_pred_a.tolist())
+        pooled_pred_b.extend(y_pred_b.tolist())
+        pooled_prob_a.extend(y_prob_a.tolist())
+        pooled_prob_b.extend(y_prob_b.tolist())
+
+    pooled_mcn = paired_mcnemar_test(np.array(pooled_true), np.array(pooled_pred_a), np.array(pooled_pred_b))
+    pooled_auc_diff = paired_bootstrap_auc_difference(np.array(pooled_true), np.array(pooled_prob_a), np.array(pooled_prob_b), n_bootstrap=n_bootstrap, seed=42)
+
+    return {
+        "per_seed": per_seed,
+        "pooled_summary": {
+            "mcnemar": pooled_mcn,
+            "bootstrap_auc_diff": pooled_auc_diff
+        }
     }
