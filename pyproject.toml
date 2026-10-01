@@ -37,11 +37,12 @@ dev = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["src*", "models*"]
+include = ["src*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
+norecursedirs = ["archive", ".git", ".pytest_cache", "__pycache__"]
 filterwarnings = [
     "ignore::FutureWarning:torch.jit.*",
     "ignore::DeprecationWarning:torch_geometric.*",

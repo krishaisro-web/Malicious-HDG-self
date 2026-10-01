@@ -1,0 +1,165 @@
+{
+  "hardware": {
+    "cpu_model": "Intel64 Family 6 Model 165 Stepping 2, GenuineIntel",
+    "core_count": 12,
+    "os": "Windows 11 (AMD64)",
+    "torch_version": "2.14.0+cpu",
+    "max_available_threads": 12
+  },
+  "config": {
+    "num_queries": 50,
+    "warmup": 5,
+    "is_fixture": true,
+    "is_smoke": true
+  },
+  "benchmarks": [
+    {
+      "batch_size": 1,
+      "num_queries_measured": 50,
+      "feature_lookup": {
+        "mean_ms": 1.368,
+        "median_ms": 1.23,
+        "p95_ms": 1.969,
+        "p99_ms": 3.274,
+        "min_ms": 1.068,
+        "max_ms": 4.021
+      },
+      "ego_subgraph_build": {
+        "mean_ms": 16.118,
+        "median_ms": 15.615,
+        "p95_ms": 21.055,
+        "p99_ms": 29.687,
+        "min_ms": 10.808,
+        "max_ms": 36.1
+      },
+      "model_forward": {
+        "mean_ms": 30.767,
+        "median_ms": 28.941,
+        "p95_ms": 40.605,
+        "p99_ms": 57.246,
+        "min_ms": 21.603,
+        "max_ms": 64.956
+      },
+      "end_to_end": {
+        "mean_ms": 48.253,
+        "median_ms": 45.306,
+        "p95_ms": 64.95,
+        "p99_ms": 88.484,
+        "min_ms": 33.878,
+        "max_ms": 103.553
+      },
+      "threads": 1
+    },
+    {
+      "batch_size": 32,
+      "num_queries_measured": 50,
+      "feature_lookup": {
+        "mean_ms": 1.357,
+        "median_ms": 1.291,
+        "p95_ms": 1.715,
+        "p99_ms": 2.005,
+        "min_ms": 1.171,
+        "max_ms": 2.227
+      },
+      "ego_subgraph_build": {
+        "mean_ms": 31.444,
+        "median_ms": 31.052,
+        "p95_ms": 35.212,
+        "p99_ms": 37.13,
+        "min_ms": 28.562,
+        "max_ms": 37.535
+      },
+      "model_forward": {
+        "mean_ms": 40.799,
+        "median_ms": 39.283,
+        "p95_ms": 51.685,
+        "p99_ms": 55.869,
+        "min_ms": 34.921,
+        "max_ms": 59.09
+      },
+      "end_to_end": {
+        "mean_ms": 73.6,
+        "median_ms": 71.772,
+        "p95_ms": 89.268,
+        "p99_ms": 90.53,
+        "min_ms": 65.865,
+        "max_ms": 90.605
+      },
+      "threads": 1
+    },
+    {
+      "batch_size": 1,
+      "num_queries_measured": 50,
+      "feature_lookup": {
+        "mean_ms": 1.772,
+        "median_ms": 1.745,
+        "p95_ms": 2.095,
+        "p99_ms": 2.291,
+        "min_ms": 1.465,
+        "max_ms": 2.38
+      },
+      "ego_subgraph_build": {
+        "mean_ms": 25.049,
+        "median_ms": 25.359,
+        "p95_ms": 32.998,
+        "p99_ms": 34.417,
+        "min_ms": 16.862,
+        "max_ms": 35.182
+      },
+      "model_forward": {
+        "mean_ms": 25.169,
+        "median_ms": 24.367,
+        "p95_ms": 34.076,
+        "p99_ms": 39.155,
+        "min_ms": 15.816,
+        "max_ms": 43.73
+      },
+      "end_to_end": {
+        "mean_ms": 51.991,
+        "median_ms": 51.619,
+        "p95_ms": 68.304,
+        "p99_ms": 71.269,
+        "min_ms": 34.534,
+        "max_ms": 71.688
+      },
+      "threads": 12
+    },
+    {
+      "batch_size": 32,
+      "num_queries_measured": 50,
+      "feature_lookup": {
+        "mean_ms": 1.967,
+        "median_ms": 1.908,
+        "p95_ms": 2.426,
+        "p99_ms": 2.826,
+        "min_ms": 1.614,
+        "max_ms": 2.874
+      },
+      "ego_subgraph_build": {
+        "mean_ms": 56.705,
+        "median_ms": 56.511,
+        "p95_ms": 64.767,
+        "p99_ms": 69.945,
+        "min_ms": 50.127,
+        "max_ms": 72.758
+      },
+      "model_forward": {
+        "mean_ms": 34.732,
+        "median_ms": 32.749,
+        "p95_ms": 48.026,
+        "p99_ms": 62.311,
+        "min_ms": 25.058,
+        "max_ms": 69.927
+      },
+      "end_to_end": {
+        "mean_ms": 93.403,
+        "median_ms": 90.513,
+        "p95_ms": 117.955,
+        "p99_ms": 123.462,
+        "min_ms": 79.165,
+        "max_ms": 125.331
+      },
+      "threads": 12
+    }
+  ]
+}

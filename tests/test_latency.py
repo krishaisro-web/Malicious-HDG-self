@@ -11,7 +11,7 @@ import torch.nn.functional as F
 from torch_geometric.data import HeteroData
 
 from src.hdg.models.hetero_gnn import HeteroGNN
-from src.hdg.latency import build_ego_subgraph
+from src.hdg.eval.latency import build_ego_subgraph
 
 
 def test_ego_subgraph_forward_pass_equivalence(minimal_synthetic_heterodata: HeteroData) -> None:

@@ -2,6 +2,13 @@
 
 All notable changes, bug fixes, and architectural enhancements are documented below.
 
+## Repository Clean Layout Restructure (`restructure/clean-layout`)
+- **Single Importable Package**: Refactored `src/hdg/` into modular subpackages: `data/` (`parse`, `fixture`, `profiler`, `audit`, `splits`, `graph`), `models/` (`hetero_gnn`), `training/` (`train`, `baselines`), and `eval/` (`attack`, `latency`, `streaming`). Re-exported key APIs at package root for clean backwards compatibility.
+- **Pipeline Standardization**: Consolidated all 13 numbered workflow scripts and runners (`run_all.py`, `run_real.sh`) into top-level `pipeline/`.
+- **Strict Data & Result Segregation**: Reorganized data storage into `data/raw/zenodo/` (gitignored), `data/fixture/zenodo/` (committed), `data/processed/{fixture, real}/`, `artifacts/checkpoints/{fixture, real}/`, and `results/{fixture, real, chrmor}/`.
+- **Legacy Quarantine**: Moved all legacy exploratory scripts, obsolete root models (`full_model`, `temporal`, `encoder`, `classifier`), legacy test (`test_full_model.py`), checkpoints, and results into `archive/legacy_v1/` with a frozen notice. Excluded `archive/` from pytest discovery.
+- **Documentation Consolidation**: Moved `ASSUMPTIONS.md` and `RUN_ON_REAL_DATA.md` into `docs/`, and research PDFs into `docs/reports/`.
+
 ---
 
 ## 1. Corrections to Dataset Scope & Governance

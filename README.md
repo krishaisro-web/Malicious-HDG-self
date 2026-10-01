@@ -97,8 +97,8 @@ python -m src.scripts.run_all --fixture --smoke
 ```
 
 ### Execution on Production CPU Linux Server
-For instructions on deploying and evaluating on the server containing the real Zenodo dataset (~245 GB RAM, Python 3.12, CPU-only), see **[`RUN_ON_REAL_DATA.md`](RUN_ON_REAL_DATA.md)** and **[`scripts/run_real.sh`](scripts/run_real.sh)**.
-For documented dataset assumptions and verification fields, see **[`ASSUMPTIONS.md`](ASSUMPTIONS.md)**.
+For instructions on deploying and evaluating on the server containing the real Zenodo dataset (~245 GB RAM, Python 3.12, CPU-only), see **[`docs/RUN_ON_REAL_DATA.md`](docs/RUN_ON_REAL_DATA.md)** and **[`pipeline/run_real.sh`](pipeline/run_real.sh)**.
+For documented dataset assumptions and verification fields, see **[`docs/ASSUMPTIONS.md`](docs/ASSUMPTIONS.md)**.
 For a complete record of architectural refactoring, see **[`CHANGELOG.md`](CHANGELOG.md)**.
 
 ---
@@ -107,63 +107,42 @@ For a complete record of architectural refactoring, see **[`CHANGELOG.md`](CHANG
 
 ```
 Malicious-HDG/
-├── configs/
-│   └── default.yaml               # Unified experiment configuration
+├── README.md  LICENSE  CHANGELOG.md  .gitignore
+├── requirements.txt  requirements-lock.txt
+│
+├── configs/                  # default.yaml pipeline configurations
+├── src/hdg/                  # The ONLY importable package
+│   ├── config.py             # Config loader, thread control & resumability
+│   ├── metrics.py            # Prevalence-adjusted precision, McNemar, bootstrap
+│   ├── data/                 # parse.py, fixture.py, profiler.py, audit.py, splits.py, graph.py
+│   ├── models/               # hetero_gnn.py (SAGE, Attn, GNNGuard)
+│   ├── training/             # train.py, baselines.py
+│   └── eval/                 # attack.py, latency.py, streaming.py
+├── pipeline/                 # Numbered pipeline scripts 00 → 11 + run_all.py + run_real.sh
+├── experiments/              # Standalone side experiments (chrmor_lexical)
+├── tests/                    # Active pytest suite (31 tests passing)
+├── tools/                    # Utility scripts (make_schema_fixture.py)
+├── data/
+│   ├── raw/zenodo/           # Real Zenodo data (gitignored)
+│   ├── fixture/zenodo/       # Small synthetic fixture data (committed)
+│   └── processed/            # Processed parquets & graphs ({fixture, real}/)
+├── artifacts/
+│   └── checkpoints/          # Model checkpoints ({fixture, real}/)
+├── results/
+│   ├── fixture/              # Smoke & test run outputs (tables, runs, logs, rpz, profile)
+│   ├── real/                 # Real data outputs
+│   └── chrmor/               # Auxiliary lexical study outputs
 ├── docs/
-│   ├── problem_scope.md           # Formal task definition & dataset scope
-│   └── latency.md                 # 2-hop ego-subgraph CPU latency protocol
-├── legacy/                        # Superseded prototype scripts archive
-│   └── README.md                  # Documentation of legacy scripts
-├── models/
-│   ├── hetero_gnn.py              # HeteroGNN (SAGE, Attn, and SAGE_Guard)
-│   └── full_model.py              # Legacy baseline model
-├── scripts/
-│   └── run_real.sh                # Automated Linux production runner (tmux/logging)
-├── src/
-│   ├── hdg/                       # Core Malicious-HDG package
-│   │   ├── config.py              # Config loader, thread control & resumability
-│   │   ├── fixture.py             # Schema-faithful synthetic fixture generator
-│   │   ├── profiler.py            # Dataset streaming profiler & time-split check
-│   │   ├── parse.py               # Streaming parser, deduplication & dual cert keys
-│   │   ├── audit.py               # Shortcut detector & single-feature AUC audit
-│   │   ├── graph.py               # Vectorized unscaled base graph builder
-│   │   ├── splits.py              # Rolling-origin, group, and ASN split generators
-│   │   ├── train.py               # Unified training loop & lr search
-│   │   ├── baselines.py           # Multi-seed TF-IDF, XGBoost & MLP baselines
-│   │   ├── metrics.py             # Prevalence-adjusted precision, McNemar, bootstrap
-│   │   ├── attack.py              # PPT structural attack generator
-│   │   ├── latency.py             # 2-hop ego-subgraph extraction & CPU benchmark
-│   │   └── streaming.py           # Continual learning & reservoir replay buffer
-│   └── scripts/                   # Production CLI execution stages
-│       ├── 00c_preflight.py       # Hardware, dependency & throughput preflight
-│       ├── 00_profile_dataset.py  # Profile raw JSON files
-│       ├── 00b_audit_shortcuts.py # Audit shortcuts on parsed data
-│       ├── 01_parse.py            # Parse & extract Parquet
-│       ├── 02_build_graph.py      # Build HeteroData graph
-│       ├── 03_run_baselines.py    # Multi-seed baselines
-│       ├── 04_train_gnn.py        # Train HeteroGNN across seeds
-│       ├── 05_ablation.py         # Run 35 topological ablations
-│       ├── 06_attack_eval.py      # Adversarial structural attack eval
-│       ├── 07_latency_eval.py     # CPU latency measurement
-│       ├── 08_provenance_checks.py# Umbrella vs CESNET provenance audits
-│       ├── 09_streaming_eval.py   # Streaming continual learning
-│       ├── 10_emit_rpz.py         # BIND RPZ DNS rule emitter
-│       ├── 11_make_report.py      # Master REPORT.md aggregator
-│       └── run_all.py             # End-to-end pipeline orchestrator
-├── tests/                         # Pytest suite (32 tests passing)
-│   ├── conftest.py                # Self-contained minimal session fixture
-│   ├── test_attack.py             # Attack immutability & train benign targets
-│   ├── test_gnnguard.py           # Relational GNNGuard edge pruning & memory
-│   ├── test_graph_and_splits.py   # Scaler isolation & split properties
-│   ├── test_latency.py            # 2-hop ego-subgraph forward equivalence
-│   ├── test_metrics.py            # Bayes prevalence precision & McNemar
-│   ├── test_models.py             # MLP-only mode & HGT empty edge guards
-│   ├── test_parser.py             # Streaming parser & cert hash handling
-│   ├── test_pipeline_e2e.py       # End-to-end integration test
-│   └── test_splits.py             # Rolling-origin zero-overlap & group balance
-├── ASSUMPTIONS.md                 # Real data assumptions & verification fields
-├── CHANGELOG.md                   # Complete architectural change history
-├── RUN_ON_REAL_DATA.md            # Exact ordered guide for Linux CPU server
-├── requirements.txt               # Dependencies
-└── requirements-lock.txt          # Locked dependencies
+│   ├── ASSUMPTIONS.md        # Real data assumptions & verification fields
+│   ├── RUN_ON_REAL_DATA.md   # Exact ordered guide for Linux CPU server
+│   ├── latency.md            # Inference latency specifications
+│   ├── problem_scope.md      # Domain problem definition & scope
+│   └── reports/              # Research reports & PDF summaries
+└── archive/                  # FROZEN legacy v1 code, checkpoints, and tests (not tested/imported)
+    └── legacy_v1/
+        ├── README.md         # Archival documentation
+        ├── scripts/          # Legacy v1 scripts
+        ├── models/           # Legacy exploratory models
+        ├── checkpoints/      # Legacy v1 weights
+        └── results/          # Legacy v1 experiment outputs
 ```

@@ -6,12 +6,14 @@ randomness:
   evaluation_seeds: [42, 1337, 2024, 777, 999]
 
 paths:
-  raw_data_dir: "data_raw/zenodo"
-  processed_data_dir: "data_processed"
-  results_dir: "results"
-  fixture_raw_dir: "data_fixture/zenodo"
-  fixture_processed_dir: "data_fixture/data_processed"
-  fixture_results_dir: "results_fixture"
+  raw_data_dir: "data/raw/zenodo"
+  processed_data_dir: "data/processed/real"
+  results_dir: "results/real"
+  checkpoints_dir: "artifacts/checkpoints/real"
+  fixture_raw_dir: "data/fixture/zenodo"
+  fixture_processed_dir: "data/processed/fixture"
+  fixture_results_dir: "results/fixture"
+  fixture_checkpoints_dir: "artifacts/checkpoints/fixture"
 
 profiling:
   min_distinct_months_for_time_split: 4

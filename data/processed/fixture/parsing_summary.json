@@ -1,0 +1,61 @@
+{
+  "is_fixture": true,
+  "processed_at": "2026-10-01T08:57:27.757739",
+  "normalize_to_e2LD": true,
+  "benign_ratio": 2.0,
+  "raw_counts": {
+    "malware": {
+      "total": 3000,
+      "excluded_no_time": 3,
+      "malformed": 0,
+      "kept": 2997
+    },
+    "umbrella": {
+      "total": 1500,
+      "excluded_no_time": 3,
+      "malformed": 0,
+      "kept": 1497
+    },
+    "cesnet": {
+      "total": 1500,
+      "excluded_no_time": 2,
+      "malformed": 0,
+      "kept": 1498
+    }
+  },
+  "asn_keys_used": {
+    "number": 3860,
+    "asn": 3494,
+    "autonomous_system_number": 3539
+  },
+  "registrar_keys_used": {
+    "name": 5517
+  },
+  "cross_class_dropped_count": 47,
+  "overlapping_months": [
+    "2023-04",
+    "2023-05",
+    "2023-06",
+    "2023-07",
+    "2023-08",
+    "2023-09",
+    "2023-10",
+    "2023-11",
+    "2023-12",
+    "2024-01",
+    "2024-02",
+    "2024-03",
+    "2024-04",
+    "2024-05",
+    "2024-06",
+    "2024-07"
+  ],
+  "final_counts": {
+    "malware": 2934,
+    "benign_uniform": 2920,
+    "total_primary": 5854,
+    "time_matched_malware": 2934,
+    "time_matched_benign": 2920,
+    "total_timematched": 5854
+  }
+}

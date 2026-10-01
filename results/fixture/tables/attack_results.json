@@ -1,0 +1,26 @@
+{
+  "budget_1": {
+    "budget": 1,
+    "num_seeds": 1,
+    "clean_f1_mean": 0.7314,
+    "clean_f1_std": 0.0,
+    "attacked_undefended_f1_mean": 0.7314,
+    "attacked_undefended_f1_std": 0.0,
+    "attacked_guard_f1_mean": 0.7314,
+    "attacked_guard_f1_std": 0.0,
+    "evasion_rate_mean": 0.0,
+    "recovery_score_mean": 1.0
+  },
+  "budget_2": {
+    "budget": 2,
+    "num_seeds": 1,
+    "clean_f1_mean": 0.7314,
+    "clean_f1_std": 0.0,
+    "attacked_undefended_f1_mean": 0.7314,
+    "attacked_undefended_f1_std": 0.0,
+    "attacked_guard_f1_mean": 0.7314,
+    "attacked_guard_f1_std": 0.0,
+    "evasion_rate_mean": 0.0,
+    "recovery_score_mean": 1.0
+  }
+}

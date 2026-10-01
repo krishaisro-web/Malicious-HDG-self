@@ -12,8 +12,8 @@ import pandas as pd
 import pytest
 import torch
 
-from src.hdg.graph import build_hetero_graph, TrainOnlyStandardizer
-from src.hdg.splits import (
+from src.hdg.data.graph import build_hetero_graph, TrainOnlyStandardizer
+from src.hdg.data.splits import (
     random_stratified_split,
     time_split,
     group_split_bipartite,

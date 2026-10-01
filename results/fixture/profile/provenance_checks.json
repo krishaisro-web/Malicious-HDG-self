@@ -1,0 +1,55 @@
+{
+  "is_fixture": true,
+  "benign_vs_benign": {
+    "roc_auc": 0.5195,
+    "f1": 0.5609,
+    "test_samples": 495,
+    "umbrella_ratio": 0.5053,
+    "interpretation": "Low/moderate source divergence (AUC <= 0.80)"
+  },
+  "cross_source_transfer": {
+    "primary_malware_source": "ThreatFox",
+    "train_samples": 1769,
+    "test_samples": 3231,
+    "xgboost_cross_source": {
+      "roc_auc": 0.4976,
+      "f1": 0.0784
+    },
+    "gnn_cross_source": {
+      "roc_auc": 0.5065,
+      "f1": 0.7384
+    }
+  },
+  "feature_group_ablation": {
+    "full_auc": 0.5034,
+    "no_null_rate_auc": 0.502,
+    "delta": -0.0013,
+    "interpretation": "Robust to missingness features"
+  },
+  "graph_connectivity_audit": {
+    "resolves_to": {
+      "overall_share_degree_ge_2": 0.0748,
+      "malware_share_degree_ge_2": 0.0661,
+      "benign_share_degree_ge_2": 0.0671,
+      "total_shared_infra_nodes": 185
+    },
+    "uses_ns": {
+      "overall_share_degree_ge_2": 1.1658,
+      "malware_share_degree_ge_2": 0.996,
+      "benign_share_degree_ge_2": 0.9951,
+      "total_shared_infra_nodes": 8
+    },
+    "registered_by": {
+      "overall_share_degree_ge_2": 1.1708,
+      "malware_share_degree_ge_2": 1.0,
+      "benign_share_degree_ge_2": 1.0,
+      "total_shared_infra_nodes": 7
+    },
+    "uses_cert": {
+      "overall_share_degree_ge_2": 0.411,
+      "malware_share_degree_ge_2": 0.3504,
+      "benign_share_degree_ge_2": 0.35,
+      "total_shared_infra_nodes": 1
+    }
+  }
+}

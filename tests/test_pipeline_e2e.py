@@ -12,9 +12,9 @@ import pytest
 import torch
 
 from src.hdg.models.hetero_gnn import HeteroGNN
-from src.hdg.audit import run_shortcut_audit
+from src.hdg.data.audit import run_shortcut_audit
 from src.hdg.config import load_config, get_resolved_paths
-from src.hdg.profiler import profile_dataset
+from src.hdg.data.profiler import profile_dataset
 
 
 def test_fixture_path_write_safeguard() -> None:
@@ -23,12 +23,12 @@ def test_fixture_path_write_safeguard() -> None:
     paths = get_resolved_paths(cfg, is_fixture=True, root_dir=repo_root)
 
     # Must raise PermissionError when trying to write to production results
-    production_results_path = repo_root / "results" / "profile"
+    production_results_path = repo_root / "results" / "real" / "profile"
     with pytest.raises(PermissionError, match="Refusing to write fixture output to production path"):
         paths.check_write_path(production_results_path)
 
     # Must succeed for fixture results
-    fixture_results_path = repo_root / "results_fixture" / "profile"
+    fixture_results_path = repo_root / "results" / "fixture" / "profile"
     paths.check_write_path(fixture_results_path)
 
 

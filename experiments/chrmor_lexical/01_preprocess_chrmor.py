@@ -3,8 +3,8 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[2]
 
-RAW_FILE = ROOT / "data_raw" / "chrmor" / "dga_domains_full.csv"
-OUT_DIR = ROOT / "data_processed" / "chrmor"
+RAW_FILE = ROOT / "data" / "raw" / "chrmor" / "dga_domains_full.csv"
+OUT_DIR = ROOT / "data" / "processed" / "chrmor"
 OUT_FILE = OUT_DIR / "chrmor_clean.csv"
 
 EXPECTED_COLUMNS = ["label", "family", "domain"]

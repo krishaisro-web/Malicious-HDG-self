@@ -16,17 +16,27 @@ class ResolvedPaths:
     raw_dir: Path
     processed_dir: Path
     results_dir: Path
+    checkpoints_dir: Path
     is_fixture: bool
     is_smoke: bool = False
 
     def check_write_path(self, target_path: Path) -> None:
         """Enforces that fixture runs never write to real results."""
-        resolved = target_path.resolve()
-        if self.is_fixture and "results_fixture" not in str(resolved) and "data_fixture" not in str(resolved):
-            raise PermissionError(
-                f"[FIXTURE SAFEGUARD] Refusing to write fixture output to production path: {resolved}. "
-                f"Fixture output must only go to results_fixture/ or data_fixture/."
-            )
+        resolved = str(target_path.resolve()).replace("\\", "/")
+        if self.is_fixture:
+            allowed_tokens = [
+                "/results/fixture",
+                "/results_fixture",
+                "/data/fixture",
+                "/data/processed/fixture",
+                "/data_fixture",
+                "/artifacts/checkpoints/fixture",
+            ]
+            if not any(token in resolved for token in allowed_tokens):
+                raise PermissionError(
+                    f"[FIXTURE SAFEGUARD] Refusing to write fixture output to production path: {resolved}. "
+                    f"Fixture output must only go to results/fixture/, data/processed/fixture/, or artifacts/checkpoints/fixture/."
+                )
 
 
 def init_thread_pool(cfg: Optional[Dict[str, Any]] = None) -> int:
@@ -70,20 +80,23 @@ def get_resolved_paths(
 
     p = cfg["paths"]
     if is_fixture:
-        raw_dir = root_dir / p["fixture_raw_dir"]
-        processed_dir = root_dir / p["fixture_processed_dir"]
-        base_results = root_dir / p["fixture_results_dir"]
+        raw_dir = root_dir / p.get("fixture_raw_dir", "data/fixture/zenodo")
+        processed_dir = root_dir / p.get("fixture_processed_dir", "data/processed/fixture")
+        base_results = root_dir / p.get("fixture_results_dir", "results/fixture")
+        checkpoints_dir = root_dir / p.get("fixture_checkpoints_dir", "artifacts/checkpoints/fixture")
+        results_dir = base_results
     else:
-        raw_dir = root_dir / p["raw_data_dir"]
-        processed_dir = root_dir / p["processed_data_dir"]
-        base_results = root_dir / p["results_dir"]
-
-    results_dir = (base_results / "smoke") if is_smoke else base_results
+        raw_dir = root_dir / p.get("raw_data_dir", "data/raw/zenodo")
+        processed_dir = root_dir / p.get("processed_data_dir", "data/processed/real")
+        base_results = root_dir / p.get("results_dir", "results/real")
+        checkpoints_dir = root_dir / p.get("checkpoints_dir", "artifacts/checkpoints/real")
+        results_dir = (base_results / "smoke") if is_smoke else base_results
 
     return ResolvedPaths(
         raw_dir=raw_dir,
         processed_dir=processed_dir,
         results_dir=results_dir,
+        checkpoints_dir=checkpoints_dir,
         is_fixture=is_fixture,
         is_smoke=is_smoke
     )

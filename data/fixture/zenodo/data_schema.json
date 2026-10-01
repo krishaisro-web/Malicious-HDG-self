@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DomainRadarRecord",
+  "type": "object",
+  "$defs": {
+    "rdapEntity": {
+      "type": "object",
+      "description": "Entity structure inside RDAP object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "handle": {
+          "type": "string"
+        },
+        "organization": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "roles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

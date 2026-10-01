@@ -17,13 +17,13 @@ import tempfile
 import pytest
 import tldextract
 
-from src.hdg.parse import (
+from src.hdg.data.parse import (
     extract_leaf_certificate,
     resolve_asn,
     resolve_registrar,
     stream_parse_file,
 )
-from src.hdg.profiler import parse_mongo_date
+from src.hdg.data.profiler import parse_mongo_date
 
 
 def test_parse_mongo_date() -> None:

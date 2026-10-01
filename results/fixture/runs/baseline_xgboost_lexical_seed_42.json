@@ -1,0 +1,71 @@
+{
+  "roc_auc": 0.5008,
+  "pr_auc": 0.5014,
+  "f1": 0.6708,
+  "precision": 0.5047,
+  "recall": 1.0,
+  "specificity": 0.0,
+  "threshold": 0.05,
+  "test_counts": {
+    "total": 751,
+    "positives": 379,
+    "negatives": 372,
+    "sample_prevalence": 0.5047
+  },
+  "confusion_matrix": {
+    "tp": 379,
+    "tn": 0,
+    "fp": 372,
+    "fn": 0
+  },
+  "operating_points": {
+    "tpr_at_1.0pct_fpr": {
+      "tpr": 0.0053,
+      "threshold": 0.8204,
+      "realised_test_fpr": 0.018817,
+      "f1_at_operating_point": 0.0103,
+      "precision_at_operating_point": 0.2222,
+      "recall_at_operating_point": 0.0053,
+      "prevalence_adjusted_precision": {
+        "pi_1.0pct": 0.0028,
+        "pi_0.1pct": 0.0003
+      },
+      "expected_fp": 4,
+      "warning": "Expected false positives at 1.0% FPR is 4 (< 10). Test sample size (372 negatives) provides limited statistical power at this FPR."
+    },
+    "tpr_at_0.1pct_fpr": {
+      "tpr": 0.0,
+      "threshold": 0.8758,
+      "realised_test_fpr": 0.005376,
+      "f1_at_operating_point": 0.0,
+      "precision_at_operating_point": 0.0,
+      "recall_at_operating_point": 0.0,
+      "prevalence_adjusted_precision": {
+        "pi_1.0pct": 0.0,
+        "pi_0.1pct": 0.0
+      },
+      "expected_fp": 0,
+      "warning": "Expected false positives at 0.1% FPR is 0 (< 10). Test sample size (372 negatives) provides limited statistical power at this FPR."
+    }
+  },
+  "bootstrap_ci": {
+    "roc_auc": {
+      "point": 0.5018,
+      "ci_lower": 0.4597,
+      "ci_upper": 0.5421,
+      "std": 0.0216
+    },
+    "pr_auc": {
+      "point": 0.5051,
+      "ci_lower": 0.4544,
+      "ci_upper": 0.5526,
+      "std": 0.0254
+    },
+    "f1": {
+      "point": 0.6704,
+      "ci_lower": 0.6382,
+      "ci_upper": 0.6996,
+      "std": 0.0157
+    }
+  }
+}

@@ -1,0 +1,158 @@
+{
+  "experiment": "ablation",
+  "name": "no_registrars",
+  "seed": 42,
+  "metrics": {
+    "roc_auc": 0.4831,
+    "pr_auc": 0.4942,
+    "f1": 0.5563,
+    "precision": 0.4929,
+    "recall": 0.6385,
+    "specificity": 0.3306,
+    "threshold": 0.05,
+    "test_counts": {
+      "total": 751,
+      "positives": 379,
+      "negatives": 372,
+      "sample_prevalence": 0.5047
+    },
+    "confusion_matrix": {
+      "tp": 242,
+      "tn": 123,
+      "fp": 249,
+      "fn": 137
+    },
+    "operating_points": {
+      "tpr_at_1.0pct_fpr": {
+        "tpr": 0.0132,
+        "threshold": 0.405,
+        "realised_test_fpr": 0.021505,
+        "f1_at_operating_point": 0.0255,
+        "precision_at_operating_point": 0.3846,
+        "recall_at_operating_point": 0.0132,
+        "prevalence_adjusted_precision": {
+          "pi_1.0pct": 0.0062,
+          "pi_0.1pct": 0.0006
+        },
+        "expected_fp": 4,
+        "warning": "Expected false positives at 1.0% FPR is 4 (< 10). Test sample size (372 negatives) provides limited statistical power at this FPR."
+      },
+      "tpr_at_0.1pct_fpr": {
+        "tpr": 0.0,
+        "threshold": 0.4124,
+        "realised_test_fpr": 0.005376,
+        "f1_at_operating_point": 0.0,
+        "precision_at_operating_point": 0.0,
+        "recall_at_operating_point": 0.0,
+        "prevalence_adjusted_precision": {
+          "pi_1.0pct": 0.0,
+          "pi_0.1pct": 0.0
+        },
+        "expected_fp": 0,
+        "warning": "Expected false positives at 0.1% FPR is 0 (< 10). Test sample size (372 negatives) provides limited statistical power at this FPR."
+      }
+    },
+    "bootstrap_ci": {
+      "roc_auc": {
+        "point": 0.484,
+        "ci_lower": 0.4437,
+        "ci_upper": 0.5247,
+        "std": 0.0208
+      },
+      "pr_auc": {
+        "point": 0.498,
+        "ci_lower": 0.449,
+        "ci_upper": 0.5478,
+        "std": 0.025
+      },
+      "f1": {
+        "point": 0.5565,
+        "ci_lower": 0.5171,
+        "ci_upper": 0.5941,
+        "std": 0.0191
+      }
+    },
+    "breakdowns": {
+      "by_resolution": {
+        "resolved": {
+          "count": 652,
+          "roc_auc": 0.4788,
+          "f1": 0.5586
+        },
+        "no_ip": {
+          "count": 99,
+          "roc_auc": 0.5,
+          "f1": 0.5405
+        }
+      },
+      "by_source": {
+        "CESNET": {
+          "count": 184,
+          "accuracy": 0.3098
+        },
+        "Firebog": {
+          "count": 79,
+          "accuracy": 0.6329
+        },
+        "MISP": {
+          "count": 71,
+          "accuracy": 0.5915
+        },
+        "ThreatFox": {
+          "count": 91,
+          "accuracy": 0.5934
+        },
+        "URLhaus": {
+          "count": 74,
+          "accuracy": 0.7297
+        },
+        "Umbrella": {
+          "count": 188,
+          "accuracy": 0.3511
+        },
+        "abuse.ch": {
+          "count": 64,
+          "accuracy": 0.6562
+        }
+      },
+      "by_malware_family": {
+        "agenttesla": {
+          "count": 64,
+          "detection_rate_recall": 0.4844
+        },
+        "asyncrat": {
+          "count": 50,
+          "detection_rate_recall": 0.62
+        },
+        "emotet": {
+          "count": 62,
+          "detection_rate_recall": 0.7258
+        },
+        "formbook": {
+          "count": 55,
+          "detection_rate_recall": 0.6364
+        },
+        "qakbot": {
+          "count": 55,
+          "detection_rate_recall": 0.6909
+        },
+        "redline": {
+          "count": 40,
+          "detection_rate_recall": 0.675
+        },
+        "unknown": {
+          "count": 53,
+          "detection_rate_recall": 0.6604
+        }
+      }
+    },
+    "training_metadata": {
+      "chosen_lr": 0.005,
+      "lr_grid": null,
+      "epochs_trained": 3,
+      "best_val_auc": 0.5101,
+      "use_class_weights": false,
+      "checkpoint_path": null
+    }
+  }
+}

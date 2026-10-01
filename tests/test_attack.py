@@ -12,8 +12,8 @@ import pytest
 import torch
 from torch_geometric.data import HeteroData
 
-from src.hdg.attack import generate_structural_attack
-from src.hdg.splits import DataSplits
+from src.hdg.eval.attack import generate_structural_attack
+from src.hdg.data.splits import DataSplits
 
 
 def test_attack_clean_graph_immutability(minimal_synthetic_heterodata: HeteroData) -> None:

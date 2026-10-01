@@ -1,0 +1,15 @@
+{
+  "generated_at": "2026-10-01T02:09:29.042225+00:00",
+  "target_fpr": 0.001,
+  "calibrated_threshold": 0.5034,
+  "realized_val_fpr": 0.00244,
+  "total_test_domains": 368,
+  "rules_emitted": 1,
+  "blocking_rate_pct": 0.27,
+  "top_malware_families": {
+    "redline": 1
+  },
+  "top_sources": {
+    "Firebog": 1
+  }
+}

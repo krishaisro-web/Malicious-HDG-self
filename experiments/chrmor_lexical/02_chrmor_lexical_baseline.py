@@ -16,7 +16,7 @@ from sklearn.model_selection import train_test_split
 
 ROOT = Path(__file__).resolve().parents[2]
 
-INPUT_FILE = ROOT / "data_processed" / "chrmor" / "chrmor_clean.csv"
+INPUT_FILE = ROOT / "data" / "processed" / "chrmor" / "chrmor_clean.csv"
 OUTPUT_DIR = ROOT / "results" / "chrmor"
 
 METRICS_FILE = OUTPUT_DIR / "lexical_baseline_metrics.csv"

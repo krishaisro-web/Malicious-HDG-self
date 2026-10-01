@@ -1,0 +1,45 @@
+{
+  "is_fixture": true,
+  "single_feature_aucs": {
+    "length": 0.505,
+    "num_labels": 0.5,
+    "subdomain_flag": 0.5056,
+    "tld": 0.5072,
+    "no_ip_nxdomain": 0.5029,
+    "has_tls": 0.5027,
+    "has_rdap": 0.5033,
+    "source_only": 1.0
+  },
+  "features_with_auc_ge_0_90": [],
+  "verdict_passed": true,
+  "source_by_class_table": {
+    "CESNET": {
+      "malware_count": 0,
+      "benign_count": 1461
+    },
+    "Firebog": {
+      "malware_count": 576,
+      "benign_count": 0
+    },
+    "MISP": {
+      "malware_count": 564,
+      "benign_count": 0
+    },
+    "ThreatFox": {
+      "malware_count": 602,
+      "benign_count": 0
+    },
+    "URLhaus": {
+      "malware_count": 598,
+      "benign_count": 0
+    },
+    "Umbrella": {
+      "malware_count": 0,
+      "benign_count": 1459
+    },
+    "abuse.ch": {
+      "malware_count": 594,
+      "benign_count": 0
+    }
+  }
+}

@@ -1,0 +1,261 @@
+{
+  "evaluated_months": [
+    "2023-04",
+    "2023-05",
+    "2023-06",
+    "2023-07"
+  ],
+  "month_0": "2023-04",
+  "month_0_baseline": {
+    "roc_auc": 0.4388,
+    "f1": 0.6234,
+    "tpr_at_01_fpr": 0.0,
+    "precision": 0.4898,
+    "recall": 0.8571,
+    "threshold": 0.46,
+    "num_samples": 56
+  },
+  "replay_reservoir_capacity": 1000,
+  "steps": [
+    {
+      "step": 0,
+      "month": "2023-04",
+      "strategy": "initial_base",
+      "current_month_perf": {
+        "roc_auc": 0.4388,
+        "f1": 0.6234,
+        "tpr_at_01_fpr": 0.0,
+        "precision": 0.4898,
+        "recall": 0.8571,
+        "threshold": 0.46,
+        "num_samples": 56
+      },
+      "month_1_perf": {
+        "roc_auc": 0.4388,
+        "f1": 0.6234,
+        "tpr_at_01_fpr": 0.0,
+        "precision": 0.4898,
+        "recall": 0.8571,
+        "threshold": 0.46,
+        "num_samples": 56
+      },
+      "backward_transfer_f1": 0.0
+    },
+    {
+      "step": 1,
+      "month": "2023-05",
+      "strategy": "retrain_from_scratch",
+      "current_month_perf": {
+        "roc_auc": 0.5031,
+        "f1": 0.6087,
+        "tpr_at_01_fpr": 0.0,
+        "precision": 0.4667,
+        "recall": 0.875,
+        "threshold": 0.44,
+        "num_samples": 51
+      },
+      "month_1_perf": {
+        "roc_auc": 0.5038,
+        "f1": 0.6133,
+        "tpr_at_01_fpr": 0.0,
+        "precision": 0.4894,
+        "recall": 0.8214,
+        "threshold": 0.44,
+        "num_samples": 56
+      },
+      "backward_transfer_f1": -0.0101
+    },
+    {
+      "step": 1,
+      "month": "2023-05",
+      "strategy": "naive_finetune",
+      "current_month_perf": {
+        "roc_auc": 0.4969,
+        "f1": 0.5938,
+        "tpr_at_01_fpr": 0.0,
+        "precision": 0.475,
+        "recall": 0.7917,
+        "threshold": 0.4,
+        "num_samples": 51
+      },
+      "month_1_perf": {
+        "roc_auc": 0.5204,
+        "f1": 0.6571,
+        "tpr_at_01_fpr": 0.0,
+        "precision": 0.5476,
+        "recall": 0.8214,
+        "threshold": 0.4,
+        "num_samples": 56
+      },
+      "backward_transfer_f1": 0.0337
+    },
+    {
+      "step": 1,
+      "month": "2023-05",
+      "strategy": "replay",
+      "current_month_perf": {
+        "roc_auc": 0.4676,
+        "f1": 0.5714,
+        "tpr_at_01_fpr": 0.0,
+        "precision": 0.4615,
+        "recall": 0.75,
+        "threshold": 0.39,
+        "num_samples": 51
+      },
+      "month_1_perf": {
+        "roc_auc": 0.5191,
+        "f1": 0.5915,
+        "tpr_at_01_fpr": 0.0,
+        "precision": 0.4884,
+        "recall": 0.75,
+        "threshold": 0.39,
+        "num_samples": 56
+      },
+      "backward_transfer_f1": -0.0319
+    },
+    {
+      "step": 2,
+      "month": "2023-06",
+      "strategy": "retrain_from_scratch",
+      "current_month_perf": {
+        "roc_auc": 0.5172,
+        "f1": 0.6747,
+        "tpr_at_01_fpr": 0.0,
+        "precision": 0.5385,
+        "recall": 0.9032,
+        "threshold": 0.46,
+        "num_samples": 61
+      },
+      "month_1_perf": {
+        "roc_auc": 0.5906,
+        "f1": 0.6571,
+        "tpr_at_01_fpr": 0.0357,
+        "precision": 0.5476,
+        "recall": 0.8214,
+        "threshold": 0.46,
+        "num_samples": 56
+      },
+      "backward_transfer_f1": 0.0337
+    },
+    {
+      "step": 2,
+      "month": "2023-06",
+      "strategy": "naive_finetune",
+      "current_month_perf": {
+        "roc_auc": 0.471,
+        "f1": 0.6739,
+        "tpr_at_01_fpr": 0.0,
+        "precision": 0.5082,
+        "recall": 1.0,
+        "threshold": 0.05,
+        "num_samples": 61
+      },
+      "month_1_perf": {
+        "roc_auc": 0.5242,
+        "f1": 0.6667,
+        "tpr_at_01_fpr": 0.0,
+        "precision": 0.5,
+        "recall": 1.0,
+        "threshold": 0.05,
+        "num_samples": 56
+      },
+      "backward_transfer_f1": 0.0433
+    },
+    {
+      "step": 2,
+      "month": "2023-06",
+      "strategy": "replay",
+      "current_month_perf": {
+        "roc_auc": 0.5108,
+        "f1": 0.6739,
+        "tpr_at_01_fpr": 0.0,
+        "precision": 0.5082,
+        "recall": 1.0,
+        "threshold": 0.48,
+        "num_samples": 61
+      },
+      "month_1_perf": {
+        "roc_auc": 0.5,
+        "f1": 0.6667,
+        "tpr_at_01_fpr": 0.0,
+        "precision": 0.5,
+        "recall": 1.0,
+        "threshold": 0.48,
+        "num_samples": 56
+      },
+      "backward_transfer_f1": 0.0433
+    },
+    {
+      "step": 3,
+      "month": "2023-07",
+      "strategy": "retrain_from_scratch",
+      "current_month_perf": {
+        "roc_auc": 0.5089,
+        "f1": 0.6667,
+        "tpr_at_01_fpr": 0.0667,
+        "precision": 0.5,
+        "recall": 1.0,
+        "threshold": 0.05,
+        "num_samples": 60
+      },
+      "month_1_perf": {
+        "roc_auc": 0.5587,
+        "f1": 0.6667,
+        "tpr_at_01_fpr": 0.1071,
+        "precision": 0.5,
+        "recall": 1.0,
+        "threshold": 0.05,
+        "num_samples": 56
+      },
+      "backward_transfer_f1": 0.0433
+    },
+    {
+      "step": 3,
+      "month": "2023-07",
+      "strategy": "naive_finetune",
+      "current_month_perf": {
+        "roc_auc": 0.5511,
+        "f1": 0.6667,
+        "tpr_at_01_fpr": 0.1,
+        "precision": 0.5,
+        "recall": 1.0,
+        "threshold": 0.05,
+        "num_samples": 60
+      },
+      "month_1_perf": {
+        "roc_auc": 0.5561,
+        "f1": 0.6667,
+        "tpr_at_01_fpr": 0.0357,
+        "precision": 0.5,
+        "recall": 1.0,
+        "threshold": 0.05,
+        "num_samples": 56
+      },
+      "backward_transfer_f1": 0.0433
+    },
+    {
+      "step": 3,
+      "month": "2023-07",
+      "strategy": "replay",
+      "current_month_perf": {
+        "roc_auc": 0.53,
+        "f1": 0.6667,
+        "tpr_at_01_fpr": 0.0333,
+        "precision": 0.5,
+        "recall": 1.0,
+        "threshold": 0.05,
+        "num_samples": 60
+      },
+      "month_1_perf": {
+        "roc_auc": 0.5153,
+        "f1": 0.6667,
+        "tpr_at_01_fpr": 0.1071,
+        "precision": 0.5,
+        "recall": 1.0,
+        "threshold": 0.05,
+        "num_samples": 56
+      },
+      "backward_transfer_f1": 0.0433
+    }
+  ]
+}

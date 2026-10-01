@@ -1,0 +1,17 @@
+; ==============================================================================
+; Malicious-HDG Automated Response Policy Zone (BIND RPZ)
+; Generated: 2026-10-01T02:09:29.042225+00:00
+; Architecture: HeteroGNN-SAGE
+; Operating Target FPR: 0.10% (0.001)
+; Calibrated Threshold: 0.5034
+; Realized Validation FPR: 0.00244 (0.244%)
+; Total Evaluated Test Domains: 368
+; Total Emitted Blocking Rules: 1
+; Estimated Blocking Rate: 0.27%
+; Policy Action: CNAME . (NXDOMAIN / Drop)
+; ==============================================================================
+$TTL 300
+@ IN SOA localhost. root.localhost. ( 2026100101 3600 1800 604800 300 )
+  IN NS  localhost.
+
+vaultvertex69.net CNAME . ; score=0.5049, threshold=0.5034, val_fpr=0.00244
