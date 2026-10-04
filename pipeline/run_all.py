@@ -46,12 +46,16 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Run complete Malicious-HDG pipeline.")
     parser.add_argument("--fixture", action="store_true", help="Execute against data_fixture/ (smoke test)")
     parser.add_argument("--smoke", action="store_true", help="Run in accelerated smoke mode")
+    parser.add_argument("--thin-client", action="store_true", help="Run with HP Thin Client profile (configs/hp_thin_client.yaml)")
     parser.add_argument("--config", type=str, default=None, help="Path to config YAML")
     parser.add_argument("--epochs", type=int, default=None, help="Override epochs for GNN models")
     parser.add_argument("--single-seed", type=int, default=None, help="Run single seed only")
     parser.add_argument("--max-domains", type=int, default=None, help="Cap total domain nodes")
     parser.add_argument("--force", action="store_true", help="Force rerun of all completed stages")
     args = parser.parse_args()
+
+    if args.thin_client and args.config is None:
+        args.config = str(REPO_ROOT / "configs" / "hp_thin_client.yaml")
 
     cfg = load_config(args.config)
     paths = get_resolved_paths(cfg, is_fixture=args.fixture, is_smoke=args.smoke, root_dir=REPO_ROOT)
@@ -73,10 +77,13 @@ def main() -> None:
         common_flags.append("--fixture")
     if args.smoke:
         common_flags.append("--smoke")
+    if args.thin_client:
+        common_flags.append("--thin-client")
     if args.force:
         common_flags.append("--force")
     if args.config:
         common_flags.extend(["--config", args.config])
+
 
     # 0. Preflight
     preflight_cmd = [py_exe, "-m", "pipeline.00c_preflight"] + common_flags

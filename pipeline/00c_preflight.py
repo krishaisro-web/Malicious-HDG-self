@@ -45,12 +45,26 @@ def check_dependencies() -> Dict[str, Tuple[bool, str]]:
     return status
 
 
-def get_ram_info() -> Tuple[float, float]:
-    """Returns (total_ram_gb, available_ram_gb). Uses psutil or falls back to /proc/meminfo / Windows ctypes."""
+def get_memory_info() -> Dict[str, float]:
+    """
+    Returns RAM and Swap info (total_ram_gb, avail_ram_gb, total_swap_gb, free_swap_gb).
+    Uses psutil or falls back to /proc/meminfo / Windows ctypes.
+    """
+    info = {
+        "total_ram": 0.0,
+        "avail_ram": 0.0,
+        "total_swap": 0.0,
+        "free_swap": 0.0
+    }
     try:
         import psutil
         vm = psutil.virtual_memory()
-        return round(vm.total / (1024**3), 2), round(vm.available / (1024**3), 2)
+        sm = psutil.swap_memory()
+        info["total_ram"] = round(vm.total / (1024**3), 2)
+        info["avail_ram"] = round(vm.available / (1024**3), 2)
+        info["total_swap"] = round(sm.total / (1024**3), 2)
+        info["free_swap"] = round(sm.free / (1024**3), 2)
+        return info
     except Exception:
         pass
 
@@ -58,14 +72,22 @@ def get_ram_info() -> Tuple[float, float]:
     meminfo_path = Path("/proc/meminfo")
     if meminfo_path.exists():
         try:
-            total_kb, avail_kb = 0, 0
+            total_kb, avail_kb, swap_total_kb, swap_free_kb = 0, 0, 0, 0
             with open(meminfo_path, "r", encoding="utf-8") as f:
                 for line in f:
                     if line.startswith("MemTotal:"):
                         total_kb = int(line.split()[1])
                     elif line.startswith("MemAvailable:"):
                         avail_kb = int(line.split()[1])
-            return round(total_kb / (1024**2), 2), round(avail_kb / (1024**2), 2)
+                    elif line.startswith("SwapTotal:"):
+                        swap_total_kb = int(line.split()[1])
+                    elif line.startswith("SwapFree:"):
+                        swap_free_kb = int(line.split()[1])
+            info["total_ram"] = round(total_kb / (1024**2), 2)
+            info["avail_ram"] = round(avail_kb / (1024**2), 2)
+            info["total_swap"] = round(swap_total_kb / (1024**2), 2)
+            info["free_swap"] = round(swap_free_kb / (1024**2), 2)
+            return info
         except Exception:
             pass
 
@@ -88,11 +110,20 @@ def get_ram_info() -> Tuple[float, float]:
             stat = MEMORYSTATUSEX()
             stat.dwLength = ctypes.sizeof(MEMORYSTATUSEX)
             ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(stat))
-            return round(stat.ullTotalPhys / (1024**3), 2), round(stat.ullAvailPhys / (1024**3), 2)
+            total_phys = round(stat.ullTotalPhys / (1024**3), 2)
+            avail_phys = round(stat.ullAvailPhys / (1024**3), 2)
+            total_page = round(stat.ullTotalPageFile / (1024**3), 2)
+            avail_page = round(stat.ullAvailPageFile / (1024**3), 2)
+            info["total_ram"] = total_phys
+            info["avail_ram"] = avail_phys
+            info["total_swap"] = max(0.0, round(total_page - total_phys, 2))
+            info["free_swap"] = max(0.0, round(avail_page - avail_phys, 2))
+            return info
         except Exception:
             pass
 
-    return 0.0, 0.0
+    return info
+
 
 
 def run_subsample_benchmark(
@@ -161,13 +192,18 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Preflight system check and workload extrapolation.")
     parser.add_argument("--fixture", action="store_true", help="Run against data_fixture/")
     parser.add_argument("--smoke", action="store_true", help="Run in fast smoke mode")
+    parser.add_argument("--thin-client", action="store_true", help="Run with HP Thin Client profile")
     parser.add_argument("--force", action="store_true", help="Force rerun")
     parser.add_argument("--config", type=str, default=None, help="Path to config YAML")
     args = parser.parse_args()
 
-    cfg = load_config(args.config)
+    config_path = args.config
+    if args.thin_client and config_path is None:
+        config_path = str(REPO_ROOT / "configs" / "hp_thin_client.yaml")
+
+    cfg = load_config(config_path)
     paths = get_resolved_paths(cfg, is_fixture=args.fixture, root_dir=REPO_ROOT)
-    num_threads = init_thread_pool()
+    num_threads = init_thread_pool(cfg)
 
     pfx = "[FIXTURE] " if args.fixture else "[REAL] "
     print(f"\n{pfx}==================================================")
@@ -176,7 +212,9 @@ def main() -> None:
 
     # 1. System Hardware Resources
     cpu_count = os.cpu_count() or 1
-    total_ram, avail_ram = get_ram_info()
+    mem = get_memory_info()
+    total_ram, avail_ram = mem["total_ram"], mem["avail_ram"]
+    total_swap, free_swap = mem["total_swap"], mem["free_swap"]
     disk_total, disk_used, disk_free = shutil.disk_usage(REPO_ROOT)
     disk_free_gb = round(disk_free / (1024**3), 2)
 
@@ -184,12 +222,53 @@ def main() -> None:
     print(f"  OS Platform:        {platform.system()} {platform.release()} ({platform.machine()})")
     print(f"  Python Version:     {platform.python_version()} ({sys.executable})")
     print(f"  CPU Cores:          {cpu_count}")
-    print(f"  PyTorch Threads:    {num_threads} (set via HDG_THREADS or cpu_count)")
+    print(f"  PyTorch Threads:    {num_threads} (set via HDG_THREADS or config)")
     print(f"  System RAM:         {total_ram:.1f} GB total, {avail_ram:.1f} GB available")
+    print(f"  System Swap:        {total_swap:.1f} GB total, {free_swap:.1f} GB free")
     print(f"  Free Workspace Disk: {disk_free_gb:.1f} GB")
+
+    # Thin Client / Resource-Constrained Audit vs Enterprise Server
+    is_thin_client = (
+        (
+            args.thin_client
+            or cpu_count <= 4
+            or total_ram <= 16.5
+            or os.environ.get("HDG_PROFILE") in ("thin_client", "hp_thin_client")
+            or str(cfg.get("hardware", {}).get("profile", "")).startswith("hp_thin_client")
+        )
+        and total_ram <= 32.0
+    )
+
+    if total_ram > 32.0:
+        print("\n  [ENTERPRISE HIGH-MEMORY SERVER DETECTED]")
+        print(f"  - Detected ~{total_ram:.1f} GB RAM and {cpu_count} CPU cores.")
+        print(f"  - PyTorch threads: {num_threads} (OMP/MKL parallel pool synchronized).")
+        print("  - [PASS] Full Zenodo DomainRadar v2 dataset enabled with maximum capacity.")
+    elif is_thin_client:
+        print("\n  [HP THIN CLIENT / RESOURCE-CONSTRAINED PROFILE DETECTED]")
+        print("  - Hardware matches HP Thin Client (e.g., ISRO lab environment: 2-4 cores, 4-16 GB RAM, no GPU).")
+        if num_threads > 4:
+            print(f"  - [WARNING] PyTorch threads ({num_threads}) > 4. May induce thermal throttling on fanless chassis. Recommended: export HDG_THREADS=2.")
+        else:
+            print(f"  - [PASS] PyTorch threads ({num_threads}) safely throttled for thin client chassis.")
+
+        if total_swap < 2.0 and total_ram <= 8.5:
+            print(f"  - [WARNING] Low/zero swap detected ({total_swap:.1f} GB swap)! PyTorch in-memory graph risks triggering Linux kernel OOM Killer.")
+            print("    Action recommended: Configure a 4GB-8GB swapfile:")
+            print("      sudo fallocate -l 4G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile")
+        else:
+            print(f"  - [PASS] Swap memory available ({total_swap:.1f} GB total, {free_swap:.1f} GB free) for OOM spike protection.")
+
+        profile_name = cfg.get("hardware", {}).get("profile", "default")
+        if profile_name not in ("hp_thin_client", "hp_thin_client_standard", "hp_thin_client_constrained"):
+            print("  - [RECOMMENDATION] Switch to the dedicated HP Thin Client profile for memory & thermal efficiency:")
+            print("      python -m pipeline.run_all --config configs/hp_thin_client.yaml (or pass --thin-client)")
+        else:
+            print(f"  - [PASS] Using optimized profile: {profile_name}.")
 
     if disk_free_gb < 5.0:
         print(f"\n[WARNING] Low free disk space: {disk_free_gb} GB (< 5 GB). Processed files & models may require additional space.")
+
 
     # 2. Dependency Audit
     print("\n--- Python Package Dependencies ---")

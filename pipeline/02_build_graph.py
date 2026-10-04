@@ -44,7 +44,7 @@ def main() -> None:
     print(f"{pfx}Loading {parquet_file}...")
     df = pd.read_parquet(parquet_file)
 
-    max_d = args.max_domains or (5000 if args.smoke else None)
+    max_d = args.max_domains or (5000 if args.smoke else cfg.get("graph", {}).get("max_domains"))
     if max_d is not None and len(df) > max_d:
         print(f"{pfx}Subsampling to {max_d} domains...")
         df = df.sample(n=max_d, random_state=42).reset_index(drop=True)

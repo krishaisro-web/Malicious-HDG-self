@@ -4,22 +4,34 @@ This runbook provides exact, copy-pasteable instructions for running the complet
 
 ---
 
-## 1. Server Environment & Hardware Specifications
+## 1. Supported Environments & Hardware Profiles
 
-| Component | Target Server Specification | Operational Guidance |
+Malicious-HDG supports two target CPU deployment profiles:
+
+### Profile A: Enterprise Multi-Core Server
+| Component | Enterprise Specification | Operational Guidance |
 |:---|:---|:---|
 | **OS** | Linux (Ubuntu 22.04 LTS / Debian 12 / RHEL 9) | x86_64, standard POSIX shell |
-| **CPU** | Multi-core enterprise server (e.g. 32 to 128 cores) | OpenMP PyTorch threading supported |
-| **RAM** | ~245 GB physical RAM available | In-memory graph processing will utilize ~16–32 GB peak |
-| **GPU** | None (CPU-only execution) | All models run on PyTorch CPU with OpenMP threading |
-| **Python** | Python 3.12 (or 3.10+) | Pinned dependencies in `requirements-lock.txt` |
-| **Disk** | $\ge 50$ GB free SSD space | Intermediate parquets and checkpoints require ~5–10 GB |
+| **CPU** | Multi-core enterprise server (e.g. 16 to 128 cores) | OpenMP PyTorch threading supported |
+| **RAM** | $\ge 32$ GB physical RAM | In-memory graph processing utilizes ~8–16 GB peak |
+| **GPU** | None (CPU-only execution) | PyTorch CPU with OpenMP threading |
+| **Config** | `configs/default.yaml` | 5 seeds, 200 epochs, 100k domains |
+
+### Profile B: HP Thin Client (ISRO Lab / Workstation Environment)
+> **Note**: For complete details, thermal tuning, and Reddit-tested sysadmin recommendations, see **[`docs/HP_THIN_CLIENT_GUIDE.md`](HP_THIN_CLIENT_GUIDE.md)**.
+
+| Component | HP Thin Client Specification | Operational Guidance |
+|:---|:---|:---|
+| **CPU** | 2 to 4 cores (AMD GX-420GI, Ryzen Embedded R1505G/R1606G, Intel) | Thread pool capped to 2 (`HDG_THREADS=2`) to prevent thermal throttling |
+| **RAM** | 4 GB to 16 GB DDR4 | Memory-efficient graph (<1.5 GB); 4GB–8GB swapfile required (`vm.swappiness=10`) |
+| **GPU** | None (CPU-only execution) | CPU execution with lightweight hidden dimensions (32-dim) |
+| **Config** | `configs/hp_thin_client.yaml` | 3 seeds, 50 epochs, 30k domains, batch size 256 |
 
 ---
 
 ## 2. Session Management & Environment Setup
 
-Because production training across 5 evaluation seeds takes 2–4 hours, **always execute inside a persistent `tmux` session** so SSH disconnects never interrupt the pipeline.
+Because CPU-only evaluations can take hours on embedded cores, **always execute inside a persistent `tmux` session** so network or terminal disconnects never interrupt the pipeline.
 
 ```bash
 # 1. Start or attach to a persistent tmux session
@@ -36,9 +48,13 @@ source venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements-lock.txt
 
-# 5. Set PyTorch thread allocation (adjust based on core availability, e.g. 32 or 64)
-export HDG_THREADS=32
+# 5. Set PyTorch thread allocation
+# For HP Thin Clients (ISRO): cap to 2 threads to prevent fanless thermal throttling
+export HDG_THREADS=2
+# For Enterprise Multi-Core Servers: adjust based on available cores (e.g. 16 or 32)
+# export HDG_THREADS=16
 ```
+
 
 ---
 

@@ -15,6 +15,11 @@ paths:
   fixture_results_dir: "results/fixture"
   fixture_checkpoints_dir: "artifacts/checkpoints/fixture"
 
+hardware:
+  profile: "default"
+  num_threads: null # null auto-detects; clamped to 2-4 threads for safe CPU execution (see configs/hp_thin_client.yaml for ISRO HP Thin Client)
+
+
 profiling:
   min_distinct_months_for_time_split: 4
   top_sources_count: 30

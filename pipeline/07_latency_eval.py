@@ -66,8 +66,9 @@ def main() -> None:
             f"Processed artifacts not found in {paths.processed_dir}. Run 01_parse.py and 02_build_graph.py first."
         )
 
-    num_queries = args.num_queries if args.num_queries is not None else (50 if args.smoke or args.fixture else 500)
-    warmup = args.warmup if args.warmup is not None else (5 if args.smoke or args.fixture else 20)
+    cfg_lat = cfg.get("latency", {})
+    num_queries = args.num_queries if args.num_queries is not None else cfg_lat.get("num_queries", 50 if args.smoke or args.fixture else 500)
+    warmup = args.warmup if args.warmup is not None else cfg_lat.get("warmup", 5 if args.smoke or args.fixture else 20)
 
     print(f"[{'FIXTURE' if args.fixture else 'REAL'}] Loading graph and dataset...")
     df = pd.read_parquet(parquet_file)

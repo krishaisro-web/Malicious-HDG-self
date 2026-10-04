@@ -71,7 +71,7 @@ def main() -> None:
     pfx = "[SMOKE] " if args.smoke else ("[FIXTURE] " if args.fixture else "[REAL] ")
     print(f"{pfx}Loading domain data and base graph...")
     df = pd.read_parquet(parquet_file)
-    max_d = args.max_domains or (5000 if args.smoke else None)
+    max_d = args.max_domains or (5000 if args.smoke else cfg.get("graph", {}).get("max_domains"))
     if max_d is not None and len(df) > max_d:
         df = df.sample(n=max_d, random_state=42).reset_index(drop=True)
 
@@ -200,6 +200,10 @@ def main() -> None:
             save_run_result(paths.results_dir, run_name, {"experiment": "ablation", "name": name, "seed": s, "metrics": test_eval})
             results[name].append(test_eval)
             print(f"  Seed {s} -> ROC-AUC: {test_eval['roc_auc']:.4f}, F1: {test_eval['f1']:.4f}")
+
+            del model, scaled_data
+            import gc
+            gc.collect()
 
     # Aggregate statistics
     aggregated_ablation: Dict[str, Any] = {}

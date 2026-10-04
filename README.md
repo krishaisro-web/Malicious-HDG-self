@@ -96,10 +96,16 @@ pytest tests/ -v
 python -m src.scripts.run_all --fixture --smoke
 ```
 
-### Execution on Production CPU Linux Server
-For instructions on deploying and evaluating on the server containing the real Zenodo dataset (~245 GB RAM, Python 3.12, CPU-only), see **[`docs/RUN_ON_REAL_DATA.md`](docs/RUN_ON_REAL_DATA.md)** and **[`pipeline/run_real.sh`](pipeline/run_real.sh)**.
+### Execution on Production CPU Linux Servers & HP Thin Clients
+For instructions on deploying and evaluating on CPU hardware:
+- **HP Thin Client (ISRO Lab / Workstation Profile)**: See **[`docs/HP_THIN_CLIENT_GUIDE.md`](docs/HP_THIN_CLIENT_GUIDE.md)** for instructions on running on 2–4 core embedded CPUs with 4GB–16GB RAM using `configs/hp_thin_client.yaml`. Quick command:
+  ```bash
+  bash pipeline/run_real.sh --thin-client
+  ```
+- **Enterprise Linux Server**: See **[`docs/RUN_ON_REAL_DATA.md`](docs/RUN_ON_REAL_DATA.md)** and **[`pipeline/run_real.sh`](pipeline/run_real.sh)**.
 For documented dataset assumptions and verification fields, see **[`docs/ASSUMPTIONS.md`](docs/ASSUMPTIONS.md)**.
 For a complete record of architectural refactoring, see **[`CHANGELOG.md`](CHANGELOG.md)**.
+
 
 ---
 

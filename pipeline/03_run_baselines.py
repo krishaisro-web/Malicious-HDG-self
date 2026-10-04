@@ -70,7 +70,7 @@ def main() -> None:
     print(f"{pfx}Loading {parquet_file}...")
     df = pd.read_parquet(parquet_file)
 
-    max_d = args.max_domains or (5000 if args.smoke else None)
+    max_d = args.max_domains or (5000 if args.smoke else cfg.get("graph", {}).get("max_domains"))
     if max_d is not None and len(df) > max_d:
         df = df.sample(n=max_d, random_state=42).reset_index(drop=True)
 
@@ -167,6 +167,9 @@ def main() -> None:
                     res_mlp = json.load(f)
             results_by_model["mlp_no_edges"].append(res_mlp)
             print(f"  [Isolated Domain MLP] ROC-AUC: {res_mlp['roc_auc']:.4f}, F1: {res_mlp['f1']:.4f}")
+
+        import gc
+        gc.collect()
 
     # Aggregate mean +/- std across seeds
     aggregated: Dict[str, Any] = {}

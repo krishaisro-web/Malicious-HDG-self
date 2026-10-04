@@ -22,11 +22,16 @@ artifacts/checkpoints/real/*
 
 # Large checkpoint weights and archives
 artifacts/checkpoints/**/*.pt
+artifacts/checkpoints/**/*.tmp
 *.tar.gz
 results_paper_ready.zip
+
+# Dynamic hardware configuration (generated per-machine at runtime)
+configs/active_config.yaml
 
 # Historical folders
 data_raw/
 data_processed/
 data_fixture/
 results_fixture/
+

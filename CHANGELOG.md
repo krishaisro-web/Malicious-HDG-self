@@ -2,7 +2,27 @@
 
 All notable changes, bug fixes, and architectural enhancements are documented below.
 
-## Repository Clean Layout Restructure (`restructure/clean-layout`)
+## HP Thin Client & Low-Resource Deployment Optimization (ISRO Environment)
+- **Dedicated Configuration Profile (`configs/hp_thin_client.yaml`)**:
+  - Calibrated for 2–4 core embedded CPUs (AMD GX-420GI, Ryzen Embedded R1505G/R1606G) and 4GB–16GB physical RAM without GPU.
+  - Capped domain capacity (`max_domains: 30000`, `max_per_class: 15000`) and reduced model hidden dimension (`hidden_dim: 32`, `out_dim: 16`) to maintain peak graph memory under 1.5 GB.
+  - Reduced training batch size to 256 and configured 50 epochs with patience 10 across 3 evaluation seeds.
+  - Compacted TF-IDF max features (2500), XGBoost estimators/depth (50 trees, depth 4), and bootstrap samples (200).
+- **Thermal & Thread Throttling Prevention (`src/hdg/config.py`)**:
+  - `init_thread_pool()` auto-detects low-core / thin client systems (<= 4 cores) and caps default threads to 2 (`HDG_THREADS=2`), preventing fanless chassis thermal throttling and OS starvation.
+  - Automatically exports synchronized thread limits to `OMP_NUM_THREADS`, `MKL_NUM_THREADS`, `OPENBLAS_NUM_THREADS`, `VECLIB_MAXIMUM_THREADS`, and `NUMEXPR_NUM_THREADS`.
+  - Added `is_thin_client_environment()` detection helper and `HDG_PROFILE=thin_client` environment routing in `load_config()`.
+- **Memory Safety & OOM Killer Defense**:
+  - Integrated `gc.collect()` and explicit object deletion across `train.py`, `03_run_baselines.py`, `04_train_gnn.py`, and `05_ablation.py`.
+  - Updated `pipeline/00c_preflight.py` to audit both physical RAM and swap memory, providing actionable shell instructions for creating 4GB–8GB swapfiles on low-RAM thin clients.
+- **Runners & Tooling Updates**:
+  - Updated `pipeline/run_real.sh` to probe hardware, auto-select `configs/hp_thin_client.yaml` when running on thin clients, verify swap, and synchronize thread pools.
+  - Added `--thin-client` CLI flag to `pipeline/run_all.py` and `pipeline/00c_preflight.py`.
+- **Operational Documentation & Unit Tests**:
+  - Created [`docs/HP_THIN_CLIENT_GUIDE.md`](docs/HP_THIN_CLIENT_GUIDE.md) detailing Reddit homelab findings, swap configuration, thermal management, and step-by-step commands.
+  - Updated [`docs/RUN_ON_REAL_DATA.md`](docs/RUN_ON_REAL_DATA.md) and [`README.md`](README.md).
+  - Added unit test suite [`tests/test_thin_client_config.py`](tests/test_thin_client_config.py) (all 35 repository tests passing).
+
 - **Single Importable Package**: Refactored `src/hdg/` into modular subpackages: `data/` (`parse`, `fixture`, `profiler`, `audit`, `splits`, `graph`), `models/` (`hetero_gnn`), `training/` (`train`, `baselines`), and `eval/` (`attack`, `latency`, `streaming`). Re-exported key APIs at package root for clean backwards compatibility.
 - **Pipeline Standardization**: Consolidated all 13 numbered workflow scripts and runners (`run_all.py`, `run_real.sh`) into top-level `pipeline/`.
 - **Strict Data & Result Segregation**: Reorganized data storage into `data/raw/zenodo/` (gitignored), `data/fixture/zenodo/` (committed), `data/processed/{fixture, real}/`, `artifacts/checkpoints/{fixture, real}/`, and `results/{fixture, real, chrmor}/`.
