@@ -135,21 +135,29 @@ def main() -> None:
                 with open(man_path, "r", encoding="utf-8") as f:
                     cand_manifest = json.load(f)
 
-            # Determine complete architecture config directly from serialized model_config
-            ckpt_cfg = ckpt_obj.get("model_config", {}) if isinstance(ckpt_obj, dict) else {}
-            if not ckpt_cfg and "model_config" in cand_manifest:
-                ckpt_cfg = cand_manifest["model_config"]
+            # Strict model_config validation (fail-closed, no silent defaults or guessing)
+            ckpt_cfg = ckpt_obj.get("model_config") if isinstance(ckpt_obj, dict) else None
+            if not isinstance(ckpt_cfg, dict):
+                raise ValueError("Checkpoint is missing required 'model_config' dictionary.")
 
-            variant = ckpt_cfg.get("variant", ckpt_cfg.get("conv_type", cand_manifest.get("architecture", "attn" if "attn" in cand_path.name else "sage")))
-            hidden_dim = int(ckpt_cfg.get("hidden_dim", 64))
-            out_dim = int(ckpt_cfg.get("out_dim", 32))
-            num_layers = int(ckpt_cfg.get("num_layers", 2))
-            num_heads = int(ckpt_cfg.get("num_heads", ckpt_cfg.get("heads", 4)))
-            dropout = float(ckpt_cfg.get("dropout", 0.2))
-            prune_threshold = float(ckpt_cfg.get("prune_threshold", 0.1))
-            use_edges = bool(ckpt_cfg.get("use_edges", True))
+            required_fields = ["variant", "hidden_dim", "out_dim", "num_layers", "num_heads", "dropout", "prune_threshold", "use_edges"]
+            missing_fields = [f for f in required_fields if f not in ckpt_cfg]
+            if missing_fields:
+                raise ValueError(f"Checkpoint model_config is incomplete; missing required fields: {missing_fields}")
 
-            # Dynamically instantiate matching architecture with exact parameters
+            variant = str(ckpt_cfg["variant"]).lower()
+            if variant not in ["sage", "attn", "sage_guard"]:
+                raise ValueError(f"Unsupported architecture variant: '{variant}'. Must be one of ['sage', 'attn', 'sage_guard']")
+
+            hidden_dim = int(ckpt_cfg["hidden_dim"])
+            out_dim = int(ckpt_cfg["out_dim"])
+            num_layers = int(ckpt_cfg["num_layers"])
+            num_heads = int(ckpt_cfg["num_heads"])
+            dropout = float(ckpt_cfg["dropout"])
+            prune_threshold = float(ckpt_cfg["prune_threshold"])
+            use_edges = bool(ckpt_cfg["use_edges"])
+
+            # Dynamically instantiate matching architecture strictly with validated parameters
             cand_model = HeteroGNN(
                 metadata=data.metadata(),
                 in_channels_dict=in_channels,
@@ -200,50 +208,22 @@ def main() -> None:
         out = model(data.x_dict, data.edge_index_dict)
         all_probs = F.softmax(out, dim=-1)[:, 1].cpu().numpy()
 
-    # Calibrate operational threshold on validation negatives with strict order-statistic tie handling
+    # Split validation negatives into calibration cohort (for setting threshold)
+    # and independent certification holdout (for verifying FPR without data reuse)
     val_idx = splits.val_indices
     y_val = data["domain"].y[val_idx].cpu().numpy()
     val_probs = all_probs[val_idx]
     val_negs = val_probs[y_val == 0]
 
     n_val_negs = len(val_negs)
-    if n_val_negs == 0:
-        print("[BLOCKED] RPZ rule generation blocked: Zero validation negatives available for calibration.")
+    if n_val_negs < 2:
+        print("[BLOCKED] RPZ rule generation blocked: Fewer than 2 validation negatives available.")
         blocked_summary = {
             "status": "BLOCKED_INSUFFICIENT_VALIDATION_NEGS",
             "reason": "Calibration requires observed benign validation instances to bound False Positive Rate. Cannot certify zero FPR.",
-            "n_val_negs": 0,
-            "timestamp": datetime.now(timezone.utc).isoformat()
-        }
-        # Fail-closed: remove any stale RPZ zone file
-        rpz_file = rpz_dir / "malicious_domains.rpz"
-        if rpz_file.exists():
-            rpz_file.unlink()
-        with open(rpz_dir / "rpz_summary.json", "w", encoding="utf-8") as f:
-            json.dump(blocked_summary, f, indent=2)
-        save_run_result(paths, run_name, blocked_summary)
-        return
-
-    # Statistical Calibration Evidence Policy:
-    # Exact binomial one-sided 95% upper bound for 0 false positives:
-    # 1 - 0.05^(1/N) <= target_fpr  ==>  N >= log(0.05) / log(1 - target_fpr) ≈ 3.0 / target_fpr
-    min_negs_for_target = int(np.ceil(np.log(0.05) / np.log(1.0 - args.target_fpr))) if args.target_fpr < 1.0 else 1
-    
-    # Strict Fail-Closed Enforcement:
-    # Block rule emission whenever validation negatives are insufficient to certify FPR at 95% confidence.
-    if n_val_negs < min_negs_for_target and not getattr(args, "allow_uncalibrated_smoke", False):
-        print(f"[BLOCKED] RPZ rule generation blocked: Statistical evidence is inadequate to certify FPR <= {args.target_fpr * 100:.3f}% "
-              f"at 95% confidence (found N={n_val_negs} validation negatives, exact binomial requirement is N>={min_negs_for_target}).")
-        exact_zero_bound = float(1.0 - 0.05 ** (1.0 / n_val_negs))
-        blocked_summary = {
-            "status": "BLOCKED_INSUFFICIENT_EVIDENCE",
-            "reason": f"Sample size (N={n_val_negs}) is statistically inadequate to certify FPR <= {args.target_fpr * 100:.3f}% at 95% confidence. Exact one-sided 95% upper bound at 0 FPs is {exact_zero_bound * 100:.2f}%.",
             "n_val_negs": n_val_negs,
-            "min_required_negs_exact_binomial": min_negs_for_target,
-            "exact_95_upper_bound_at_zero_fp": round(exact_zero_bound, 5),
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
-        # Fail-closed: remove any stale RPZ zone file so invalid policies cannot be deployed
         rpz_file = rpz_dir / "malicious_domains.rpz"
         if rpz_file.exists():
             rpz_file.unlink()
@@ -252,52 +232,76 @@ def main() -> None:
         save_run_result(paths, run_name, blocked_summary)
         return
 
-    # Order-statistic threshold calibration with strict upper bounding
-    sorted_negs = np.sort(val_negs)
-    max_allowed_fp = int(np.floor(n_val_negs * args.target_fpr))
-    rank_idx = n_val_negs - 1 - max_allowed_fp
+    # Two-fold split of validation negatives: 50% for order-statistic threshold calibration,
+    # 50% independent holdout for rigorous statistical certification (prevents optimistic bias from data reuse)
+    rng = np.random.RandomState(cfg.get("randomness", {}).get("seed", 42))
+    shuffled_indices = rng.permutation(n_val_negs)
+    n_calib = max(1, n_val_negs // 2)
+    calib_negs = val_negs[shuffled_indices[:n_calib]]
+    cert_negs = val_negs[shuffled_indices[n_calib:]]
+    n_cert = len(cert_negs)
 
-    if rank_idx < 0:
-        threshold = float(sorted_negs[-1]) + 1e-6
-    else:
-        raw_cut = float(sorted_negs[rank_idx])
-        threshold = raw_cut
+    # Statistical Certification Requirement:
+    # Under exact binomial model, for 0 false positives on independent verification holdout:
+    # 1 - 0.05^(1/N_cert) <= target_fpr  ==>  N_cert >= log(0.05) / log(1 - target_fpr)
+    min_cert_negs = int(np.ceil(np.log(0.05) / np.log(1.0 - args.target_fpr))) if args.target_fpr < 1.0 else 1
 
-    # Realized validation FPR under >= threshold
-    observed_fp = int(np.sum(val_negs >= threshold))
-    realized_val_fpr = float(observed_fp / n_val_negs)
+    # Order-statistic threshold calibration on calibration cohort
+    sorted_calib = np.sort(calib_negs)
+    max_calib_fp = int(np.floor(len(calib_negs) * args.target_fpr))
+    rank_idx = len(calib_negs) - 1 - max_calib_fp
+    threshold = float(sorted_calib[-1]) + 1e-6 if rank_idx < 0 else float(sorted_calib[rank_idx])
 
-    # Tie handling: if score ties caused realized_val_fpr > target_fpr, adjust threshold upward
-    if realized_val_fpr > args.target_fpr:
-        strictly_higher = sorted_negs[sorted_negs > threshold]
-        if len(strictly_higher) > 0:
-            threshold = float(strictly_higher[0])
-            observed_fp = int(np.sum(val_negs >= threshold))
-            realized_val_fpr = float(observed_fp / n_val_negs)
-        else:
-            threshold = float(sorted_negs[-1]) + 1e-6
-            observed_fp = 0
-            realized_val_fpr = 0.0
+    # Now certify threshold independently on certification holdout (cert_negs)
+    observed_fp_cert = int(np.sum(cert_negs >= threshold))
+    realized_cert_fpr = float(observed_fp_cert / n_cert)
 
-    # Exact 95% Confidence Upper Bound on Population FPR:
-    # When 0 false positives are observed: Exact binomial bound 1 - 0.05^(1/N)
-    # When >0 false positives are observed: Wilson score interval upper bound
-    if observed_fp == 0:
-        fpr_95_upper_bound = float(1.0 - 0.05 ** (1.0 / n_val_negs))
-        confidence_bound_type = "Exact Binomial (1 - 0.05^(1/N))"
+    # Compute exact 95% confidence upper bound on population FPR using independent certification holdout
+    if observed_fp_cert == 0:
+        fpr_95_upper_bound = float(1.0 - 0.05 ** (1.0 / n_cert))
+        confidence_bound_type = "Exact Binomial (1 - 0.05^(1/N_cert))"
     else:
         z = 1.96
-        p_hat = realized_val_fpr
-        denom = 1.0 + (z**2) / n_val_negs
-        centre = p_hat + (z**2) / (2.0 * n_val_negs)
-        spread = z * np.sqrt((p_hat * (1.0 - p_hat) + (z**2) / (4.0 * n_val_negs)) / n_val_negs)
+        p_hat = realized_cert_fpr
+        denom = 1.0 + (z**2) / n_cert
+        centre = p_hat + (z**2) / (2.0 * n_cert)
+        spread = z * np.sqrt((p_hat * (1.0 - p_hat) + (z**2) / (4.0 * n_cert)) / n_cert)
         fpr_95_upper_bound = min(1.0, float((centre + spread) / denom))
         confidence_bound_type = "Wilson Score (95% Two-Sided Upper)"
 
-    adequate_evidence = n_val_negs >= min_negs_for_target
-    print(f"Operating Target FPR: {args.target_fpr * 100:.2f}% | Calibrated Threshold: {threshold:.4f} "
-          f"(Val FPR: {realized_val_fpr * 100:.3f}%, Observed FP: {observed_fp}/{n_val_negs}, "
-          f"95% Upper Bound: {fpr_95_upper_bound * 100:.2f}% via {confidence_bound_type})")
+    # Strict Certification Gate:
+    # Fail closed if sample size is below required certification power OR if the 95% upper bound exceeds target FPR
+    cert_passed = (n_cert >= min_cert_negs) and (fpr_95_upper_bound <= args.target_fpr)
+    if not cert_passed:
+        print(f"[BLOCKED] RPZ rule generation blocked: Statistical certification failed. "
+              f"95% Confidence Upper Bound on FPR ({fpr_95_upper_bound * 100:.3f}%) exceeds target FPR ({args.target_fpr * 100:.3f}%) "
+              f"or certification negatives (N={n_cert}) below required minimum ({min_cert_negs}).")
+        blocked_summary = {
+            "status": "BLOCKED_UNCERTIFIED_FPR",
+            "reason": f"95% confidence upper bound ({fpr_95_upper_bound * 100:.3f}%) exceeds operational target FPR ({args.target_fpr * 100:.3f}%).",
+            "target_fpr": args.target_fpr,
+            "calibrated_threshold": round(threshold, 4),
+            "n_calibration_negs": len(calib_negs),
+            "n_certification_negs": n_cert,
+            "min_required_certification_negs": min_cert_negs,
+            "observed_fps_on_certification": observed_fp_cert,
+            "realized_cert_fpr": round(realized_cert_fpr, 5),
+            "fpr_95_upper_bound": round(fpr_95_upper_bound, 5),
+            "confidence_bound_type": confidence_bound_type,
+            "rules_emitted": 0,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        rpz_file = rpz_dir / "malicious_domains.rpz"
+        if rpz_file.exists():
+            rpz_file.unlink()
+        with open(rpz_dir / "rpz_summary.json", "w", encoding="utf-8") as f:
+            json.dump(blocked_summary, f, indent=2)
+        save_run_result(paths, run_name, blocked_summary)
+        return
+
+    print(f"Operational Target FPR: {args.target_fpr * 100:.3f}% | Calibrated Threshold: {threshold:.4f} "
+          f"(Certified FPR Upper Bound: {fpr_95_upper_bound * 100:.3f}% <= {args.target_fpr * 100:.3f}%, "
+          f"Observed FP on Holdout: {observed_fp_cert}/{n_cert})")
 
     # Evaluate test cohort
     test_idx = splits.test_indices
@@ -322,9 +326,9 @@ def main() -> None:
         f"; Checkpoint File: {resolved_ckpt_path.name if resolved_ckpt_path else 'None'}",
         f"; Operating Target FPR: {args.target_fpr * 100:.3f}% ({args.target_fpr})",
         f"; Calibrated Threshold: {threshold:.4f}",
-        f"; Realized Validation FPR: {realized_val_fpr:.5f} ({realized_val_fpr * 100:.3f}%)",
-        f"; Validation Negatives Evaluated: {n_val_negs}",
-        f"; Validation False Positives Observed: {observed_fp}",
+        f"; Realized Certification FPR: {realized_cert_fpr:.5f} ({realized_cert_fpr * 100:.3f}%)",
+        f"; Independent Holdout Negatives: {n_cert}",
+        f"; False Positives on Holdout: {observed_fp_cert}",
         f"; 95% Confidence Upper Bound on FPR: {fpr_95_upper_bound * 100:.3f}% ({confidence_bound_type})",
         f"; Total Evaluated Test Domains: {n_test}",
         f"; Total Emitted Blocking Rules: {n_blocked}",
@@ -340,7 +344,7 @@ def main() -> None:
     for _, row in blocked_df.iterrows():
         d_name = row.get("domain", row.get("raw_domain", "unknown"))
         score = row["score"]
-        rpz_lines.append(f"{d_name} CNAME . ; score={score:.4f}, threshold={threshold:.4f}, val_fpr={realized_val_fpr:.5f}")
+        rpz_lines.append(f"{d_name} CNAME . ; score={score:.4f}, threshold={threshold:.4f}, cert_fpr={realized_cert_fpr:.5f}")
 
     rpz_file = rpz_dir / "malicious_domains.rpz"
     with open(rpz_file, "w", encoding="utf-8") as f:
@@ -356,11 +360,13 @@ def main() -> None:
         "architecture": getattr(model, "variant", "unknown"),
         "target_fpr": args.target_fpr,
         "calibrated_threshold": round(threshold, 4),
-        "validation_negatives_evaluated": n_val_negs,
-        "validation_false_positives_observed": observed_fp,
-        "realized_val_fpr": round(realized_val_fpr, 5),
+        "calibration_negatives": len(calib_negs),
+        "independent_certification_negatives": n_cert,
+        "observed_false_positives_holdout": observed_fp_cert,
+        "realized_cert_fpr": round(realized_cert_fpr, 5),
         "fpr_95_upper_bound": round(fpr_95_upper_bound, 5),
-        "adequate_evidence_for_target": adequate_evidence,
+        "confidence_bound_type": confidence_bound_type,
+        "certified_within_target": True,
         "total_test_domains": n_test,
         "rules_emitted": n_blocked,
         "blocking_rate_pct": round(blocking_rate, 2),

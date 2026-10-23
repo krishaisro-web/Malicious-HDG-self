@@ -171,9 +171,19 @@ def test_checkpoint_round_trip_reconstruction(tmp_path: Path) -> None:
         ckpt_p = tmp_path / f"test_{variant}.pt"
         torch.save(saved_payload, ckpt_p)
 
-        # Reconstruct
+        m1.eval()
+        with torch.no_grad():
+            out1 = m1(data.x_dict, data.edge_index_dict)
+
+        # Reconstruct exactly from serialized config
         loaded_obj = torch.load(ckpt_p, weights_only=False)
         l_cfg = loaded_obj["model_config"]
+        assert l_cfg["variant"] == variant
+        assert l_cfg["hidden_dim"] == 48
+        assert l_cfg["out_dim"] == 24
+        assert l_cfg["num_layers"] == 2
+        assert l_cfg["dropout"] == 0.15
+
         m2 = HeteroGNN(
             metadata=data.metadata(),
             in_channels_dict=in_channels,
@@ -182,10 +192,28 @@ def test_checkpoint_round_trip_reconstruction(tmp_path: Path) -> None:
             out_dim=l_cfg["out_dim"],
             num_layers=l_cfg["num_layers"],
             num_heads=l_cfg["num_heads"],
-            dropout=l_cfg["dropout"]
+            dropout=l_cfg["dropout"],
+            prune_threshold=l_cfg["prune_threshold"],
+            use_edges=l_cfg["use_edges"]
         )
         m2.load_state_dict(loaded_obj["model_state_dict"])
         m2.eval()
         with torch.no_grad():
-            out = m2(data.x_dict, data.edge_index_dict)
-        assert out.shape == (data["domain"].num_nodes, 2)
+            out2 = m2(data.x_dict, data.edge_index_dict)
+
+        # Exact logit equivalence check
+        torch.testing.assert_close(out1, out2)
+
+    # Test isolated MLP baseline (use_edges=False, non-default prune_threshold)
+    m_mlp = HeteroGNN(
+        metadata=data.metadata(),
+        in_channels_dict=in_channels,
+        variant="sage",
+        hidden_dim=32,
+        out_dim=16,
+        prune_threshold=0.35,
+        use_edges=False
+    )
+    mlp_cfg = m_mlp.get_model_config()
+    assert mlp_cfg["use_edges"] is False
+    assert mlp_cfg["prune_threshold"] == 0.35
