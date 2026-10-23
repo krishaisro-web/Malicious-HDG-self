@@ -13,6 +13,10 @@ from src.hdg.data.splits import (
     group_split_bipartite,
     group_split_by_asn,
     compute_asn_leakage_report,
+    single_chronological_holdout_split,
+    analyze_temporal_eligibility,
+    save_temporal_eligibility_report,
+    TemporalEligibilityResult,
 )
 from src.hdg.data.graph import (
     build_base_graph,
@@ -36,9 +40,14 @@ __all__ = [
     "group_split_bipartite",
     "group_split_by_asn",
     "compute_asn_leakage_report",
+    "single_chronological_holdout_split",
+    "analyze_temporal_eligibility",
+    "save_temporal_eligibility_report",
+    "TemporalEligibilityResult",
     "build_base_graph",
     "apply_split_scaling",
     "extract_domain_feature_vector",
     "extract_domain_features_vectorized",
     "make_fixture",
 ]
+

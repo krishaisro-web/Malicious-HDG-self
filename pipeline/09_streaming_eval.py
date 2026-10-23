@@ -48,32 +48,32 @@ def main() -> None:
     cfg = load_config(args.config)
     paths = get_resolved_paths(cfg, is_fixture=args.fixture, is_smoke=args.smoke, root_dir=REPO_ROOT)
 
+    from src.hdg.data.graph import load_aligned_graph_cohort
+    from src.hdg.cache import compute_experiment_fingerprint
+
+    max_months = args.max_months
+    if max_months is None:
+        max_months = 4 if (args.smoke or args.fixture) else None
+
+    exp_fp = compute_experiment_fingerprint(
+        cfg,
+        stage="streaming_eval",
+        extra_dict={"max_months": max_months, "reservoir_size": args.reservoir_size}
+    )
+
     run_name = "streaming_eval"
-    if should_skip_run(paths, run_name, force=args.force):
-        print(f"[{run_name}] Run already completed. Skipping (use --force to rerun).")
+    if should_skip_run(paths, run_name, force=args.force, expected_fingerprint=exp_fp):
+        print(f"[{run_name}] Run already completed with matching fingerprint. Skipping (use --force to rerun).")
         return
 
     out_dir = paths.results_dir / "tables"
     paths.check_write_path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    parquet_file = paths.processed_dir / "domains.parquet"
-    graph_file = paths.processed_dir / "heterodata.pt"
-
-    if not parquet_file.exists() or not graph_file.exists():
-        raise FileNotFoundError(
-            f"Processed artifacts not found in {paths.processed_dir}. Run 01_parse.py and 02_build_graph.py first."
-        )
-
-    print(f"[{'FIXTURE' if args.fixture else 'REAL'}] Loading graph and domain dataset...")
-    df = pd.read_parquet(parquet_file)
-    data = torch.load(graph_file, weights_only=False)
+    print(f"[{'FIXTURE' if args.fixture else 'REAL'}] Loading aligned graph and domain dataset...")
+    data, df, manifest = load_aligned_graph_cohort(paths.processed_dir)
 
     init_thread_pool(cfg)
-
-    max_months = args.max_months
-    if max_months is None:
-        max_months = 4 if (args.smoke or args.fixture) else None
 
     epochs_scratch = 15 if (args.smoke or args.fixture) else 50
     epochs_finetune = 5 if (args.smoke or args.fixture) else 15
@@ -89,14 +89,46 @@ def main() -> None:
         max_months=max_months,
         seed=cfg.get("randomness", {}).get("seed", 42)
     )
+    res["experiment_fingerprint"] = exp_fp
 
     # Save JSON
     json_path = out_dir / "streaming_eval.json"
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(res, f, indent=2)
 
-    # Generate Markdown
     pfx = "[FIXTURE - meaningless] " if args.fixture else ""
+    md_path = out_dir / "streaming_eval.md"
+
+    if res.get("status") == "BLOCKED_INSUFFICIENT_DATA":
+        print(f"\n[BLOCKED] Streaming evaluation cannot proceed: {res.get('reason')}")
+        md_lines = [
+            f"# {pfx}Streaming Domain Prototype Evaluation",
+            "",
+            "> [!WARNING]",
+            f"> **Status: BLOCKED_INSUFFICIENT_DATA**",
+            f"> {res.get('reason')}",
+            "",
+            "### Monthly Class Distribution in Dataset",
+            "| Month | Total Records | Malware Count | Benign Count | Status |",
+            "|:---:|:---:|:---:|:---:|:---:|",
+        ]
+        for m_name, counts in res.get("month_class_counts", {}).items():
+            status_str = "Eligible (Mixed)" if counts["malware"] > 0 and counts["benign"] > 0 else "Single-Class Only"
+            md_lines.append(
+                f"| `{m_name}` | {counts['total']:,} | {counts['malware']:,} | {counts['benign']:,} | {status_str} |"
+            )
+        md_lines.append("")
+        md_lines.append("> [!NOTE]")
+        md_lines.append("> Multi-month continual learning evaluation requires multiple transitions between consecutive months containing both classes.")
+        md_lines.append("> To evaluate temporal robustness on datasets with a single overlapping month, refer to the Single Chronological Holdout results in `gnn_evaluation_time.json`.")
+        with open(md_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(md_lines) + "\n")
+        save_run_result(paths, run_name, res)
+        print(f"Results JSON: {json_path}")
+        print(f"Results Markdown: {md_path}")
+        return
+
+    # Generate Markdown for successful run
     md_lines = [
         f"# {pfx}Streaming Domain Prototype Evaluation",
         "",
@@ -110,7 +142,7 @@ def main() -> None:
         "|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|",
     ]
 
-    for s in res["steps"]:
+    for s in res.get("steps", []):
         st_num = s["step"]
         m_str = s["month"]
         strat = s["strategy"]
@@ -128,7 +160,6 @@ def main() -> None:
     md_lines.append("2. **Naive fine-tuning**: Adapts rapidly to the active month's malicious patterns but suffers from catastrophic forgetting (negative backward transfer on Month 1).")
     md_lines.append("3. **Replay buffer**: Mitigates catastrophic forgetting by interleaving historical anchor domains, stabilizing long-term recall without full retraining.")
 
-    md_path = out_dir / "streaming_eval.md"
     with open(md_path, "w", encoding="utf-8") as f:
         f.write("\n".join(md_lines) + "\n")
 

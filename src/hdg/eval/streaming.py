@@ -207,7 +207,27 @@ def run_streaming_evaluation(
         valid_months = valid_months[:max_months]
 
     if len(valid_months) < 2:
-        raise ValueError(f"Need at least 2 valid months with both classes, found: {len(valid_months)}")
+        month_class_counts = {}
+        for m in unique_months:
+            m_labels = df.loc[df[temporal_col] == m, "label"].to_numpy()
+            month_class_counts[str(m)] = {
+                "total": int(len(m_labels)),
+                "malware": int((m_labels == 1).sum()),
+                "benign": int((m_labels == 0).sum())
+            }
+        logger.warning(
+            f"Streaming evaluation cannot proceed: need >= 2 valid months with both classes, found {len(valid_months)}."
+        )
+        return {
+            "status": "BLOCKED_INSUFFICIENT_DATA",
+            "reason": f"Need at least 2 valid months with both classes for continual learning, but found {len(valid_months)}.",
+            "valid_months": valid_months,
+            "all_months": unique_months,
+            "month_class_counts": month_class_counts,
+            "temporal_column": temporal_col,
+            "steps": [],
+            "message": "Streaming evaluation blocked due to lack of multiple consecutive multi-class months."
+        }
 
     y_tensor = data["domain"].y
     y_true_all = y_tensor.cpu().numpy()
@@ -353,6 +373,7 @@ def run_streaming_evaluation(
         })
 
     return {
+        "status": "SUCCESS",
         "evaluated_months": valid_months,
         "month_0": m0,
         "month_0_baseline": m0_baseline_perf,

@@ -3,146 +3,146 @@
   "name": "no_nameservers",
   "seed": 42,
   "metrics": {
-    "roc_auc": 0.497,
-    "pr_auc": 0.5078,
-    "f1": 0.66,
-    "precision": 0.5035,
-    "recall": 0.9578,
-    "specificity": 0.0376,
-    "threshold": 0.45,
+    "roc_auc": 0.4767,
+    "pr_auc": 0.4972,
+    "f1": 0.6682,
+    "precision": 0.5017,
+    "recall": 1.0,
+    "specificity": 0.0,
+    "threshold": 0.05,
     "test_counts": {
-      "total": 751,
-      "positives": 379,
-      "negatives": 372,
-      "sample_prevalence": 0.5047
+      "total": 879,
+      "positives": 441,
+      "negatives": 438,
+      "sample_prevalence": 0.5017
     },
     "confusion_matrix": {
-      "tp": 363,
-      "tn": 14,
-      "fp": 358,
-      "fn": 16
+      "tp": 441,
+      "tn": 0,
+      "fp": 438,
+      "fn": 0
     },
     "operating_points": {
       "tpr_at_1.0pct_fpr": {
-        "tpr": 0.0106,
-        "threshold": 0.4885,
-        "realised_test_fpr": 0.008065,
-        "f1_at_operating_point": 0.0207,
-        "precision_at_operating_point": 0.5714,
-        "recall_at_operating_point": 0.0106,
+        "tpr": 0.0091,
+        "threshold": 0.5194,
+        "realised_test_fpr": 0.013699,
+        "f1_at_operating_point": 0.0177,
+        "precision_at_operating_point": 0.4,
+        "recall_at_operating_point": 0.0091,
         "prevalence_adjusted_precision": {
-          "pi_1.0pct": 0.013,
-          "pi_0.1pct": 0.0013
+          "pi_1.0pct": 0.0066,
+          "pi_0.1pct": 0.0007
         },
         "expected_fp": 4,
-        "warning": "Expected false positives at 1.0% FPR is 4 (< 10). Test sample size (372 negatives) provides limited statistical power at this FPR."
+        "warning": "Expected false positives at 1.0% FPR is 4 (< 10). Test sample size (438 negatives) provides limited statistical power at this FPR."
       },
       "tpr_at_0.1pct_fpr": {
-        "tpr": 0.0026,
-        "threshold": 0.4946,
-        "realised_test_fpr": 0.0,
-        "f1_at_operating_point": 0.0053,
-        "precision_at_operating_point": 1.0,
-        "recall_at_operating_point": 0.0026,
+        "tpr": 0.0,
+        "threshold": 0.5257,
+        "realised_test_fpr": 0.002283,
+        "f1_at_operating_point": 0.0,
+        "precision_at_operating_point": 0.0,
+        "recall_at_operating_point": 0.0,
         "prevalence_adjusted_precision": {
-          "pi_1.0pct": 1.0,
-          "pi_0.1pct": 1.0
+          "pi_1.0pct": 0.0,
+          "pi_0.1pct": 0.0
         },
         "expected_fp": 0,
-        "warning": "Expected false positives at 0.1% FPR is 0 (< 10). Test sample size (372 negatives) provides limited statistical power at this FPR."
+        "warning": "Expected false positives at 0.1% FPR is 0 (< 10). Test sample size (438 negatives) provides limited statistical power at this FPR."
       }
     },
     "bootstrap_ci": {
       "roc_auc": {
-        "point": 0.4966,
-        "ci_lower": 0.4556,
-        "ci_upper": 0.5383,
-        "std": 0.0208
+        "point": 0.4769,
+        "ci_lower": 0.4384,
+        "ci_upper": 0.5154,
+        "std": 0.0198
       },
       "pr_auc": {
-        "point": 0.5101,
-        "ci_lower": 0.4616,
-        "ci_upper": 0.5603,
-        "std": 0.0254
+        "point": 0.5016,
+        "ci_lower": 0.4545,
+        "ci_upper": 0.5487,
+        "std": 0.0241
       },
       "f1": {
-        "point": 0.6596,
-        "ci_lower": 0.6269,
-        "ci_upper": 0.6874,
-        "std": 0.016
+        "point": 0.6689,
+        "ci_lower": 0.6393,
+        "ci_upper": 0.6987,
+        "std": 0.0154
       }
     },
     "breakdowns": {
       "by_resolution": {
         "resolved": {
-          "count": 652,
-          "roc_auc": 0.4879,
-          "f1": 0.6714
+          "count": 770,
+          "roc_auc": 0.4745,
+          "f1": 0.669
         },
         "no_ip": {
-          "count": 99,
-          "roc_auc": 0.5193,
-          "f1": 0.5691
+          "count": 109,
+          "roc_auc": 0.4785,
+          "f1": 0.6626
         }
       },
       "by_source": {
         "CESNET": {
-          "count": 184,
-          "accuracy": 0.0435
+          "count": 217,
+          "accuracy": 0.0
         },
         "Firebog": {
-          "count": 79,
-          "accuracy": 0.9367
+          "count": 74,
+          "accuracy": 1.0
         },
         "MISP": {
-          "count": 71,
-          "accuracy": 0.9718
+          "count": 90,
+          "accuracy": 1.0
         },
         "ThreatFox": {
-          "count": 91,
-          "accuracy": 0.9451
+          "count": 88,
+          "accuracy": 1.0
         },
         "URLhaus": {
-          "count": 74,
-          "accuracy": 0.973
+          "count": 93,
+          "accuracy": 1.0
         },
         "Umbrella": {
-          "count": 188,
-          "accuracy": 0.0319
+          "count": 221,
+          "accuracy": 0.0
         },
         "abuse.ch": {
-          "count": 64,
-          "accuracy": 0.9688
+          "count": 96,
+          "accuracy": 1.0
         }
       },
       "by_malware_family": {
         "agenttesla": {
-          "count": 64,
-          "detection_rate_recall": 0.9531
+          "count": 66,
+          "detection_rate_recall": 1.0
         },
         "asyncrat": {
-          "count": 50,
-          "detection_rate_recall": 0.94
+          "count": 71,
+          "detection_rate_recall": 1.0
         },
         "emotet": {
-          "count": 62,
-          "detection_rate_recall": 0.9677
+          "count": 68,
+          "detection_rate_recall": 1.0
         },
         "formbook": {
-          "count": 55,
-          "detection_rate_recall": 0.9818
+          "count": 51,
+          "detection_rate_recall": 1.0
         },
         "qakbot": {
-          "count": 55,
-          "detection_rate_recall": 0.9091
+          "count": 67,
+          "detection_rate_recall": 1.0
         },
         "redline": {
-          "count": 40,
+          "count": 57,
           "detection_rate_recall": 1.0
         },
         "unknown": {
-          "count": 53,
-          "detection_rate_recall": 0.9623
+          "count": 61,
+          "detection_rate_recall": 1.0
         }
       }
     },
@@ -150,7 +150,7 @@
       "chosen_lr": 0.005,
       "lr_grid": null,
       "epochs_trained": 3,
-      "best_val_auc": 0.5217,
+      "best_val_auc": 0.5161,
       "use_class_weights": false,
       "checkpoint_path": null
     }

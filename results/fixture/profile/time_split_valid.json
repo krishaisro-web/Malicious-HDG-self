@@ -1,5 +1,25 @@
 {
   "time_split_valid": true,
+  "single_holdout_available": true,
+  "rolling_origin_available": true,
+  "streaming_available": true,
+  "eligible_target_months": [
+    "2023-05",
+    "2023-06",
+    "2023-07",
+    "2023-08",
+    "2023-09",
+    "2023-10",
+    "2023-11",
+    "2023-12",
+    "2024-01",
+    "2024-02",
+    "2024-03",
+    "2024-04",
+    "2024-05",
+    "2024-06",
+    "2024-07"
+  ],
   "min_required_months": 4,
   "malware_months_count": 16,
   "benign_months_count": 16,
@@ -22,5 +42,7 @@
     "2024-06",
     "2024-07"
   ],
-  "reasons": []
+  "reasons": [
+    "Single chronological holdout is eligible targeting: ['2023-05', '2023-06', '2023-07', '2023-08', '2023-09', '2023-10', '2023-11', '2023-12', '2024-01', '2024-02', '2024-03', '2024-04', '2024-05', '2024-06', '2024-07']."
+  ]
 }

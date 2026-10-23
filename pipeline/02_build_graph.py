@@ -20,13 +20,14 @@ import pandas as pd
 import torch
 
 from src.hdg.config import load_config, get_resolved_paths, init_thread_pool
-from src.hdg.data.graph import build_base_graph, apply_split_scaling
+from src.hdg.data.graph import build_base_graph, apply_split_scaling, save_graph_cohort_bundle
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Construct Heterogeneous Base Graph.")
     parser.add_argument("--fixture", action="store_true", help="Run against data_fixture/")
     parser.add_argument("--smoke", action="store_true", help="Run in smoke test mode")
+    parser.add_argument("--force", action="store_true", help="Force rebuilding base graph")
     parser.add_argument("--config", type=str, default=None, help="Path to config YAML")
     parser.add_argument("--max-domains", type=int, default=None, help="Cap total domains for fast test")
     args = parser.parse_args()
@@ -35,6 +36,15 @@ def main() -> None:
     cfg = load_config(args.config)
     paths = get_resolved_paths(cfg, is_fixture=args.fixture, is_smoke=args.smoke, root_dir=REPO_ROOT)
     paths.check_write_path(paths.processed_dir)
+
+    graph_pt_path = paths.processed_dir / "heterodata.pt"
+    cohort_path = paths.processed_dir / "domains_cohort.parquet"
+    manifest_path = paths.processed_dir / "graph_manifest.json"
+
+    pfx = "[SMOKE] " if args.smoke else ("[FIXTURE] " if args.fixture else "[REAL] ")
+    if not args.force and graph_pt_path.exists() and cohort_path.exists() and manifest_path.exists():
+        print(f"{pfx}Aligned base graph and cohort manifest already exist in {paths.processed_dir}. Skipping (use --force to rebuild).")
+        return
 
     parquet_file = paths.processed_dir / "domains.parquet"
     if not parquet_file.exists():
@@ -60,17 +70,15 @@ def main() -> None:
         if nt in base_graph.node_types and (not hasattr(base_graph[nt], "x") or base_graph[nt].x is None):
             base_graph[nt].x = torch.zeros((base_graph[nt].num_nodes, 1), dtype=torch.float)
 
-    # Save base graph artifact
+    # Save base graph artifact and aligned cohort bundle atomically
+    manifest = save_graph_cohort_bundle(
+        graph=base_graph,
+        df=df,
+        output_dir=paths.processed_dir,
+        config=cfg,
+        metadata={"is_smoke": args.smoke, "is_fixture": args.fixture}
+    )
     graph_pt_path = paths.processed_dir / "heterodata.pt"
-    torch.save(base_graph, graph_pt_path)
-
-    id_maps_path = paths.processed_dir / "id_maps.json"
-    with open(id_maps_path, "w", encoding="utf-8") as f:
-        serializable_maps = {
-            nt: {str(k): v for k, v in m.items()}
-            for nt, m in getattr(base_graph, "id_maps", {}).items()
-        }
-        json.dump(serializable_maps, f, indent=2)
 
     print(f"\n{pfx}=== BASE GRAPH CONSTRUCTION COMPLETE ===")
     print(f"Graph file: {graph_pt_path}")

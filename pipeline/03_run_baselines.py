@@ -61,20 +61,24 @@ def main() -> None:
     paths.check_write_path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    parquet_file = paths.processed_dir / "domains.parquet"
-    graph_file = paths.processed_dir / "heterodata.pt"
-    if not parquet_file.exists():
-        raise FileNotFoundError(f"Domains file not found: {parquet_file}")
+    from src.hdg.data.graph import load_aligned_graph_cohort
+    from src.hdg.cache import compute_experiment_fingerprint
 
     pfx = "[SMOKE] " if args.smoke else ("[FIXTURE] " if args.fixture else "[REAL] ")
-    print(f"{pfx}Loading {parquet_file}...")
-    df = pd.read_parquet(parquet_file)
-
-    max_d = args.max_domains or (5000 if args.smoke else cfg.get("graph", {}).get("max_domains"))
-    if max_d is not None and len(df) > max_d:
-        df = df.sample(n=max_d, random_state=42).reset_index(drop=True)
-
-    base_graph = torch.load(graph_file, weights_only=False) if graph_file.exists() else None
+    graph_file = paths.processed_dir / "heterodata.pt"
+    if graph_file.exists():
+        print(f"{pfx}Loading aligned graph-cohort bundle from {paths.processed_dir}...")
+        base_graph, df, manifest = load_aligned_graph_cohort(paths.processed_dir)
+    else:
+        parquet_file = paths.processed_dir / "domains.parquet"
+        if not parquet_file.exists():
+            raise FileNotFoundError(f"Domains file not found: {parquet_file}")
+        print(f"{pfx}Loading {parquet_file}...")
+        df = pd.read_parquet(parquet_file)
+        max_d = args.max_domains or (5000 if args.smoke else cfg.get("graph", {}).get("max_domains"))
+        if max_d is not None and len(df) > max_d:
+            df = df.sample(n=max_d, random_state=42).reset_index(drop=True)
+        base_graph = None
 
     if args.single_seed is not None:
         seeds = [args.single_seed]

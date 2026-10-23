@@ -1,11 +1,31 @@
 {
   "metadata": {
     "is_fixture": true,
-    "generated_at": "2026-10-01T03:34:30.044143+00:00",
+    "generated_at": "2026-10-23T14:01:25.223911+00:00",
     "prefix": "FIXTURE - meaningless"
   },
   "time_split_valid": {
     "time_split_valid": true,
+    "single_holdout_available": true,
+    "rolling_origin_available": true,
+    "streaming_available": true,
+    "eligible_target_months": [
+      "2023-05",
+      "2023-06",
+      "2023-07",
+      "2023-08",
+      "2023-09",
+      "2023-10",
+      "2023-11",
+      "2023-12",
+      "2024-01",
+      "2024-02",
+      "2024-03",
+      "2024-04",
+      "2024-05",
+      "2024-06",
+      "2024-07"
+    ],
     "min_required_months": 4,
     "malware_months_count": 16,
     "benign_months_count": 16,
@@ -28,7 +48,95 @@
       "2024-06",
       "2024-07"
     ],
-    "reasons": []
+    "reasons": [
+      "Single chronological holdout is eligible targeting: ['2023-05', '2023-06', '2023-07', '2023-08', '2023-09', '2023-10', '2023-11', '2023-12', '2024-01', '2024-02', '2024-03', '2024-04', '2024-05', '2024-06', '2024-07']."
+    ]
+  },
+  "temporal_eligibility": {
+    "status": "ROLLING_ORIGIN_AVAILABLE",
+    "single_holdout_available": true,
+    "rolling_origin_available": true,
+    "streaming_available": true,
+    "eligible_target_months": [
+      "2023-05",
+      "2023-06",
+      "2023-07",
+      "2023-08",
+      "2023-09",
+      "2023-10",
+      "2023-11",
+      "2023-12",
+      "2024-01",
+      "2024-02",
+      "2024-03",
+      "2024-04",
+      "2024-05",
+      "2024-06",
+      "2024-07"
+    ],
+    "malware_months": [
+      "2023-04",
+      "2023-05",
+      "2023-06",
+      "2023-07",
+      "2023-08",
+      "2023-09",
+      "2023-10",
+      "2023-11",
+      "2023-12",
+      "2024-01",
+      "2024-02",
+      "2024-03",
+      "2024-04",
+      "2024-05",
+      "2024-06",
+      "2024-07"
+    ],
+    "benign_months": [
+      "2023-04",
+      "2023-05",
+      "2023-06",
+      "2023-07",
+      "2023-08",
+      "2023-09",
+      "2023-10",
+      "2023-11",
+      "2023-12",
+      "2024-01",
+      "2024-02",
+      "2024-03",
+      "2024-04",
+      "2024-05",
+      "2024-06",
+      "2024-07"
+    ],
+    "overlapping_months": [
+      "2023-04",
+      "2023-05",
+      "2023-06",
+      "2023-07",
+      "2023-08",
+      "2023-09",
+      "2023-10",
+      "2023-11",
+      "2023-12",
+      "2024-01",
+      "2024-02",
+      "2024-03",
+      "2024-04",
+      "2024-05",
+      "2024-06",
+      "2024-07"
+    ],
+    "overlapping_months_count": 16,
+    "reasons": [
+      "Single chronological holdout is eligible targeting: ['2023-05', '2023-06', '2023-07', '2023-08', '2023-09', '2023-10', '2023-11', '2023-12', '2024-01', '2024-02', '2024-03', '2024-04', '2024-05', '2024-06', '2024-07']."
+    ],
+    "timestamp_semantics": {
+      "selected_field": "sourced_on",
+      "fallback_field": "evaluated_on",
+      "temporal_confounding_note": "Benign domains were collected largely in early 2023, while malware domains were collected in late 2023, with Dec 2023 overlapping."
+    }
   },
   "data_schema_rdap_entity": {
     "type": "object",

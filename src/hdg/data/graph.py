@@ -97,24 +97,29 @@ def extract_domain_features_vectorized(
     use_lexical: bool = True,
     include_has_subdomain: bool = False
 ) -> np.ndarray:
-    """Vectorized domain feature extraction replacing row-by-row iterrows."""
+    n = len(df)
+    def _col_series(col_name: str, default_val: Any) -> pd.Series:
+        if col_name in df.columns:
+            return df[col_name].fillna(default_val)
+        return pd.Series([default_val] * n, index=df.index)
+
     cols: List[np.ndarray] = [
-        df["no_ip"].fillna(False).astype(np.float32).to_numpy(),
-        df["no_rdap"].fillna(False).astype(np.float32).to_numpy(),
-        df["no_tls"].fillna(False).astype(np.float32).to_numpy(),
-        df["mx_count"].fillna(0).astype(np.float32).to_numpy(),
-        df["has_spf"].fillna(False).astype(np.float32).to_numpy(),
-        df["has_dmarc"].fillna(False).astype(np.float32).to_numpy(),
-        df["has_dkim"].fillna(False).astype(np.float32).to_numpy(),
-        df["dnssec"].fillna(False).astype(np.float32).to_numpy(),
-        np.log1p(np.maximum(0, df["ttl_a"].fillna(0).to_numpy(dtype=np.float32))),
-        np.log1p(np.maximum(0, df["ttl_ns"].fillna(0).to_numpy(dtype=np.float32))),
-        df["tls_cert_count"].fillna(0).astype(np.float32).to_numpy(),
-        np.log1p(np.maximum(0, df["cert_valid_len"].fillna(0).to_numpy(dtype=np.float32)))
+        _col_series("no_ip", False).astype(np.float32).to_numpy(),
+        _col_series("no_rdap", False).astype(np.float32).to_numpy(),
+        _col_series("no_tls", False).astype(np.float32).to_numpy(),
+        _col_series("mx_count", 0).astype(np.float32).to_numpy(),
+        _col_series("has_spf", False).astype(np.float32).to_numpy(),
+        _col_series("has_dmarc", False).astype(np.float32).to_numpy(),
+        _col_series("has_dkim", False).astype(np.float32).to_numpy(),
+        _col_series("dnssec", False).astype(np.float32).to_numpy(),
+        np.log1p(np.maximum(0, _col_series("ttl_a", 0).to_numpy(dtype=np.float32))),
+        np.log1p(np.maximum(0, _col_series("ttl_ns", 0).to_numpy(dtype=np.float32))),
+        _col_series("tls_cert_count", 0).astype(np.float32).to_numpy(),
+        np.log1p(np.maximum(0, _col_series("cert_valid_len", 0).to_numpy(dtype=np.float32)))
     ]
 
     if include_has_subdomain:
-        cols.append(df["has_subdomain"].fillna(False).astype(np.float32).to_numpy())
+        cols.append(_col_series("has_subdomain", False).astype(np.float32).to_numpy())
 
     if use_lexical:
         d_strs = df["domain"].astype(str).tolist()
@@ -488,3 +493,204 @@ def build_hetero_graph(
     scaler.std = np.array(stats["domain"]["std"])
 
     return scaled, scaler, base.id_maps
+
+
+def save_graph_cohort_bundle(
+    graph: HeteroData,
+    df: pd.DataFrame,
+    output_dir: Path,
+    config: Optional[Dict[str, Any]] = None,
+    metadata: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    """
+    Saves an atomic graph-cohort bundle:
+    1. heterodata.pt (base unscaled graph)
+    2. domains_cohort.parquet (exact aligned domain dataframe, row index == domain node ID)
+    3. id_maps.json (node name to ID mappings)
+    4. graph_manifest.json (cryptographic checksums and counts to prevent stale/misaligned downstream runs)
+    """
+    import hashlib
+    from src.hdg.cache import atomic_save_torch, atomic_save_json, compute_dict_fingerprint
+
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    n_domains = len(df)
+    if graph["domain"].num_nodes != n_domains:
+        raise ValueError(
+            f"Cannot save aligned graph bundle: graph domain count ({graph['domain'].num_nodes}) "
+            f"does not match dataframe row count ({n_domains})."
+        )
+
+    # 1. Compute domain identity and label checksums
+    domain_names = df["domain"].astype(str).tolist()
+    names_str = "\n".join(domain_names).encode("utf-8")
+    dom_sha256 = hashlib.sha256(names_str).hexdigest()
+
+    labels_arr = df["label"].to_numpy().astype(np.int64)
+    labels_sha256 = hashlib.sha256(labels_arr.tobytes()).hexdigest()
+
+    node_counts = {nt: int(graph[nt].num_nodes) for nt in graph.node_types}
+    edge_counts = {f"{et[0]}__{et[1]}__{et[2]}": int(graph[et].edge_index.shape[1]) for et in graph.edge_types}
+
+    manifest = {
+        "schema_version": "2.1.0",
+        "domain_count": n_domains,
+        "domain_names_sha256": dom_sha256,
+        "labels_sha256": labels_sha256,
+        "node_counts": node_counts,
+        "edge_counts": edge_counts,
+        "feature_dim": int(graph["domain"].raw_x.shape[1]) if hasattr(graph["domain"], "raw_x") else int(graph["domain"].x.shape[1]),
+        "config_hash": compute_dict_fingerprint(config or {}),
+        "created_at": pd.Timestamp.now(tz="UTC").isoformat(),
+        "extra_metadata": metadata or {}
+    }
+    manifest["manifest_id"] = compute_dict_fingerprint(manifest)
+
+    # 2. Atomic serialization
+    graph_pt_path = output_dir / "heterodata.pt"
+    cohort_parquet_path = output_dir / "domains_cohort.parquet"
+    manifest_json_path = output_dir / "graph_manifest.json"
+    id_maps_path = output_dir / "id_maps.json"
+
+    atomic_save_torch(graph, graph_pt_path)
+    df.to_parquet(cohort_parquet_path, index=False)
+    atomic_save_json(manifest, manifest_json_path)
+
+    if hasattr(graph, "id_maps") and graph.id_maps:
+        atomic_save_json(graph.id_maps, id_maps_path)
+
+    logger.info(
+        f"Saved aligned graph bundle to {output_dir} (domains={n_domains}, manifest_id={manifest['manifest_id']})"
+    )
+    return manifest
+
+
+def load_aligned_graph_cohort(
+    processed_dir: Path,
+    require_manifest: bool = False
+) -> Tuple[HeteroData, pd.DataFrame, Optional[Dict[str, Any]]]:
+    """
+    Loads and strictly validates graph-domain cohort alignment.
+    Guarantees that dataframe rows, labels, and graph node indices match 1-to-1.
+    """
+    processed_dir = Path(processed_dir)
+    graph_path = processed_dir / "heterodata.pt"
+
+    # Prefer domains_cohort.parquet; fallback to domains.parquet
+    cohort_path = processed_dir / "domains_cohort.parquet"
+    if cohort_path.exists():
+        df = pd.read_parquet(cohort_path)
+    else:
+        dom_path = processed_dir / "domains.parquet"
+        if not dom_path.exists():
+            raise FileNotFoundError(
+                f"No domain dataset found in {processed_dir}. Expected 'domains_cohort.parquet' or 'domains.parquet'."
+            )
+        df = pd.read_parquet(dom_path)
+
+    if not graph_path.exists():
+        raise FileNotFoundError(f"Graph artifact not found: {graph_path}")
+
+    graph = torch.load(graph_path, weights_only=False)
+
+    # 1. Structural node count check
+    if graph["domain"].num_nodes != len(df):
+        raise ValueError(
+            f"FATAL ALIGNMENT MISMATCH: graph['domain'].num_nodes ({graph['domain'].num_nodes}) "
+            f"!= len(df) ({len(df)}) in {processed_dir}. "
+            "Graph was built from a different cohort than the loaded dataframe!"
+        )
+
+    # 2. Label agreement check
+    y_graph = graph["domain"].y.cpu().numpy().astype(int)
+    y_df = df["label"].to_numpy().astype(int)
+    if not np.array_equal(y_graph, y_df):
+        mismatches = int(np.sum(y_graph != y_df))
+        raise ValueError(
+            f"FATAL LABEL MISMATCH: {mismatches} of {len(df)} domain labels disagree between "
+            f"heterodata.pt and dataframe in {processed_dir}."
+        )
+
+    # 3. Manifest checksum validation
+    manifest_path = processed_dir / "graph_manifest.json"
+    manifest: Optional[Dict[str, Any]] = None
+    if manifest_path.exists():
+        with open(manifest_path, "r", encoding="utf-8") as f:
+            manifest = json.load(f)
+
+        import hashlib
+        names_str = "\n".join(df["domain"].astype(str).tolist()).encode("utf-8")
+        actual_dom_sha = hashlib.sha256(names_str).hexdigest()
+        expected_dom_sha = manifest.get("domain_names_sha256")
+
+        if expected_dom_sha and actual_dom_sha != expected_dom_sha:
+            raise ValueError(
+                f"FATAL COHORT CORRUPTION: Domain names SHA-256 ({actual_dom_sha}) does not match "
+                f"manifest ({expected_dom_sha}) in {processed_dir}!"
+            )
+    elif require_manifest:
+        raise FileNotFoundError(f"Missing mandatory graph manifest: {manifest_path}")
+
+    # Ensure unscaled base graph has x populated if only raw_x exists
+    if not hasattr(graph["domain"], "x") or graph["domain"].x is None:
+        if hasattr(graph["domain"], "raw_x") and graph["domain"].raw_x is not None:
+            graph["domain"].x = graph["domain"].raw_x.clone()
+
+    for nt in ["ip", "nameserver", "registrar", "asn", "certificate"]:
+        if nt in graph.node_types:
+            if not hasattr(graph[nt], "x") or graph[nt].x is None:
+                graph[nt].x = torch.zeros((graph[nt].num_nodes, 1), dtype=torch.float)
+
+    return graph, df, manifest
+
+
+def build_temporal_graph_pair(
+    df: pd.DataFrame,
+    train_cutoff: Optional[str] = None,
+    test_cutoff: Optional[str] = None,
+    config: Optional[Dict[str, Any]] = None,
+    month_col: str = "t_month",
+    train_cutoff_month: Optional[str] = None,
+    target_month: Optional[str] = None,
+    temporal_col: Optional[str] = None
+) -> Tuple[HeteroData, HeteroData, Dict[str, Any]]:
+    """
+    Constructs a leakage-safe temporal graph pair:
+    - train_graph: Built strictly from records with t_month <= train_cutoff.
+      Zero future domains, zero future edges, zero future infrastructure entities exist in train_graph.
+    - eval_graph: Cumulative graph up to target_month / test_cutoff.
+    Returns: (train_graph, eval_graph, meta_dict)
+    """
+    col = temporal_col or month_col
+    t_cut = train_cutoff_month or train_cutoff
+    e_cut = target_month or test_cutoff or t_cut
+
+    if t_cut is None:
+        raise ValueError("Must provide train_cutoff or train_cutoff_month.")
+
+    if col not in df.columns:
+        from src.hdg.data.temporal import extract_month_str
+        df = df.copy()
+        df[col] = df["t"].apply(extract_month_str)
+
+    train_df = df[df[col] <= t_cut].copy().reset_index(drop=True)
+    if len(train_df) == 0:
+        raise ValueError(f"No records found with {col} <= '{t_cut}'.")
+
+    eval_df = df[df[col] <= e_cut].copy().reset_index(drop=True)
+
+    train_graph = build_base_graph(train_df, config=config)
+    eval_graph = build_base_graph(eval_df, config=config)
+
+    meta = {
+        "train_cutoff_month": t_cut,
+        "target_month": e_cut,
+        "train_domain_count": len(train_df),
+        "target_domain_count": len(eval_df) - len(train_df),
+        "train_df": train_df,
+        "eval_df": eval_df
+    }
+
+    return train_graph, eval_graph, meta
+

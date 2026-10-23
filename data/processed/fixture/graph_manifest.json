@@ -1,0 +1,36 @@
+{
+  "schema_version": "2.1.0",
+  "domain_count": 5854,
+  "domain_names_sha256": "fbc7aeafd2bd91bea3da1d7d5a9b0c73c9078a0d04f4b90e7ac8e4ec0b870522",
+  "labels_sha256": "8f07a074d4e42c3a70e7d15bc7dbd62fe05ea87d173989afb65c8f12c249c934",
+  "node_counts": {
+    "domain": 5854,
+    "ip": 4922,
+    "nameserver": 8,
+    "registrar": 7,
+    "asn": 6,
+    "certificate": 3800
+  },
+  "edge_counts": {
+    "domain__resolves_to__ip": 5103,
+    "ip__rev_resolves_to__domain": 5103,
+    "nameserver__ns_ip__ip": 8,
+    "ip__rev_ns_ip__nameserver": 8,
+    "domain__uses_ns__nameserver": 18819,
+    "nameserver__rev_uses_ns__domain": 18819,
+    "domain__registered_by__registrar": 5854,
+    "registrar__rev_registered_by__domain": 5854,
+    "ip__belongs_to_asn__asn": 5119,
+    "asn__rev_belongs_to_asn__ip": 5119,
+    "domain__uses_cert__certificate": 5854,
+    "certificate__rev_uses_cert__domain": 5854
+  },
+  "feature_dim": 17,
+  "config_hash": "24627f512a2d0ce8",
+  "created_at": "2026-10-23T13:52:32.555211+00:00",
+  "extra_metadata": {
+    "is_smoke": false,
+    "is_fixture": true
+  },
+  "manifest_id": "0c647cae9adf247a"
+}

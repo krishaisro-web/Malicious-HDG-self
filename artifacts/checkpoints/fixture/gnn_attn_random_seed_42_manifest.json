@@ -1,0 +1,43 @@
+{
+  "checkpoint_file": "gnn_attn_random_seed_42.pt",
+  "experiment_fingerprint": "90ea0a4f71f19bbd",
+  "seed": 42,
+  "threshold": 0.05,
+  "best_val_auc": 0.524,
+  "epochs_trained": 3,
+  "created_at": 1792763564.251752,
+  "target_fprs": [
+    0.01,
+    0.001
+  ],
+  "operating_points": {
+    "tpr_at_1.0pct_fpr": {
+      "tpr": 0.0023,
+      "threshold": 0.6137,
+      "realised_test_fpr": 0.0,
+      "f1_at_operating_point": 0.0045,
+      "precision_at_operating_point": 1.0,
+      "recall_at_operating_point": 0.0023,
+      "prevalence_adjusted_precision": {
+        "pi_1.0pct": 1.0,
+        "pi_0.1pct": 1.0
+      },
+      "expected_fp": 4,
+      "warning": "Expected false positives at 1.0% FPR is 4 (< 10). Test sample size (438 negatives) provides limited statistical power at this FPR."
+    },
+    "tpr_at_0.1pct_fpr": {
+      "tpr": 0.0,
+      "threshold": 0.6166,
+      "realised_test_fpr": 0.0,
+      "f1_at_operating_point": 0.0,
+      "precision_at_operating_point": 0.0,
+      "recall_at_operating_point": 0.0,
+      "prevalence_adjusted_precision": {
+        "pi_1.0pct": 0.0,
+        "pi_0.1pct": 0.0
+      },
+      "expected_fp": 0,
+      "warning": "Expected false positives at 0.1% FPR is 0 (< 10). Test sample size (438 negatives) provides limited statistical power at this FPR."
+    }
+  }
+}

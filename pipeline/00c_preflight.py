@@ -202,7 +202,7 @@ def main() -> None:
         config_path = str(REPO_ROOT / "configs" / "hp_thin_client.yaml")
 
     cfg = load_config(config_path)
-    paths = get_resolved_paths(cfg, is_fixture=args.fixture, root_dir=REPO_ROOT)
+    paths = get_resolved_paths(cfg, is_fixture=args.fixture, is_smoke=args.smoke, root_dir=REPO_ROOT)
     num_threads = init_thread_pool(cfg)
 
     pfx = "[FIXTURE] " if args.fixture else "[REAL] "

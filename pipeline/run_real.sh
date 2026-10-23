@@ -172,10 +172,16 @@ log "STAGE 5: Running Multi-Seed Baselines (TF-IDF, XGBoost, MLP, Single-Feature
 ${PYTHON_BIN} -m pipeline.03_run_baselines --config "${CONFIG_FILE}"
 success "Stage 5 (Baselines) PASSED."
 
-# Step 6: Multi-Seed HeteroGNN Training & Evaluation
-log "STAGE 6: Training & Evaluating HeteroGNN (SAGE & Attn across Random, Time, Group splits)..."
-${PYTHON_BIN} -m pipeline.04_train_gnn --config "${CONFIG_FILE}" --variant both
-success "Stage 6 (HeteroGNN Evaluation) PASSED."
+# Step 6: Multi-Seed HeteroGNN Training & Evaluation (Random, Time, Group splits)
+log "STAGE 6a: Training & Evaluating HeteroGNN (Random Split)..."
+${PYTHON_BIN} -m pipeline.04_train_gnn --config "${CONFIG_FILE}" --split-type random --variant both
+
+log "STAGE 6b: Training & Evaluating HeteroGNN (Time Split)..."
+${PYTHON_BIN} -m pipeline.04_train_gnn --config "${CONFIG_FILE}" --split-type time --variant both
+
+log "STAGE 6c: Training & Evaluating HeteroGNN (Group Split)..."
+${PYTHON_BIN} -m pipeline.04_train_gnn --config "${CONFIG_FILE}" --split-type group --variant both
+success "Stage 6 (HeteroGNN Random, Time, Group Evaluation) PASSED."
 
 # Step 7: Topological & Feature Ablation Study
 log "STAGE 7: Running Systematic Ablation Study..."

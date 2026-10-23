@@ -21,16 +21,23 @@ from src.hdg.data.profiler import profile_dataset
 def main() -> None:
     parser = argparse.ArgumentParser(description="Profile Zenodo dataset files.")
     parser.add_argument("--fixture", action="store_true", help="Run against data_fixture/zenodo")
+    parser.add_argument("--smoke", action="store_true", help="Run in smoke test mode")
+    parser.add_argument("--force", action="store_true", help="Force rerun profiling")
     parser.add_argument("--config", type=str, default=None, help="Path to config YAML")
     args = parser.parse_args()
 
     cfg = load_config(args.config)
-    paths = get_resolved_paths(cfg, is_fixture=args.fixture, root_dir=REPO_ROOT)
+    paths = get_resolved_paths(cfg, is_fixture=args.fixture, is_smoke=args.smoke, root_dir=REPO_ROOT)
 
     out_profile_dir = paths.results_dir / "profile"
     paths.check_write_path(out_profile_dir)
 
-    print(f"[{'FIXTURE' if args.fixture else 'REAL'}] Starting dataset profiling...")
+    pfx = "[FIXTURE] " if args.fixture else ("[SMOKE] " if args.smoke else "[REAL] ")
+    if not args.force and (out_profile_dir / "profile_report.json").exists():
+        print(f"{pfx}Profile report already exists at {out_profile_dir / 'profile_report.json'}. Skipping (use --force to rerun).")
+        return
+
+    print(f"{pfx}Starting dataset profiling...")
     print(f"  Input raw dir: {paths.raw_dir}")
     print(f"  Output dir: {out_profile_dir}")
 

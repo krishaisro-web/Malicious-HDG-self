@@ -1,0 +1,47 @@
+{
+  "dataset_name": "Zenodo DomainRadar v2",
+  "zenodo_record": "10.5281/zenodo.10629548",
+  "zenodo_url": "https://zenodo.org/records/10629548",
+  "description": "DomainRadar v2 dataset for heterogeneous graph-based malicious domain detection.",
+  "expected_raw_directory": "data/raw/zenodo",
+  "raw_files": {
+    "malware.json": {
+      "description": "Active malware and phishing domains gathered from threat intelligence feeds (URLhaus, ThreatFox, OpenPhish).",
+      "expected_sha256": "4b68e7ec892e59e35fb080db4aa7e5e1e5559cf9c6b907cae2669e46950ba39d",
+      "approx_size_mb": 210,
+      "mandatory": true
+    },
+    "benign_umbrella.json": {
+      "description": "Benign domains from Cisco Umbrella Top 1M list, enriched with identical active feature extraction.",
+      "expected_sha256": "8a69e7f8279ad72081a95a127f8d67a14022bfdf6f0b4ee99c7515e171da2198",
+      "approx_size_mb": 110,
+      "mandatory": true
+    },
+    "benign_cesnet.json": {
+      "description": "Benign domains from CESNET National Academic Research Network traffic observations.",
+      "expected_sha256": "5c1926fb96bdfca8892416a445ec266ef61d6ec7c0e86a0b94326f59b6b90554",
+      "approx_size_mb": 110,
+      "mandatory": true
+    }
+  },
+  "fixture_files": {
+    "data/fixture/zenodo/malware.json": {
+      "size_bytes": 7409175,
+      "sha256": "e837d01b11d52821f8efd9c046e2a86851fa2eeb779029cc30b1fe410cef2523"
+    },
+    "data/fixture/zenodo/benign_umbrella.json": {
+      "size_bytes": 3676049,
+      "sha256": "9fbef797b4cbf405a5226fbee9964de6c076e124bc2b1d50617f5454bbab349e"
+    },
+    "data/fixture/zenodo/benign_cesnet.json": {
+      "size_bytes": 3673577,
+      "sha256": "09a346216026458c171e9d2d017c62138901e24c729e9a737032dff63a2d6993"
+    },
+    "data/fixture/zenodo/data_schema.json": {
+      "size_bytes": 625,
+      "sha256": "57b8c7820874f4374ef7cfd4f3695d67dae32bbb2a0ea2e72f5951aef1628ada"
+    }
+  },
+  "schema_version": "2.0.0",
+  "verification_command": "python -m pipeline.00c_preflight"
+}

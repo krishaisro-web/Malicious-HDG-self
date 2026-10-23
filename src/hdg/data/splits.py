@@ -93,6 +93,7 @@ def rolling_origin_temporal_splits(
     min_distinct_months: int = 3,
     min_per_class_per_window: int = 200,
     train_val_split_ratio: float = 0.85,
+    allow_empty: bool = False,
     seed: int = 42
 ) -> List[Tuple[str, DataSplits]]:
     """
@@ -101,7 +102,8 @@ def rolling_origin_temporal_splits(
       - Train on months <= T (stratified 85/15 train/val split inside historical window)
       - Test on month T+1
     Skips transitions with insufficient class samples and logs exact reasons.
-    Refuses if overlapping months < 2.
+    If overlapping months < 2 and allow_empty is True, logs a warning and returns [].
+    Otherwise raises ValueError.
     """
     if "t_month" not in df.columns:
         df["t_month"] = pd.to_datetime(df["t"]).dt.strftime("%Y-%m")
@@ -120,10 +122,14 @@ def rolling_origin_temporal_splits(
     ])
 
     if len(both_class_months) < 2:
-        raise ValueError(
+        msg = (
             f"Overlapping months with both classes is {len(both_class_months)} (< 2). "
             "Temporal rolling-origin evaluation cannot proceed."
         )
+        if allow_empty:
+            logger.warning(msg)
+            return []
+        raise ValueError(msg)
 
     if len(both_class_months) < min_distinct_months:
         logger.warning(
@@ -588,3 +594,12 @@ def group_split_by_asn(
     )
     splits.assert_disjoint()
     return splits, {"leakage_report": leakage, "stratification_stats": stat}
+
+
+# Re-export temporal diagnostics and holdout split for unified consumption
+from src.hdg.data.temporal import (
+    single_chronological_holdout_split,
+    analyze_temporal_eligibility,
+    save_temporal_eligibility_report,
+    TemporalEligibilityResult,
+)

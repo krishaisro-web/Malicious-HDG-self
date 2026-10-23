@@ -26,17 +26,24 @@ from src.hdg.data.audit import run_shortcut_audit
 def main() -> None:
     parser = argparse.ArgumentParser(description="Audit dataset shortcuts and class confounding.")
     parser.add_argument("--fixture", action="store_true", help="Run against data_fixture/")
+    parser.add_argument("--smoke", action="store_true", help="Run in smoke test mode")
+    parser.add_argument("--force", action="store_true", help="Force rerun shortcut audit")
     parser.add_argument("--config", type=str, default=None, help="Path to config YAML")
     args = parser.parse_args()
 
     cfg = load_config(args.config)
-    paths = get_resolved_paths(cfg, is_fixture=args.fixture, root_dir=REPO_ROOT)
+    paths = get_resolved_paths(cfg, is_fixture=args.fixture, is_smoke=args.smoke, root_dir=REPO_ROOT)
 
     parquet_file = paths.processed_dir / "domains.parquet"
     out_dir = paths.results_dir / "profile"
     paths.check_write_path(out_dir)
 
-    print(f"[{'FIXTURE' if args.fixture else 'REAL'}] Running shortcut audit on: {parquet_file}...")
+    pfx = "[FIXTURE] " if args.fixture else ("[SMOKE] " if args.smoke else "[REAL] ")
+    if not args.force and (out_dir / "audit_shortcuts.json").exists():
+        print(f"{pfx}Shortcut audit already exists at {out_dir / 'audit_shortcuts.json'}. Skipping (use --force to rerun).")
+        return
+
+    print(f"{pfx}Running shortcut audit on: {parquet_file}...")
     summary, md_text = run_shortcut_audit(parquet_file, out_dir, is_fixture=args.fixture)
 
     pfx = "[FIXTURE - meaningless] " if args.fixture else ""

@@ -76,9 +76,10 @@ def main() -> None:
             f"Processed artifacts not found in {paths.processed_dir}. Run 01_parse.py and 02_build_graph.py first."
         )
 
-    print(f"[{'FIXTURE' if args.fixture else 'REAL'}] Loading graph and domain dataset...")
-    df = pd.read_parquet(parquet_file)
-    data = torch.load(graph_file, weights_only=False)
+    from src.hdg.data.graph import load_aligned_graph_cohort
+
+    print(f"[{'FIXTURE' if args.fixture else 'REAL'}] Loading aligned graph and domain dataset...")
+    data, df, manifest = load_aligned_graph_cohort(paths.processed_dir)
 
     init_thread_pool(cfg)
 
@@ -86,7 +87,7 @@ def main() -> None:
     splits = None
     try:
         if "t_month" in df.columns or "t" in df.columns:
-            transitions = rolling_origin_temporal_splits(df, min_distinct_months=2, min_per_class_per_window=10)
+            transitions = rolling_origin_temporal_splits(df, min_distinct_months=2, min_per_class_per_window=10, allow_empty=True)
             if transitions:
                 _, splits = transitions[-1]
     except Exception as e:
@@ -105,47 +106,64 @@ def main() -> None:
         num_layers=2
     )
 
-    # Load or train model
+    # Resolve validated model checkpoint
     model_loaded = False
-    if args.checkpoint and Path(args.checkpoint).exists():
-        model.load_state_dict(torch.load(args.checkpoint, map_location="cpu", weights_only=False))
-        print(f"Loaded model checkpoint from: {args.checkpoint}")
-        model_loaded = True
+    resolved_ckpt_path = None
+    ckpt_manifest = {}
+
+    if args.checkpoint:
+        cand = Path(args.checkpoint)
+        if cand.exists():
+            resolved_ckpt_path = cand
     else:
-        # Check if a checkpoint exists in checkpoints_dir
+        # Search for calibrated production checkpoints
         ckpt_dir = paths.checkpoints_dir
-        available_ckpts = list(ckpt_dir.glob("*.pt")) if ckpt_dir.exists() else []
-        if available_ckpts:
-            ckpt_path = available_ckpts[0]
-            try:
-                ckpt_obj = torch.load(ckpt_path, map_location="cpu", weights_only=False)
-                if isinstance(ckpt_obj, dict):
-                    if "model_state_dict" in ckpt_obj:
-                        state_dict = ckpt_obj["model_state_dict"]
-                    elif "state_dict" in ckpt_obj:
-                        state_dict = ckpt_obj["state_dict"]
-                    else:
-                        state_dict = ckpt_obj
-                else:
-                    state_dict = ckpt_obj
-                model.load_state_dict(state_dict)
-                print(f"Loaded checkpoint from: {ckpt_path}")
-                model_loaded = True
-            except Exception as e:
-                print(f"Could not load {ckpt_path} ({e}), training fresh model...")
+        preferred_candidates = [
+            ckpt_dir / "gnn_sage_random_seed_42.pt",
+            ckpt_dir / "gnn_sage_guard_random_seed_42.pt",
+            ckpt_dir / "gnn_attn_random_seed_42.pt"
+        ]
+        for p in preferred_candidates:
+            if p.exists():
+                resolved_ckpt_path = p
+                break
+        if resolved_ckpt_path is None and ckpt_dir.exists():
+            all_pts = [p for p in ckpt_dir.glob("*.pt") if not p.name.endswith("_train_state.pt")]
+            if all_pts:
+                resolved_ckpt_path = all_pts[0]
+
+    if resolved_ckpt_path is not None and resolved_ckpt_path.exists():
+        try:
+            ckpt_obj = torch.load(resolved_ckpt_path, map_location="cpu", weights_only=False)
+            state_dict = ckpt_obj.get("model_state_dict", ckpt_obj) if isinstance(ckpt_obj, dict) else ckpt_obj
+            model.load_state_dict(state_dict)
+            model_loaded = True
+            print(f"[RPZ] Successfully loaded verified model checkpoint: {resolved_ckpt_path.name}")
+
+            # Load accompanying manifest if present
+            man_path = resolved_ckpt_path.parent / f"{resolved_ckpt_path.stem}_manifest.json"
+            if man_path.exists():
+                with open(man_path, "r", encoding="utf-8") as f:
+                    ckpt_manifest = json.load(f)
+                print(f"[RPZ] Loaded model checkpoint manifest: {man_path.name}")
+        except Exception as e:
+            print(f"[WARN] Failed to load checkpoint {resolved_ckpt_path}: {e}")
 
     if not model_loaded:
-        print("Training fast base model for RPZ threshold calibration...")
-        optimizer = torch.optim.Adam(model.parameters(), lr=0.005, weight_decay=0.0001)
-        model.train()
-        train_idx = splits.train_indices
-        y_all = data["domain"].y
-        for epoch in range(15 if (args.smoke or args.fixture) else 40):
-            optimizer.zero_grad()
-            out = model(data.x_dict, data.edge_index_dict)
-            loss = F.cross_entropy(out[train_idx], y_all[train_idx])
-            loss.backward()
-            optimizer.step()
+        print("[BLOCKED] RPZ rule generation blocked: No verified production model checkpoint found.")
+        print("          Run 'pipeline/04_train_gnn.py' first to train, evaluate, and save calibrated checkpoints.")
+        blocked_summary = {
+            "status": "BLOCKED_MISSING_MODEL",
+            "reason": f"No verified model checkpoint found in {paths.checkpoints_dir}. Will not emit RPZ rules from unrecorded model.",
+            "checkpoint_path": None,
+            "rules_emitted": 0,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        summary_json_path = rpz_dir / "rpz_summary.json"
+        with open(summary_json_path, "w", encoding="utf-8") as f:
+            json.dump(blocked_summary, f, indent=2)
+        save_run_result(paths, run_name, blocked_summary)
+        return
 
     model.eval()
     with torch.no_grad():
