@@ -35,11 +35,21 @@ from src.hdg.config import load_config, get_resolved_paths
 from src.hdg.data.fixture import make_fixture
 
 
-def run_cmd(cmd: List[str]) -> None:
-    print(f"\n[RUN] Executing: {' '.join(cmd)}")
+import time
+
+def run_step(step_num: int, total_steps: int, title: str, cmd: List[str]) -> None:
+    bar = "=" * 70
+    print(f"\n{bar}")
+    print(f"▶ STEP [{step_num:02d}/{total_steps:02d}]: {title.upper()}")
+    print(f"  Command: {' '.join(cmd)}")
+    print(f"{bar}")
+    t0 = time.perf_counter()
     res = subprocess.run(cmd, cwd=str(REPO_ROOT))
+    elapsed = time.perf_counter() - t0
     if res.returncode != 0:
+        print(f"\n❌ STEP [{step_num:02d}/{total_steps:02d}] FAILED after {elapsed:.2f}s with exit code {res.returncode}")
         raise RuntimeError(f"Command failed with exit code {res.returncode}: {' '.join(cmd)}")
+    print(f"✔ STEP [{step_num:02d}/{total_steps:02d}] COMPLETED in {elapsed:.2f}s\n")
 
 
 def main() -> None:
@@ -85,29 +95,28 @@ def main() -> None:
         common_flags.extend(["--config", args.config])
 
 
+    TOTAL_STAGES = 16
+
     # 0. Preflight
-    preflight_cmd = [py_exe, "-m", "pipeline.00c_preflight"] + common_flags
-    run_cmd(preflight_cmd)
+    run_step(1, TOTAL_STAGES, "Preflight Environment & Resource Audit", [py_exe, "-m", "pipeline.00c_preflight"] + common_flags)
 
     # 1. Profile Dataset
-    profile_cmd = [py_exe, "-m", "pipeline.00_profile_dataset"] + common_flags
-    run_cmd(profile_cmd)
+    run_step(2, TOTAL_STAGES, "Dataset Schema & Date Distribution Profiling", [py_exe, "-m", "pipeline.00_profile_dataset"] + common_flags)
 
     # 2. Parse & Normalize
     parse_cmd = [py_exe, "-m", "pipeline.01_parse"] + common_flags
     if args.max_domains is not None:
         parse_cmd.extend(["--limit", str(args.max_domains)])
-    run_cmd(parse_cmd)
+    run_step(3, TOTAL_STAGES, "Stream Parsing, Key Resolution & Normalization", parse_cmd)
 
     # 3. Shortcut Audit
-    audit_cmd = [py_exe, "-m", "pipeline.00b_audit_shortcuts"] + common_flags
-    run_cmd(audit_cmd)
+    run_step(4, TOTAL_STAGES, "Shortcut & Single-Feature Leakage Audit", [py_exe, "-m", "pipeline.00b_audit_shortcuts"] + common_flags)
 
     # 4. Build Graph
     graph_cmd = [py_exe, "-m", "pipeline.02_build_graph"] + common_flags
     if args.max_domains is not None:
         graph_cmd.extend(["--max-domains", str(args.max_domains)])
-    run_cmd(graph_cmd)
+    run_step(5, TOTAL_STAGES, "Heterogeneous Graph (HDG) Construction", graph_cmd)
 
     # 5. Baselines
     base_cmd = [py_exe, "-m", "pipeline.03_run_baselines"] + common_flags
@@ -115,11 +124,17 @@ def main() -> None:
         base_cmd.extend(["--single-seed", str(args.single_seed)])
     elif args.fixture or args.smoke:
         base_cmd.extend(["--single-seed", "42"])
-    run_cmd(base_cmd)
+    run_step(6, TOTAL_STAGES, "Tabular & Lexical Baselines Evaluation", base_cmd)
 
     # 6. GNN Evaluation (Random, Time, Group splits)
     epochs_val = args.epochs if args.epochs is not None else (3 if (args.fixture or args.smoke) else 30)
-    for s_type in ["random", "time", "group"]:
+    split_meta = [
+        ("Random Split", "random"),
+        ("Time Split (Temporal Holdout)", "time"),
+        ("Group Split (Disjoint Infrastructure)", "group")
+    ]
+    step_idx = 7
+    for label, s_type in split_meta:
         gnn_cmd = [
             py_exe, "-m", "pipeline.04_train_gnn",
             "--split-type", s_type,
@@ -130,7 +145,8 @@ def main() -> None:
             gnn_cmd.extend(["--single-seed", str(args.single_seed)])
         elif args.fixture or args.smoke:
             gnn_cmd.extend(["--single-seed", "42"])
-        run_cmd(gnn_cmd)
+        run_step(step_idx, TOTAL_STAGES, f"HeteroGNN Training & Testing [{label}]", gnn_cmd)
+        step_idx += 1
 
     # 7. Ablation Study
     abl_cmd = [
@@ -141,14 +157,14 @@ def main() -> None:
         abl_cmd.extend(["--single-seed", str(args.single_seed)])
     elif args.fixture or args.smoke:
         abl_cmd.extend(["--single-seed", "42"])
-    run_cmd(abl_cmd)
+    run_step(10, TOTAL_STAGES, "Systematic Graph Ablation Study", abl_cmd)
 
     # 8. Structural Attack
     atk_cmd = [
         py_exe, "-m", "pipeline.06_attack_eval",
         "--epochs", str(epochs_val)
     ] + common_flags
-    run_cmd(atk_cmd)
+    run_step(11, TOTAL_STAGES, "Adversarial Structural Attack & GNNGuard Recovery", atk_cmd)
 
     # 9. Latency Benchmark
     lat_cmd = [
@@ -156,25 +172,22 @@ def main() -> None:
         "--num-queries", "20" if (args.fixture or args.smoke) else "500",
         "--warmup", "5" if (args.fixture or args.smoke) else "20"
     ] + common_flags
-    run_cmd(lat_cmd)
+    run_step(12, TOTAL_STAGES, "Operational CPU Inference Latency Benchmark", lat_cmd)
 
     # 10. Provenance Checks
-    prov_cmd = [py_exe, "-m", "pipeline.08_provenance_checks"] + common_flags
-    run_cmd(prov_cmd)
+    run_step(13, TOTAL_STAGES, "Dataset Provenance & Cross-Source Generalization Audit", [py_exe, "-m", "pipeline.08_provenance_checks"] + common_flags)
 
     # 11. Streaming Continual Learning
     stream_cmd = [py_exe, "-m", "pipeline.09_streaming_eval"] + common_flags
     if args.fixture or args.smoke:
         stream_cmd.extend(["--max-months", "3"])
-    run_cmd(stream_cmd)
+    run_step(14, TOTAL_STAGES, "Streaming Continual Learning & Online Adaptation", stream_cmd)
 
     # 12. BIND RPZ Rule Emission
-    rpz_cmd = [py_exe, "-m", "pipeline.10_emit_rpz"] + common_flags
-    run_cmd(rpz_cmd)
+    run_step(15, TOTAL_STAGES, "BIND Response Policy Zone (RPZ) Firewall Rule Emission", [py_exe, "-m", "pipeline.10_emit_rpz"] + common_flags)
 
     # 13. Comprehensive Report Generation
-    report_cmd = [py_exe, "-m", "pipeline.11_make_report"] + common_flags
-    run_cmd(report_cmd)
+    run_step(16, TOTAL_STAGES, "Comprehensive Evaluation Report Compilation", [py_exe, "-m", "pipeline.11_make_report"] + common_flags)
 
     print(f"\n{pfx}==================================================")
     print(f"{pfx}Malicious-HDG complete pipeline finished successfully!")

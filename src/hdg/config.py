@@ -3,6 +3,7 @@ Configuration loader, path validation, and run management for Malicious-HDG.
 """
 
 import os
+import platform
 # Ensure safe OpenMP multi-threading initialization on macOS / Linux CPU environments
 os.environ.setdefault("OMP_NUM_THREADS", "1")
 os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
@@ -10,6 +11,11 @@ os.environ.setdefault("MKL_NUM_THREADS", "1")
 os.environ.setdefault("VECLIB_MAXIMUM_THREADS", "1")
 os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
 os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
+
+try:
+    import xgboost as _xgb_preinit
+except Exception:
+    pass
 
 from dataclasses import dataclass
 import json
@@ -396,9 +402,11 @@ def init_thread_pool(cfg: Optional[Dict[str, Any]] = None) -> int:
         num_threads = int(cfg["hardware"]["num_threads"])
     else:
         avail = os.cpu_count() or 1
-        # On thin client or low-core machines (<= 4 cores and <= 16GB RAM), cap to min(2, avail)
-        # to ensure thermal stability on passive cooling and leave headroom for OS.
-        if is_thin_client_environment():
+        # On macOS ARM64 (Apple Silicon), PyTorch + XGBoost + OpenMP runtime conflicts
+        # cause segfaults when changing threads or spawning threads across libraries.
+        if platform.system() == "Darwin":
+            num_threads = 1
+        elif is_thin_client_environment():
             num_threads = min(2, avail)
         else:
             # On large multi-core server (e.g. 245 GB RAM server with 16-128 cores),

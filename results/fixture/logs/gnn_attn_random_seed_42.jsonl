@@ -1,3 +1,0 @@
-{"epoch": 1, "train_loss": 0.7194, "val_loss": 0.7075, "val_auc": 0.4732, "seconds": 0.211}
-{"epoch": 2, "train_loss": 0.7064, "val_loss": 0.6957, "val_auc": 0.5129, "seconds": 0.177}
-{"epoch": 3, "train_loss": 0.6975, "val_loss": 0.6945, "val_auc": 0.524, "seconds": 0.178}

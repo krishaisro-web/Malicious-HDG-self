@@ -155,7 +155,14 @@ def main() -> None:
             elif args.split_type == "time":
                 # Analyze temporal eligibility on complete chronological cohort
                 min_months = cfg.get("temporal", {}).get("min_distinct_months", 3)
-                min_p_class = 10 if (args.fixture or args.smoke) else cfg.get("temporal", {}).get("min_per_class_per_window", 200)
+                if args.fixture or args.smoke:
+                    min_p_class = 10
+                elif len(df) < 500:
+                    # Adaptive threshold for small testing subsamples of real dataset
+                    min_p_class = 2
+                else:
+                    min_p_class = cfg.get("temporal", {}).get("min_per_class_per_window", 200)
+
                 elig = analyze_temporal_eligibility(
                     df,
                     min_distinct_months=min_months,
@@ -179,11 +186,13 @@ def main() -> None:
 
                 if not elig.rolling_origin_available and elig.single_holdout_available:
                     target_m = elig.eligible_target_months[0]
+                    min_hist = 2 if len(df) < 500 else (10 if (args.fixture or args.smoke) else 50)
+                    min_tgt = 2 if len(df) < 500 else (10 if (args.fixture or args.smoke) else 50)
                     splits = single_chronological_holdout_split(
                         df,
                         target_month=target_m,
-                        min_historical_per_class=10 if (args.fixture or args.smoke) else 50,
-                        min_target_per_class=10 if (args.fixture or args.smoke) else 50,
+                        min_historical_per_class=min_hist,
+                        min_target_per_class=min_tgt,
                         seed=s
                     )
                     temporal_mode = "single_chronological_holdout"
@@ -282,8 +291,13 @@ def main() -> None:
                     "y_pred": y_pred.tolist()
                 }
             }
-            save_run_result(paths.results_dir, run_name, run_payload)
-            print(f"  Test ROC-AUC: {test_eval['roc_auc']:.4f}, PR-AUC: {test_eval['pr_auc']:.4f}, F1: {test_eval['f1']:.4f}")
+            tpr_01 = test_eval.get('operating_points', {}).get('tpr_at_0.1pct_fpr', {}).get('tpr', 0.0)
+            print(f"  ┌── [TEST METRICS: {var.upper()} on {args.split_type.upper()}] ─────────────────────────")
+            print(f"  │  ROC-AUC:   {test_eval['roc_auc']:.4f}  |  PR-AUC:   {test_eval['pr_auc']:.4f}")
+            print(f"  │  F1-Score:  {test_eval['f1']:.4f}  |  Accuracy: {test_eval.get('accuracy', (test_eval.get('precision', 0)+test_eval.get('recall', 0))/2):.4f}")
+            print(f"  │  Precision: {test_eval.get('precision', 0.0):.4f}  |  Recall:   {test_eval.get('recall', 0.0):.4f}")
+            print(f"  │  Operating Point TPR @ 0.1% FPR: {tpr_01:.4f} (Threshold: {test_eval['threshold']:.4f})")
+            print(f"  └───────────────────────────────────────────────────────────────────")
 
             # Memory cleanup for low-resource / thin client execution
             del model, scaled_data

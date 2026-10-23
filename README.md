@@ -125,9 +125,8 @@ Malicious-HDG/
 │   ├── training/             # train.py, baselines.py
 │   └── eval/                 # attack.py, latency.py, streaming.py
 ├── pipeline/                 # Numbered pipeline scripts 00 → 11 + run_all.py + run_real.sh
-├── experiments/              # Standalone side experiments (chrmor_lexical)
 ├── tests/                    # Active pytest suite (31 tests passing)
-├── tools/                    # Utility scripts (make_schema_fixture.py)
+├── tools/                    # Hardware probe & system verification utilities
 ├── data/
 │   ├── raw/zenodo/           # Real Zenodo data (gitignored)
 │   ├── fixture/zenodo/       # Small synthetic fixture data (committed)
@@ -136,8 +135,7 @@ Malicious-HDG/
 │   └── checkpoints/          # Model checkpoints ({fixture, real}/)
 ├── results/
 │   ├── fixture/              # Smoke & test run outputs (tables, runs, logs, rpz, profile)
-│   ├── real/                 # Real data outputs
-│   └── chrmor/               # Auxiliary lexical study outputs
+│   └── real/                 # Real data outputs
 ├── docs/
 │   ├── ASSUMPTIONS.md        # Real data assumptions & verification fields
 │   ├── RUN_ON_REAL_DATA.md   # Exact ordered guide for Linux CPU server

@@ -22,6 +22,8 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+# Import xgboost first to ensure libomp runtime binds cleanly on macOS ARM64
+import xgboost as xgb
 import numpy as np
 import pandas as pd
 import torch

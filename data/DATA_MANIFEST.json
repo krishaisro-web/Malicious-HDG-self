@@ -1,26 +1,23 @@
 {
   "dataset_name": "Zenodo DomainRadar v2",
-  "zenodo_record": "10.5281/zenodo.10629548",
-  "zenodo_url": "https://zenodo.org/records/10629548",
-  "description": "DomainRadar v2 dataset for heterogeneous graph-based malicious domain detection.",
+  "zenodo_record": "10.5281/zenodo.14332167",
+  "zenodo_url": "https://zenodo.org/records/14332167",
+  "description": "DomainRadar v2 dataset for heterogeneous graph-based malicious domain detection (NESFIT Brno University of Technology).",
   "expected_raw_directory": "data/raw/zenodo",
   "raw_files": {
     "malware.json": {
-      "description": "Active malware and phishing domains gathered from threat intelligence feeds (URLhaus, ThreatFox, OpenPhish).",
-      "expected_sha256": "4b68e7ec892e59e35fb080db4aa7e5e1e5559cf9c6b907cae2669e46950ba39d",
-      "approx_size_mb": 210,
+      "description": "Active malware domains gathered from threat intelligence feeds (ThreatFox, URLhaus, Firebog, MISP).",
+      "approx_size_mb": 1034,
       "mandatory": true
     },
     "benign_umbrella.json": {
       "description": "Benign domains from Cisco Umbrella Top 1M list, enriched with identical active feature extraction.",
-      "expected_sha256": "8a69e7f8279ad72081a95a127f8d67a14022bfdf6f0b4ee99c7515e171da2198",
-      "approx_size_mb": 110,
+      "approx_size_mb": 5794,
       "mandatory": true
     },
     "benign_cesnet.json": {
       "description": "Benign domains from CESNET National Academic Research Network traffic observations.",
-      "expected_sha256": "5c1926fb96bdfca8892416a445ec266ef61d6ec7c0e86a0b94326f59b6b90554",
-      "approx_size_mb": 110,
+      "approx_size_mb": 6138,
       "mandatory": true
     }
   },

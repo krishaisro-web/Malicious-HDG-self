@@ -215,7 +215,17 @@ def train_eval_gnn(
         }
         log_records.append(log_entry)
 
-        if val_auc > best_val_auc:
+        is_best = val_auc > best_val_auc
+        marker = " ★ (Best Val AUC)" if is_best else ""
+        # Live industry-standard training progress line
+        if epoch == 1 or epoch % max(1, epochs // 10) == 0 or epoch == epochs or is_best:
+            print(f"    [Epoch {epoch:03d}/{epochs:03d}] "
+                  f"Train Loss: {train_loss:.4f} | "
+                  f"Val Loss: {val_loss:.4f} | "
+                  f"Val AUC: {val_auc:.4f} | "
+                  f"Time: {epoch_sec:.2f}s{marker}")
+
+        if is_best:
             best_val_auc = val_auc
             best_weights = deepcopy(model.state_dict())
             epochs_no_improve = 0
