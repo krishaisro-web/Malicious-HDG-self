@@ -43,6 +43,7 @@ def main() -> None:
     parser.add_argument("--config", type=str, default=None, help="Path to config YAML")
     parser.add_argument("--num-queries", type=int, default=None, help="Number of test queries to measure (default: 500, smoke: 50)")
     parser.add_argument("--warmup", type=int, default=None, help="Number of warmup iterations (default: 20, smoke: 5)")
+    parser.add_argument("--checkpoint", type=str, default=None, help="Path to trained model checkpoint .pt")
     parser.add_argument("--force", action="store_true", help="Force rerun even if results exist")
     args = parser.parse_args()
 
@@ -85,12 +86,74 @@ def main() -> None:
         df = df.drop(columns=["_graph_idx"])
     print(f"[LATENCY] Aligned {len(df):,} dataframe rows to graph domain-node order.")
 
-    in_channels = {nt: data[nt].x.shape[1] for nt in data.node_types}
-    model = HeteroGNN(
-        metadata=data.metadata(),
-        in_channels_dict=in_channels,
-        variant="sage"
+    from src.hdg.data.splits import random_stratified_split
+    from src.hdg.data.graph import apply_split_scaling
+
+    # Apply training-time split scaling to match production inference inputs
+    splits = random_stratified_split(df["label"].to_numpy(), seed=42)
+    scaled_data, _ = apply_split_scaling(
+        base=data,
+        train_indices=splits.train_indices,
+        val_indices=splits.val_indices,
+        degree_mode=cfg.get("graph", {}).get("degree_mode", "transductive")
     )
+
+    in_channels = {nt: scaled_data[nt].x.shape[1] for nt in scaled_data.node_types}
+    
+    # 1. Identify and load production checkpoint
+    ckpt_dir = paths.checkpoints_dir
+    candidates = []
+    if args.checkpoint:
+        cand = Path(args.checkpoint)
+        if cand.exists():
+            candidates.append(cand)
+    else:
+        preferred = [
+            ckpt_dir / "gnn_sage_random_seed_42.pt",
+            ckpt_dir / "gnn_attn_random_seed_42.pt",
+            ckpt_dir / "gnn_sage_guard_random_seed_42.pt",
+            ckpt_dir / "gnn_sage_time_seed_42.pt",
+        ]
+        for p in preferred:
+            if p.exists() and p not in candidates:
+                candidates.append(p)
+        if ckpt_dir.exists():
+            for p in sorted(ckpt_dir.glob("*.pt")):
+                if not p.name.endswith("_train_state.pt") and p not in candidates:
+                    candidates.append(p)
+
+    model = None
+    loaded_ckpt_file = None
+    for cand_path in candidates:
+        try:
+            ckpt_obj = torch.load(cand_path, map_location="cpu", weights_only=False)
+            state_dict = ckpt_obj.get("model_state_dict", ckpt_obj) if isinstance(ckpt_obj, dict) else ckpt_obj
+            ckpt_cfg = ckpt_obj.get("model_config", {})
+            cand_model = HeteroGNN(
+                metadata=scaled_data.metadata(),
+                in_channels_dict=in_channels,
+                variant=ckpt_cfg.get("variant", "sage"),
+                hidden_dim=ckpt_cfg.get("hidden_dim", 64),
+                out_dim=ckpt_cfg.get("out_dim", 32),
+                num_layers=ckpt_cfg.get("num_layers", 2),
+                dropout=ckpt_cfg.get("dropout", 0.2),
+                use_edges=ckpt_cfg.get("use_edges", True)
+            )
+            cand_model.load_state_dict(state_dict)
+            model = cand_model
+            loaded_ckpt_file = cand_path.name
+            print(f"[LATENCY] Loaded production checkpoint: {cand_path.name}")
+            break
+        except Exception as e:
+            print(f"[LATENCY] Could not load checkpoint {cand_path.name} ({e}), trying next candidate...")
+
+    if model is None:
+        print("[LATENCY] No saved checkpoint found. Initializing reference SAGE model...")
+        model = HeteroGNN(
+            metadata=scaled_data.metadata(),
+            in_channels_dict=in_channels,
+            variant="sage"
+        )
 
     # Hardware specs
     cpu_model = get_cpu_model_name()
@@ -116,7 +179,7 @@ def main() -> None:
                 print(f"Evaluating Batch Size = {bs} ({num_queries} queries, {warmup} warmup)...")
                 stats = benchmark_cpu_query_latency(
                     model=model,
-                    data=data,
+                    data=scaled_data,
                     df=df,
                     batch_size=bs,
                     num_queries=num_queries,
@@ -142,7 +205,8 @@ def main() -> None:
             "num_queries": num_queries,
             "warmup": warmup,
             "is_fixture": args.fixture,
-            "is_smoke": args.smoke
+            "is_smoke": args.smoke,
+            "checkpoint_file": loaded_ckpt_file
         },
         "benchmarks": all_results
     }
@@ -162,6 +226,7 @@ def main() -> None:
         f"- **Physical/Logical Cores**: `{core_count}`",
         f"- **Operating System**: `{os_name}`",
         f"- **PyTorch Version**: `{torch_version}`",
+        f"- **Evaluated Checkpoint**: `{loaded_ckpt_file or 'Reference SAGE (fresh)'}`",
         f"- **Queries Measured**: `{num_queries}` (Warmup: `{warmup}`)",
         "",
         "## Benchmark Results (ms per query)",

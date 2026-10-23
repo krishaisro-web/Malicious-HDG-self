@@ -28,9 +28,10 @@ class DataSplits:
     test_indices: np.ndarray
     split_type: str
     metadata: Dict[str, Any] = field(default_factory=dict)
+    cert_indices: Optional[np.ndarray] = None
 
     def assert_disjoint(self) -> None:
-        """Asserts train, val, and test index sets are completely disjoint."""
+        """Asserts train, val, test, and cert index sets are completely disjoint."""
         s_train = set(self.train_indices.tolist())
         s_val = set(self.val_indices.tolist())
         s_test = set(self.test_indices.tolist())
@@ -45,6 +46,15 @@ class DataSplits:
             raise AssertionError(f"Leak detected: {len(inter_tt)} indices in both Train and Test!")
         if inter_vt:
             raise AssertionError(f"Leak detected: {len(inter_vt)} indices in both Val and Test!")
+
+        if self.cert_indices is not None:
+            s_cert = set(self.cert_indices.tolist())
+            if s_cert.intersection(s_train):
+                raise AssertionError("Leak detected: Certification indices overlap with Train!")
+            if s_cert.intersection(s_val):
+                raise AssertionError("Leak detected: Certification indices overlap with Model-Selection Val!")
+            if s_cert.intersection(s_test):
+                raise AssertionError("Leak detected: Certification indices overlap with Test!")
 
 
 def random_stratified_split(
@@ -72,17 +82,40 @@ def random_stratified_split(
     val_idx = temp_idx[sub_val_idx]
     test_idx = temp_idx[sub_test_idx]
 
+    # Pre-allocate 50% of validation negatives into an independent certification holdout
+    # to guarantee zero data reuse during early stopping, hyperparameter search, and threshold calibration
+    val_labels = labels[val_idx]
+    val_neg_indices = val_idx[val_labels == 0]
+    val_pos_indices = val_idx[val_labels == 1]
+
+    if len(val_neg_indices) >= 2:
+        rng = np.random.RandomState(seed)
+        shuffled_negs = rng.permutation(val_neg_indices)
+        half = len(val_neg_indices) // 2
+        calib_negs = shuffled_negs[:half]
+        cert_negs = shuffled_negs[half:]
+        # val_indices for model selection and early stopping strictly contains calib_negs + val positives
+        model_val_indices = np.concatenate([val_pos_indices, calib_negs])
+        model_val_indices.sort()
+        cert_indices = cert_negs
+        cert_indices.sort()
+    else:
+        model_val_indices = val_idx
+        cert_indices = np.array([], dtype=int)
+
     splits = DataSplits(
         train_indices=train_idx,
-        val_indices=val_idx,
+        val_indices=model_val_indices,
         test_indices=test_idx,
         split_type="random_stratified",
         metadata={
             "train_size": len(train_idx),
-            "val_size": len(val_idx),
+            "val_size": len(model_val_indices),
             "test_size": len(test_idx),
+            "cert_size": len(cert_indices),
             "seed": seed
-        }
+        },
+        cert_indices=cert_indices
     )
     splits.assert_disjoint()
     return splits
@@ -186,9 +219,27 @@ def rolling_origin_temporal_splits(
                 val_indices = np.array([hist_indices[0]], dtype=int)
             train_indices = np.array([idx for idx in hist_indices if idx not in val_indices], dtype=int)
 
+        val_labels = df.iloc[val_indices]["label"].to_numpy()
+        val_neg_idx = val_indices[val_labels == 0]
+        val_pos_idx = val_indices[val_labels == 1]
+
+        if len(val_neg_idx) >= 2:
+            rng = np.random.RandomState(seed)
+            shuffled_negs = rng.permutation(val_neg_idx)
+            half = len(val_neg_idx) // 2
+            calib_negs = shuffled_negs[:half]
+            cert_negs = shuffled_negs[half:]
+            model_val_indices = np.concatenate([val_pos_idx, calib_negs])
+            model_val_indices.sort()
+            cert_indices = cert_negs
+            cert_indices.sort()
+        else:
+            model_val_indices = val_indices
+            cert_indices = np.array([], dtype=int)
+
         splits = DataSplits(
             train_indices=train_indices,
-            val_indices=val_indices,
+            val_indices=model_val_indices,
             test_indices=test_indices,
             split_type="temporal_rolling_origin",
             metadata={
@@ -197,12 +248,14 @@ def rolling_origin_temporal_splits(
                 "test_month": t_next,
                 "train_pos": int(np.sum(df.iloc[train_indices]["label"] == 1)),
                 "train_neg": int(np.sum(df.iloc[train_indices]["label"] == 0)),
-                "val_pos": int(np.sum(df.iloc[val_indices]["label"] == 1)),
-                "val_neg": int(np.sum(df.iloc[val_indices]["label"] == 0)),
+                "val_pos": int(np.sum(df.iloc[model_val_indices]["label"] == 1)),
+                "val_neg": int(np.sum(df.iloc[model_val_indices]["label"] == 0)),
+                "cert_neg": len(cert_indices),
                 "test_pos": test_pos,
                 "test_neg": test_neg,
                 "seed": seed
-            }
+            },
+            cert_indices=cert_indices
         )
         splits.assert_disjoint()
         transitions.append((trans_name, splits))

@@ -37,6 +37,7 @@ def minimal_domains_df() -> pd.DataFrame:
         "family": [None if l == 0 else "emotet" for l in labels],
         "t": dates,
         "t_month": months,
+        "has_subdomain": [False] * 10,
         "no_ip": [False] * 10,
         "no_rdap": [False] * 10,
         "no_tls": [False] * 10,

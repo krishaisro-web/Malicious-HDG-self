@@ -56,6 +56,9 @@ fi
 # Parse CLI options
 CONFIG_OVERRIDE=""
 FORCE_THIN_CLIENT=false
+FORCE_RERUN=false
+EXTRA_PIPELINE_FLAGS=()
+
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --config)
@@ -64,10 +67,16 @@ while [[ $# -gt 0 ]]; do
             ;;
         --thin-client)
             FORCE_THIN_CLIENT=true
+            EXTRA_PIPELINE_FLAGS+=("--thin-client")
+            shift
+            ;;
+        --force)
+            FORCE_RERUN=true
+            EXTRA_PIPELINE_FLAGS+=("--force")
             shift
             ;;
         *)
-            shift
+            error_exit "Unrecognized CLI argument: $1. Supported options: --config <path>, --thin-client, --force"
             ;;
     esac
 done
@@ -144,80 +153,80 @@ log "=========================================================================="
 
 # Step 0: Preflight Verification
 log "STAGE 0: Running System & Dataset Preflight Checks..."
-${PYTHON_BIN} -m pipeline.00c_preflight --config "${CONFIG_FILE}"
+${PYTHON_BIN} -m pipeline.00c_preflight --config "${CONFIG_FILE}" ${EXTRA_PIPELINE_FLAGS[@]+"${EXTRA_PIPELINE_FLAGS[@]}"}
 success "Stage 0 (Preflight) PASSED."
 
 # Step 1: Profiling
 log "STAGE 1: Profiling Dataset & Key Schema Distributions..."
-${PYTHON_BIN} -m pipeline.00_profile_dataset --config "${CONFIG_FILE}"
+${PYTHON_BIN} -m pipeline.00_profile_dataset --config "${CONFIG_FILE}" ${EXTRA_PIPELINE_FLAGS[@]+"${EXTRA_PIPELINE_FLAGS[@]}"}
 success "Stage 1 (Profile) PASSED."
 
 # Step 2: Parsing & Time-Matched Sampling
 log "STAGE 2: Parsing Raw JSON Records & Sampling Time-Matched Benign Cohort..."
-${PYTHON_BIN} -m pipeline.01_parse --config "${CONFIG_FILE}"
+${PYTHON_BIN} -m pipeline.01_parse --config "${CONFIG_FILE}" ${EXTRA_PIPELINE_FLAGS[@]+"${EXTRA_PIPELINE_FLAGS[@]}"}
 success "Stage 2 (Parse) PASSED."
 
 # Step 3: Shortcut & Single-Feature Leakage Audit
 log "STAGE 3: Running Shortcut Audit & Feature Sensitivity Checks..."
-${PYTHON_BIN} -m pipeline.00b_audit_shortcuts --config "${CONFIG_FILE}"
+${PYTHON_BIN} -m pipeline.00b_audit_shortcuts --config "${CONFIG_FILE}" ${EXTRA_PIPELINE_FLAGS[@]+"${EXTRA_PIPELINE_FLAGS[@]}"}
 success "Stage 3 (Shortcut Audit) PASSED."
 
 # Step 4: Construct Unscaled Base Heterogeneous Graph
 log "STAGE 4: Building Unscaled Base HeteroData Graph..."
-${PYTHON_BIN} -m pipeline.02_build_graph --config "${CONFIG_FILE}"
+${PYTHON_BIN} -m pipeline.02_build_graph --config "${CONFIG_FILE}" ${EXTRA_PIPELINE_FLAGS[@]+"${EXTRA_PIPELINE_FLAGS[@]}"}
 success "Stage 4 (Build Graph) PASSED."
 
 # Step 5: Multi-Seed Baselines
 log "STAGE 5: Running Multi-Seed Baselines (TF-IDF, XGBoost, MLP, Single-Feature)..."
-${PYTHON_BIN} -m pipeline.03_run_baselines --config "${CONFIG_FILE}"
+${PYTHON_BIN} -m pipeline.03_run_baselines --config "${CONFIG_FILE}" ${EXTRA_PIPELINE_FLAGS[@]+"${EXTRA_PIPELINE_FLAGS[@]}"}
 success "Stage 5 (Baselines) PASSED."
 
 # Step 6: Multi-Seed HeteroGNN Training & Evaluation (Random, Time, Group splits)
 log "STAGE 6a: Training & Evaluating HeteroGNN (Random Split)..."
-${PYTHON_BIN} -m pipeline.04_train_gnn --config "${CONFIG_FILE}" --split-type random --variant both
+${PYTHON_BIN} -m pipeline.04_train_gnn --config "${CONFIG_FILE}" --split-type random --variant both ${EXTRA_PIPELINE_FLAGS[@]+"${EXTRA_PIPELINE_FLAGS[@]}"}
 
 log "STAGE 6b: Training & Evaluating HeteroGNN (Time Split)..."
-${PYTHON_BIN} -m pipeline.04_train_gnn --config "${CONFIG_FILE}" --split-type time --variant both
+${PYTHON_BIN} -m pipeline.04_train_gnn --config "${CONFIG_FILE}" --split-type time --variant both ${EXTRA_PIPELINE_FLAGS[@]+"${EXTRA_PIPELINE_FLAGS[@]}"}
 
 log "STAGE 6c: Training & Evaluating HeteroGNN (Group Split)..."
-${PYTHON_BIN} -m pipeline.04_train_gnn --config "${CONFIG_FILE}" --split-type group --variant both
+${PYTHON_BIN} -m pipeline.04_train_gnn --config "${CONFIG_FILE}" --split-type group --variant both ${EXTRA_PIPELINE_FLAGS[@]+"${EXTRA_PIPELINE_FLAGS[@]}"}
 success "Stage 6 (HeteroGNN Random, Time, Group Evaluation) PASSED."
 
 # Step 7: Topological & Feature Ablation Study
 log "STAGE 7: Running Systematic Ablation Study..."
-${PYTHON_BIN} -m pipeline.05_ablation --config "${CONFIG_FILE}"
+${PYTHON_BIN} -m pipeline.05_ablation --config "${CONFIG_FILE}" ${EXTRA_PIPELINE_FLAGS[@]+"${EXTRA_PIPELINE_FLAGS[@]}"}
 success "Stage 7 (Ablation) PASSED."
 
 # Step 8: Structural Adversarial Attack & GNNGuard Recovery
 log "STAGE 8: Evaluating PPT Structural Attack & Relational GNNGuard..."
-${PYTHON_BIN} -m pipeline.06_attack_eval --config "${CONFIG_FILE}"
+${PYTHON_BIN} -m pipeline.06_attack_eval --config "${CONFIG_FILE}" ${EXTRA_PIPELINE_FLAGS[@]+"${EXTRA_PIPELINE_FLAGS[@]}"}
 success "Stage 8 (Attack & Robustness) PASSED."
 
 # Step 9: Operational CPU Latency Benchmark
 log "STAGE 9: Benchmarking CPU Inference Latency..."
 LATENCY_QUERIES=$(${PYTHON_BIN} -c "import yaml; cfg=yaml.safe_load(open('${CONFIG_FILE}')); print(cfg.get('latency', {}).get('num_queries', 500))" 2>/dev/null || echo 500)
 LATENCY_WARMUP=$(${PYTHON_BIN} -c "import yaml; cfg=yaml.safe_load(open('${CONFIG_FILE}')); print(cfg.get('latency', {}).get('warmup', 20))" 2>/dev/null || echo 20)
-${PYTHON_BIN} -m pipeline.07_latency_eval --config "${CONFIG_FILE}" --num-queries "${LATENCY_QUERIES}" --warmup "${LATENCY_WARMUP}"
+${PYTHON_BIN} -m pipeline.07_latency_eval --config "${CONFIG_FILE}" --num-queries "${LATENCY_QUERIES}" --warmup "${LATENCY_WARMUP}" ${EXTRA_PIPELINE_FLAGS[@]+"${EXTRA_PIPELINE_FLAGS[@]}"}
 success "Stage 9 (Latency Benchmark) PASSED."
 
 # Step 10: Dataset Provenance & Shortcut Generalization Checks
 log "STAGE 10: Running Dataset Provenance & Cross-Source Generalization Audits..."
-${PYTHON_BIN} -m pipeline.08_provenance_checks --config "${CONFIG_FILE}"
+${PYTHON_BIN} -m pipeline.08_provenance_checks --config "${CONFIG_FILE}" ${EXTRA_PIPELINE_FLAGS[@]+"${EXTRA_PIPELINE_FLAGS[@]}"}
 success "Stage 10 (Provenance Checks) PASSED."
 
 # Step 11: Continual Learning & Streaming Evaluation
 log "STAGE 11: Evaluating Streaming Updates (Retrain vs Fine-Tune vs Replay Buffer)..."
-${PYTHON_BIN} -m pipeline.09_streaming_eval --config "${CONFIG_FILE}"
+${PYTHON_BIN} -m pipeline.09_streaming_eval --config "${CONFIG_FILE}" ${EXTRA_PIPELINE_FLAGS[@]+"${EXTRA_PIPELINE_FLAGS[@]}"}
 success "Stage 11 (Streaming Continual Learning) PASSED."
 
 # Step 12: BIND Response Policy Zone (RPZ) Rule Emission
 log "STAGE 12: Calibrating 0.1% FPR Threshold & Emitting BIND RPZ Zone File..."
-${PYTHON_BIN} -m pipeline.10_emit_rpz --config "${CONFIG_FILE}" --target-fpr 0.001
+${PYTHON_BIN} -m pipeline.10_emit_rpz --config "${CONFIG_FILE}" --target-fpr 0.001 ${EXTRA_PIPELINE_FLAGS[@]+"${EXTRA_PIPELINE_FLAGS[@]}"}
 success "Stage 12 (RPZ Emission) PASSED."
 
 # Step 13: Compile Comprehensive Report
 log "STAGE 13: Compiling Final Comprehensive REPORT.md..."
-${PYTHON_BIN} -m pipeline.11_make_report --config "${CONFIG_FILE}"
+${PYTHON_BIN} -m pipeline.11_make_report --config "${CONFIG_FILE}" ${EXTRA_PIPELINE_FLAGS[@]+"${EXTRA_PIPELINE_FLAGS[@]}"}
 success "Stage 13 (Report Compilation) PASSED."
 
 log "=========================================================================="

@@ -27,6 +27,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Construct Heterogeneous Base Graph.")
     parser.add_argument("--fixture", action="store_true", help="Run against data_fixture/")
     parser.add_argument("--smoke", action="store_true", help="Run in smoke test mode")
+    parser.add_argument("--thin-client", action="store_true", help="Run with HP Thin Client profile")
     parser.add_argument("--force", action="store_true", help="Force rebuilding base graph")
     parser.add_argument("--config", type=str, default=None, help="Path to config YAML")
     parser.add_argument("--max-domains", type=int, default=None, help="Cap total domains for fast test")
@@ -41,14 +42,26 @@ def main() -> None:
     cohort_path = paths.processed_dir / "domains_cohort.parquet"
     manifest_path = paths.processed_dir / "graph_manifest.json"
 
-    pfx = "[SMOKE] " if args.smoke else ("[FIXTURE] " if args.fixture else "[REAL] ")
-    if not args.force and graph_pt_path.exists() and cohort_path.exists() and manifest_path.exists():
-        print(f"{pfx}Aligned base graph and cohort manifest already exist in {paths.processed_dir}. Skipping (use --force to rebuild).")
-        return
-
     parquet_file = paths.processed_dir / "domains.parquet"
     if not parquet_file.exists():
         raise FileNotFoundError(f"Processed domains file not found: {parquet_file}. Run 01_parse.py first.")
+
+    pfx = "[SMOKE] " if args.smoke else ("[FIXTURE] " if args.fixture else "[REAL] ")
+    can_skip_graph = False
+    if not args.force and graph_pt_path.exists() and cohort_path.exists() and manifest_path.exists():
+        try:
+            with open(manifest_path, "r", encoding="utf-8") as f:
+                prev_man = json.load(f)
+            from src.hdg.cache import compute_file_sha256
+            curr_sha = compute_file_sha256(parquet_file)
+            if prev_man.get("source_domains_parquet_sha256") == curr_sha:
+                can_skip_graph = True
+        except Exception:
+            can_skip_graph = False
+
+    if can_skip_graph:
+        print(f"{pfx}Aligned base graph and cohort manifest already exist with matching input hash in {paths.processed_dir}. Skipping (use --force to rebuild).")
+        return
 
     pfx = "[SMOKE] " if args.smoke else ("[FIXTURE] " if args.fixture else "[REAL] ")
     print(f"{pfx}Loading {parquet_file}...")

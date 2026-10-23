@@ -49,6 +49,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Run Baselines on identical splits.")
     parser.add_argument("--fixture", action="store_true", help="Run against data_fixture/")
     parser.add_argument("--smoke", action="store_true", help="Run in smoke test mode")
+    parser.add_argument("--thin-client", action="store_true", help="Run with HP Thin Client profile")
     parser.add_argument("--config", type=str, default=None, help="Path to config YAML")
     parser.add_argument("--single-seed", type=int, default=None, help="Run single seed only")
     parser.add_argument("--max-domains", type=int, default=None, help="Cap total domains")

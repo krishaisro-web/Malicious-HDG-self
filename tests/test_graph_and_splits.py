@@ -124,7 +124,8 @@ def test_splits_disjoint_and_leak_free() -> None:
     # 1. Random Stratified
     rand_splits = random_stratified_split(labels, seed=42)
     rand_splits.assert_disjoint()
-    assert len(rand_splits.train_indices) + len(rand_splits.val_indices) + len(rand_splits.test_indices) == len(df)
+    cert_len = len(rand_splits.cert_indices) if rand_splits.cert_indices is not None else 0
+    assert len(rand_splits.train_indices) + len(rand_splits.val_indices) + len(rand_splits.test_indices) + cert_len == len(df)
 
     # 2. Time Split
     t_splits = time_split(df, time_split_valid=True)
@@ -151,3 +152,66 @@ def test_time_split_fails_when_invalid() -> None:
     df = make_toy_domains_df()
     with pytest.raises(ValueError, match="time_split_valid is False"):
         _ = time_split(df, time_split_valid=False)
+
+
+def test_temporal_future_graph_topology_isolation() -> None:
+    """Verifies that when mask_future_domains is enabled, zero edges to test domains exist in the model graph."""
+    from src.hdg.data.graph import build_base_graph, apply_split_scaling
+    df = make_toy_domains_df()
+    base = build_base_graph(df)
+
+    t_splits = time_split(df, time_split_valid=True)
+    test_set = set(t_splits.test_indices.tolist())
+
+    scaled, _ = apply_split_scaling(
+        base=base,
+        train_indices=t_splits.train_indices,
+        val_indices=t_splits.val_indices,
+        test_indices=t_splits.test_indices,
+        degree_mode="train_visible",
+        mask_future_domains=True
+    )
+
+    # Check that in every relational edge tensor involving domain, no test domain node is present
+    for et in scaled.edge_types:
+        src_t, _, dst_t = et
+        edges = scaled[et].edge_index
+        if edges.numel() == 0:
+            continue
+        if src_t == "domain":
+            src_nodes = set(edges[0].tolist())
+            assert src_nodes.isdisjoint(test_set), f"Future test domains leaked into {et} source nodes!"
+        if dst_t == "domain":
+            dst_nodes = set(edges[1].tolist())
+            assert dst_nodes.isdisjoint(test_set), f"Future test domains leaked into {et} target nodes!"
+
+
+def test_group_split_cross_partition_boundary_isolation() -> None:
+    """Verifies that when mask_disjoint_groups is enabled, test domains have zero active edges during training."""
+    from src.hdg.data.graph import build_base_graph, apply_split_scaling
+    df = make_toy_domains_df()
+    base = build_base_graph(df)
+
+    grp_splits, _ = group_split_bipartite(df, seed=42)
+    test_set = set(grp_splits.test_indices.tolist())
+
+    scaled, _ = apply_split_scaling(
+        base=base,
+        train_indices=grp_splits.train_indices,
+        val_indices=grp_splits.val_indices,
+        test_indices=grp_splits.test_indices,
+        mask_disjoint_groups=True
+    )
+
+    for et in scaled.edge_types:
+        src_t, _, dst_t = et
+        edges = scaled[et].edge_index
+        if edges.numel() == 0:
+            continue
+        if src_t == "domain":
+            src_nodes = set(edges[0].tolist())
+            assert src_nodes.isdisjoint(test_set), f"Cross-group domain nodes leaked into {et} source nodes!"
+        if dst_t == "domain":
+            dst_nodes = set(edges[1].tolist())
+            assert dst_nodes.isdisjoint(test_set), f"Cross-group domain nodes leaked into {et} target nodes!"
+

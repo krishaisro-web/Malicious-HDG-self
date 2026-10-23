@@ -27,6 +27,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Audit dataset shortcuts and class confounding.")
     parser.add_argument("--fixture", action="store_true", help="Run against data_fixture/")
     parser.add_argument("--smoke", action="store_true", help="Run in smoke test mode")
+    parser.add_argument("--thin-client", action="store_true", help="Run with HP Thin Client profile")
     parser.add_argument("--force", action="store_true", help="Force rerun shortcut audit")
     parser.add_argument("--config", type=str, default=None, help="Path to config YAML")
     args = parser.parse_args()

@@ -93,8 +93,10 @@ def compute_experiment_fingerprint(
         if k not in ("hardware", "runtime", "paths", "system", "device", "num_threads", "num_workers")
     }
 
+    git_info = get_git_info()
     elements: Dict[str, Any] = {
         "stage": stage,
+        "git_commit": git_info.get("commit", "unknown")[:10],
         "config_hash": compute_dict_fingerprint(research_config),
         "split_type": split_type or "none",
         "model_variant": model_variant or "none",

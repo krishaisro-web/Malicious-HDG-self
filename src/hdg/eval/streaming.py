@@ -64,9 +64,15 @@ def evaluate_on_indices(
     data: HeteroData,
     eval_indices: np.ndarray,
     y_true_all: np.ndarray,
-    threshold: float = 0.5
+    threshold: float = 0.5,
+    val_indices: Optional[np.ndarray] = None,
+    calibrated_threshold_01: Optional[float] = None
 ) -> Dict[str, float]:
-    """Evaluates model on specified domain indices and returns metrics."""
+    """
+    Evaluates model on specified domain indices.
+    Operating point TPR @ 0.1% FPR is evaluated using a frozen validation-calibrated threshold.
+    Test labels are never used to choose the operating point.
+    """
     model.eval()
     with torch.no_grad():
         out = model(data.x_dict, data.edge_index_dict)
@@ -76,11 +82,32 @@ def evaluate_on_indices(
     if len(np.unique(y_eval)) < 2:
         auc = 0.5
         tpr_at_01 = 0.0
+        rfpr_at_01 = 0.0
+        chosen_th_01 = calibrated_threshold_01 if calibrated_threshold_01 is not None else 0.5
     else:
         auc = float(roc_auc_score(y_eval, probs))
-        fprs, tprs, _ = roc_curve(y_eval, probs)
-        valid = np.where(fprs <= 0.001)[0]
-        tpr_at_01 = float(tprs[valid[-1]]) if len(valid) > 0 else 0.0
+        
+        # Strictly determine operating threshold using validation negatives, NEVER test labels
+        if calibrated_threshold_01 is not None:
+            chosen_th_01 = float(calibrated_threshold_01)
+        elif val_indices is not None and len(val_indices) > 0:
+            with torch.no_grad():
+                v_probs = F.softmax(out[val_indices], dim=-1)[:, 1].cpu().numpy()
+            v_negs = v_probs[y_true_all[val_indices] == 0]
+            if len(v_negs) > 0:
+                sorted_v_negs = np.sort(v_negs)
+                cutoff_idx = int(np.ceil((1.0 - 0.001) * (len(sorted_v_negs) - 1)))
+                chosen_th_01 = float(sorted_v_negs[cutoff_idx])
+            else:
+                chosen_th_01 = 0.5
+        else:
+            chosen_th_01 = 0.5
+
+        # Evaluate realized metrics on the test cohort using the frozen calibrated threshold
+        test_pos = probs[y_eval == 1]
+        test_negs = probs[y_eval == 0]
+        tpr_at_01 = float(np.mean(test_pos >= chosen_th_01)) if len(test_pos) > 0 else 0.0
+        rfpr_at_01 = float(np.mean(test_negs >= chosen_th_01)) if len(test_negs) > 0 else 0.0
 
     y_pred = (probs >= threshold).astype(int)
     f1 = float(f1_score(y_eval, y_pred, zero_division=0))
@@ -91,6 +118,8 @@ def evaluate_on_indices(
         "roc_auc": round(auc, 4),
         "f1": round(f1, 4),
         "tpr_at_01_fpr": round(tpr_at_01, 4),
+        "realized_fpr_at_01": round(rfpr_at_01, 6),
+        "calibrated_threshold_01": round(float(chosen_th_01), 4),
         "precision": round(prec, 4),
         "recall": round(rec, 4),
         "threshold": round(float(threshold), 4),
@@ -146,6 +175,29 @@ def train_step(
     return model, val_thresh
 
 
+from src.hdg.data.graph import apply_split_scaling
+
+
+def calibrate_operating_threshold(
+    model: nn.Module,
+    data: HeteroData,
+    val_indices: np.ndarray,
+    y_true_all: np.ndarray,
+    target_fpr: float = 0.001
+) -> float:
+    """Calibrates low-FPR operating threshold strictly on validation negatives."""
+    model.eval()
+    with torch.no_grad():
+        out = model(data.x_dict, data.edge_index_dict)
+        probs = F.softmax(out[val_indices], dim=-1)[:, 1].cpu().numpy()
+    val_negs = probs[y_true_all[val_indices] == 0]
+    if len(val_negs) == 0:
+        return 0.5
+    sorted_v_negs = np.sort(val_negs)
+    cutoff_idx = int(np.ceil((1.0 - target_fpr) * (len(sorted_v_negs) - 1)))
+    return float(sorted_v_negs[cutoff_idx])
+
+
 def run_streaming_evaluation(
     data: HeteroData,
     df: pd.DataFrame,
@@ -158,11 +210,10 @@ def run_streaming_evaluation(
 ) -> Dict[str, Any]:
     """
     Executes incremental streaming evaluation over consecutive chronological months.
-    Compares:
-      1. retrain_from_scratch
-      2. naive_finetune
-      3. replay
-    Evaluates forward performance on current month and backward transfer on Month 1.
+    Applies split scaling and cutoff-appropriate topology masking (mask_future_domains=True,
+    degree_mode='train_visible') for each step.
+    Operating point at 0.1% FPR is strictly calibrated on historical validation negatives
+    and frozen prior to evaluation on test cohorts.
     """
     rng = np.random.default_rng(seed)
     torch.manual_seed(seed)
@@ -231,15 +282,31 @@ def run_streaming_evaluation(
 
     y_tensor = data["domain"].y
     y_true_all = y_tensor.cpu().numpy()
-    in_channels = {nt: data[nt].x.shape[1] for nt in data.node_types}
 
     # Month 0 initialization
     m0 = valid_months[0]
     m0_splits = month_data[m0]
 
+    # Build cutoff-appropriate scaled graph for Month 0
+    # Future months' domains are masked from message passing
+    all_future_domains = np.concatenate([month_data[m]["train"] for m in valid_months[1:]] +
+                                        [month_data[m]["val"] for m in valid_months[1:]] +
+                                        [month_data[m]["test"] for m in valid_months[1:]] +
+                                        [m0_splits["test"]])
+    m0_scaled_data, _ = apply_split_scaling(
+        base=data,
+        train_indices=m0_splits["train"],
+        val_indices=m0_splits["val"],
+        test_indices=all_future_domains,
+        degree_mode="train_visible",
+        mask_future_domains=True
+    )
+
+    in_channels = {nt: m0_scaled_data[nt].x.shape[1] for nt in m0_scaled_data.node_types}
+
     def build_fresh_model() -> HeteroGNN:
         return HeteroGNN(
-            metadata=data.metadata(),
+            metadata=m0_scaled_data.metadata(),
             in_channels_dict=in_channels,
             variant="sage",
             hidden_dim=64,
@@ -247,11 +314,11 @@ def run_streaming_evaluation(
             num_layers=2
         )
 
-    # Train base model on Month 0
+    # Train base model on Month 0 using scaled, cutoff graph
     base_model = build_fresh_model()
     base_model, m0_thresh = train_step(
         model=base_model,
-        data=data,
+        data=m0_scaled_data,
         train_indices=m0_splits["train"],
         val_indices=m0_splits["val"],
         y_tensor=y_tensor,
@@ -259,8 +326,17 @@ def run_streaming_evaluation(
         epochs=epochs_scratch
     )
 
+    # Calibrate operating threshold at 0.1% FPR strictly on Month 0 validation negatives
+    m0_calibrated_th_01 = calibrate_operating_threshold(
+        base_model, m0_scaled_data, m0_splits["val"], y_true_all, target_fpr=0.001
+    )
+
+    # Evaluate Month 0 baseline using frozen calibrated threshold
     m0_baseline_perf = evaluate_on_indices(
-        base_model, data, m0_splits["test"], y_true_all, threshold=m0_thresh
+        base_model, m0_scaled_data, m0_splits["test"], y_true_all,
+        threshold=m0_thresh,
+        val_indices=m0_splits["val"],
+        calibrated_threshold_01=m0_calibrated_th_01
     )
 
     # Models for the 3 strategies
@@ -272,6 +348,10 @@ def run_streaming_evaluation(
 
     cumulative_train = [m0_splits["train"]]
     cumulative_val = [m0_splits["val"]]
+
+    # Historical validation negatives buffer for freezing operating threshold
+    last_val_indices = m0_splits["val"]
+    last_calibrated_th_01 = m0_calibrated_th_01
 
     step_results: List[Dict[str, Any]] = []
 
@@ -291,21 +371,51 @@ def run_streaming_evaluation(
         cumulative_train.append(cur_splits["train"])
         cumulative_val.append(cur_splits["val"])
 
-        # 1. Strategy: retrain_from_scratch
+        # Determine cutoff test set for this step: test cohort + any subsequent future months
+        future_months = valid_months[step_idx+1:]
+        step_future_domains = [cur_splits["test"]]
+        for fm in future_months:
+            step_future_domains.extend([month_data[fm]["train"], month_data[fm]["val"], month_data[fm]["test"]])
+        step_test_set = np.concatenate(step_future_domains)
+
         all_tr = np.concatenate(cumulative_train)
         all_va = np.concatenate(cumulative_val)
+
+        # Build cutoff-appropriate scaled graph for current step
+        step_scaled_data, _ = apply_split_scaling(
+            base=data,
+            train_indices=all_tr,
+            val_indices=all_va,
+            test_indices=step_test_set,
+            degree_mode="train_visible",
+            mask_future_domains=True
+        )
+
+        # Operating point threshold for month m_cur MUST be calibrated strictly on historical validation negatives
+        # available PRIOR to testing month m_cur (freeze threshold before evaluation)
+        frozen_th_01 = last_calibrated_th_01
+
+        # 1. Strategy: retrain_from_scratch
         model_scratch = build_fresh_model()
         model_scratch, scratch_thresh = train_step(
             model=model_scratch,
-            data=data,
+            data=step_scaled_data,
             train_indices=all_tr,
             val_indices=all_va,
             y_tensor=y_tensor,
             y_true_all=y_true_all,
             epochs=epochs_scratch
         )
-        scratch_cur = evaluate_on_indices(model_scratch, data, cur_splits["test"], y_true_all, threshold=scratch_thresh)
-        scratch_m0 = evaluate_on_indices(model_scratch, data, m0_splits["test"], y_true_all, threshold=scratch_thresh)
+        scratch_cur = evaluate_on_indices(
+            model_scratch, step_scaled_data, cur_splits["test"], y_true_all,
+            threshold=scratch_thresh,
+            calibrated_threshold_01=frozen_th_01
+        )
+        scratch_m0 = evaluate_on_indices(
+            model_scratch, step_scaled_data, m0_splits["test"], y_true_all,
+            threshold=scratch_thresh,
+            calibrated_threshold_01=m0_calibrated_th_01
+        )
         bwt_scratch = round(scratch_m0["f1"] - m0_baseline_perf["f1"], 4)
 
         step_results.append({
@@ -320,15 +430,23 @@ def run_streaming_evaluation(
         # 2. Strategy: naive_finetune
         model_finetune, ft_thresh = train_step(
             model=model_finetune,
-            data=data,
+            data=step_scaled_data,
             train_indices=cur_splits["train"],
             val_indices=cur_splits["val"],
             y_tensor=y_tensor,
             y_true_all=y_true_all,
             epochs=epochs_finetune
         )
-        ft_cur = evaluate_on_indices(model_finetune, data, cur_splits["test"], y_true_all, threshold=ft_thresh)
-        ft_m0 = evaluate_on_indices(model_finetune, data, m0_splits["test"], y_true_all, threshold=ft_thresh)
+        ft_cur = evaluate_on_indices(
+            model_finetune, step_scaled_data, cur_splits["test"], y_true_all,
+            threshold=ft_thresh,
+            calibrated_threshold_01=frozen_th_01
+        )
+        ft_m0 = evaluate_on_indices(
+            model_finetune, step_scaled_data, m0_splits["test"], y_true_all,
+            threshold=ft_thresh,
+            calibrated_threshold_01=m0_calibrated_th_01
+        )
         bwt_ft = round(ft_m0["f1"] - m0_baseline_perf["f1"], 4)
 
         step_results.append({
@@ -349,7 +467,7 @@ def run_streaming_evaluation(
 
         model_replay, rep_thresh = train_step(
             model=model_replay,
-            data=data,
+            data=step_scaled_data,
             train_indices=replay_tr,
             val_indices=cur_splits["val"],
             y_tensor=y_tensor,
@@ -359,8 +477,16 @@ def run_streaming_evaluation(
         # Update reservoir with current month training data
         replay_buffer.add(cur_splits["train"])
 
-        rep_cur = evaluate_on_indices(model_replay, data, cur_splits["test"], y_true_all, threshold=rep_thresh)
-        rep_m0 = evaluate_on_indices(model_replay, data, m0_splits["test"], y_true_all, threshold=rep_thresh)
+        rep_cur = evaluate_on_indices(
+            model_replay, step_scaled_data, cur_splits["test"], y_true_all,
+            threshold=rep_thresh,
+            calibrated_threshold_01=frozen_th_01
+        )
+        rep_m0 = evaluate_on_indices(
+            model_replay, step_scaled_data, m0_splits["test"], y_true_all,
+            threshold=rep_thresh,
+            calibrated_threshold_01=m0_calibrated_th_01
+        )
         bwt_rep = round(rep_m0["f1"] - m0_baseline_perf["f1"], 4)
 
         step_results.append({
@@ -371,6 +497,12 @@ def run_streaming_evaluation(
             "month_1_perf": rep_m0,
             "backward_transfer_f1": bwt_rep
         })
+
+        # Update last historical validation negatives & calibrated threshold for next month
+        last_val_indices = cur_splits["val"]
+        last_calibrated_th_01 = calibrate_operating_threshold(
+            model_scratch, step_scaled_data, cur_splits["val"], y_true_all, target_fpr=0.001
+        )
 
     return {
         "status": "SUCCESS",

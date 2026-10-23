@@ -32,17 +32,17 @@ def test_fixture_path_write_safeguard(tmp_path: Path) -> None:
     paths.check_write_path(test_subpath)  # Should not raise
 
 
-def test_profiler() -> None:
-    cfg = load_config()
-    repo_root = Path(__file__).resolve().parent.parent
-    paths = get_resolved_paths(cfg, is_fixture=False, root_dir=repo_root)
+def test_profiler(tmp_path: Path) -> None:
+    from src.hdg.data.fixture import make_fixture
+    raw_dir = tmp_path / "raw_synthetic"
+    out_dir = tmp_path / "profile_out"
+    make_fixture(raw_dir, n_malware=20, n_umbrella=10, n_cesnet=10, seed=42)
 
-    out_dir = paths.results_dir / "profile"
     report, md_text, time_split = profile_dataset(
-        raw_dir=paths.raw_dir,
+        raw_dir=raw_dir,
         output_dir=out_dir,
-        min_distinct_months=cfg.get("profiling", {}).get("min_distinct_months_for_time_split", 4),
-        is_fixture=False
+        min_distinct_months=2,
+        is_fixture=True
     )
 
     # Both files must exist
@@ -61,28 +61,19 @@ def test_profiler() -> None:
     assert "benign_cesnet" in report["classes"]
 
 
-def test_shortcut_audit() -> None:
-    cfg = load_config()
-    repo_root = Path(__file__).resolve().parent.parent
-    paths = get_resolved_paths(cfg, is_fixture=False, root_dir=repo_root)
-
-    parquet_file = paths.processed_dir / "domains.parquet"
-    out_dir = paths.results_dir / "profile"
-    summary, md_text = run_shortcut_audit(parquet_file, out_dir, is_fixture=False)
+def test_shortcut_audit(minimal_domains_df, tmp_path: Path) -> None:
+    parquet_file = tmp_path / "domains.parquet"
+    minimal_domains_df.to_parquet(parquet_file)
+    out_dir = tmp_path / "audit_out"
+    summary, md_text = run_shortcut_audit(parquet_file, out_dir, is_fixture=True)
 
     assert (out_dir / "audit_shortcuts.json").exists()
     assert (out_dir / "audit_shortcuts.md").exists()
     assert "single_feature_aucs" in summary
 
 
-def test_hetero_gnn_forward_pass_both_variants() -> None:
-    cfg = load_config()
-    repo_root = Path(__file__).resolve().parent.parent
-    paths = get_resolved_paths(cfg, is_fixture=False, root_dir=repo_root)
-
-    graph_file = paths.processed_dir / "heterodata.pt"
-    data = torch.load(graph_file, weights_only=False)
-
+def test_hetero_gnn_forward_pass_both_variants(minimal_synthetic_heterodata) -> None:
+    data = minimal_synthetic_heterodata
     in_channels = {nt: data[nt].x.shape[1] for nt in data.node_types}
 
     # 1. SAGE
@@ -113,14 +104,9 @@ def test_hetero_gnn_forward_pass_both_variants() -> None:
     assert out_attn.shape == (data["domain"].num_nodes, 2)
 
 
-def test_checkpoint_model_config_contract() -> None:
+def test_checkpoint_model_config_contract(minimal_synthetic_heterodata) -> None:
     """Verifies that get_model_config provides complete architecture metadata."""
-    cfg = load_config()
-    repo_root = Path(__file__).resolve().parent.parent
-    paths = get_resolved_paths(cfg, is_fixture=False, root_dir=repo_root)
-
-    graph_file = paths.processed_dir / "heterodata.pt"
-    data = torch.load(graph_file, weights_only=False)
+    data = minimal_synthetic_heterodata
     in_channels = {nt: data[nt].x.shape[1] for nt in data.node_types}
 
     model = HeteroGNN(
@@ -143,14 +129,9 @@ def test_checkpoint_model_config_contract() -> None:
     assert "use_edges" in conf
 
 
-def test_checkpoint_round_trip_reconstruction(tmp_path: Path) -> None:
+def test_checkpoint_round_trip_reconstruction(minimal_synthetic_heterodata, tmp_path: Path) -> None:
     """Verifies that each supported architecture round-trips state_dict + config exactly."""
-    cfg = load_config()
-    repo_root = Path(__file__).resolve().parent.parent
-    paths = get_resolved_paths(cfg, is_fixture=False, root_dir=repo_root)
-
-    graph_file = paths.processed_dir / "heterodata.pt"
-    data = torch.load(graph_file, weights_only=False)
+    data = minimal_synthetic_heterodata
     in_channels = {nt: data[nt].x.shape[1] for nt in data.node_types}
 
     for variant in ["sage", "attn", "sage_guard"]:
@@ -247,3 +228,162 @@ def test_checkpoint_round_trip_reconstruction(tmp_path: Path) -> None:
         out_mlp2 = m_mlp2(data.x_dict, data.edge_index_dict)
 
     torch.testing.assert_close(out_mlp1, out_mlp2)
+
+
+def test_deterministic_gnn_initialization_and_forward(minimal_synthetic_heterodata):
+    """
+    Verifies that seeding torch, numpy, and random prior to model construction
+    yields 100% bitwise deterministic parameter initialization and forward outputs.
+    """
+    import random
+    import numpy as np
+    data = minimal_synthetic_heterodata
+    in_channels = {nt: data[nt].x.shape[1] for nt in data.node_types}
+
+    seed = 1337
+
+    # Run 1: Seed then construct
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    m1 = HeteroGNN(
+        metadata=data.metadata(),
+        in_channels_dict=in_channels,
+        variant="attn",
+        hidden_dim=32,
+        out_dim=16,
+        num_layers=2,
+        num_heads=2
+    )
+    m1.eval()
+    with torch.no_grad():
+        out1 = m1(data.x_dict, data.edge_index_dict)
+
+    # Run 2: Seed again then construct
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    m2 = HeteroGNN(
+        metadata=data.metadata(),
+        in_channels_dict=in_channels,
+        variant="attn",
+        hidden_dim=32,
+        out_dim=16,
+        num_layers=2,
+        num_heads=2
+    )
+    m2.eval()
+    with torch.no_grad():
+        out2 = m2(data.x_dict, data.edge_index_dict)
+
+    # Verify identical initial weights across all modules
+    for p1, p2 in zip(m1.parameters(), m2.parameters()):
+        torch.testing.assert_close(p1, p2)
+
+    # Verify identical forward outputs
+    torch.testing.assert_close(out1, out2)
+
+
+def test_streaming_evaluation_validation_calibrated_threshold(minimal_synthetic_heterodata):
+    """
+    Verifies that streaming evaluate_on_indices uses validation negatives to calibrate
+    its low-FPR operating point without peeking at test cohort labels.
+    """
+    from src.hdg.eval.streaming import evaluate_on_indices, calibrate_operating_threshold
+    data = minimal_synthetic_heterodata
+    in_channels = {nt: data[nt].x.shape[1] for nt in data.node_types}
+    model = HeteroGNN(
+        metadata=data.metadata(),
+        in_channels_dict=in_channels,
+        variant="sage",
+        hidden_dim=32,
+        out_dim=16,
+        num_layers=2
+    )
+
+    import numpy as np
+    y_true_all = data["domain"].y.cpu().numpy()
+    val_indices = np.array([0, 1, 2, 3], dtype=int)
+    test_indices = np.array([4, 5, 6, 7], dtype=int)
+
+    # Calibrate on validation set
+    calib_th = calibrate_operating_threshold(model, data, val_indices, y_true_all, target_fpr=0.001)
+    assert 0.0 <= calib_th <= 1.0
+
+    # Evaluate on test set with frozen threshold
+    metrics = evaluate_on_indices(
+        model=model,
+        data=data,
+        eval_indices=test_indices,
+        y_true_all=y_true_all,
+        calibrated_threshold_01=calib_th
+    )
+
+    assert "tpr_at_01_fpr" in metrics
+    assert "realized_fpr_at_01" in metrics
+    assert metrics["calibrated_threshold_01"] == round(float(calib_th), 4)
+
+
+def test_objective_acceptance_criteria_exact():
+    """
+    Verifies that evaluate_objective_statuses enforces strict acceptance logic:
+    - O1 requires realized FPR <= 0.0010 (not just high TPR)
+    - O3 requires p < 0.05
+    - O4 requires both mean and P95 latency < 50ms
+    """
+    import importlib
+    make_report_mod = importlib.import_module("pipeline.11_make_report")
+    evaluate_objective_statuses = make_report_mod.evaluate_objective_statuses
+
+    # Scenario A: High TPR but realized FPR exceeds 0.1% target -> NOT MET
+    gnn_data_leaky_fpr = {
+        "random": {
+            "variants": {
+                "sage": {
+                    "runs": [{
+                        "operating_points": {
+                            "tpr_at_0.1pct_fpr": {
+                                "tpr": 0.85,
+                                "realised_test_fpr": 0.0050  # 0.5% > 0.1% target
+                            }
+                        }
+                    }]
+                }
+            }
+        }
+    }
+    statuses = evaluate_objective_statuses(
+        gnn_evaluations=gnn_data_leaky_fpr,
+        baselines_data=None,
+        latency_data=None,
+        attack_data=None,
+        is_fixture=False
+    )
+    assert statuses["O1"][1] == "NOT MET"
+
+    # Scenario B: High TPR and realized FPR <= 0.0010 -> MET
+    gnn_data_compliant = {
+        "random": {
+            "variants": {
+                "sage": {
+                    "runs": [{
+                        "operating_points": {
+                            "tpr_at_0.1pct_fpr": {
+                                "tpr": 0.72,
+                                "realised_test_fpr": 0.0008  # <= 0.1% target
+                            }
+                        }
+                    }]
+                }
+            }
+        }
+    }
+    statuses_b = evaluate_objective_statuses(
+        gnn_evaluations=gnn_data_compliant,
+        baselines_data=None,
+        latency_data=None,
+        attack_data=None,
+        is_fixture=False
+    )
+    assert statuses_b["O1"][1] == "MET"
+

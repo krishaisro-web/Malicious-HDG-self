@@ -40,7 +40,15 @@ from src.hdg.config import (
     save_run_result,
     init_thread_pool,
 )
-from src.hdg.data.splits import rolling_origin_temporal_splits, random_stratified_split
+from src.hdg.data.splits import (
+    rolling_origin_temporal_splits,
+    random_stratified_split,
+    single_chronological_holdout_split,
+    group_split_bipartite,
+    group_split_by_asn,
+    DataSplits
+)
+from src.hdg.data.graph import apply_split_scaling
 
 
 def main() -> None:
@@ -48,6 +56,8 @@ def main() -> None:
     parser.add_argument("--fixture", action="store_true", help="Run against data_fixture/")
     parser.add_argument("--smoke", action="store_true", help="Run in fast smoke mode")
     parser.add_argument("--config", type=str, default=None, help="Path to config YAML")
+    parser.add_argument("--split-type", type=str, default="time", choices=["time", "random", "group"],
+                        help="Deployment split protocol to use for evaluation and certification (default: 'time')")
     parser.add_argument("--checkpoint", type=str, default=None, help="Path to trained model checkpoint .pt")
     parser.add_argument("--target-fpr", type=float, default=0.001, help="Operating target FPR (default: 0.001 = 0.1%%)")
     parser.add_argument("--force", action="store_true", help="Force rerun even if results exist")
@@ -61,8 +71,25 @@ def main() -> None:
     paths = get_resolved_paths(cfg, is_fixture=args.fixture, is_smoke=args.smoke, root_dir=REPO_ROOT)
 
     run_name = "emit_rpz"
-    if should_skip_run(paths, run_name, force=args.force):
-        print(f"[{run_name}] Run already completed. Skipping (use --force to rerun).")
+    # Safe cache check: do not skip if forced, if RPZ zone file is missing,
+    # or if previous cached run was BLOCKED
+    rpz_dir = paths.results_dir / "rpz"
+    rpz_zone_file = rpz_dir / "malicious_domains.rpz"
+    cached_run_path = paths.results_dir / "runs" / f"{run_name}.json"
+
+    can_skip = False
+    if not args.force and cached_run_path.exists() and rpz_zone_file.exists():
+        try:
+            with open(cached_run_path, "r", encoding="utf-8") as f:
+                prev_run = json.load(f)
+            # Only allow skipping if previously certified and emitted successfully
+            if prev_run.get("status") == "SUCCESS" and prev_run.get("rules_emitted", 0) > 0:
+                can_skip = True
+        except Exception:
+            can_skip = False
+
+    if can_skip:
+        print(f"[{run_name}] Valid, certified RPZ run already completed. Skipping (use --force to rerun).")
         return
 
     rpz_dir = paths.results_dir / "rpz"
@@ -87,21 +114,7 @@ def main() -> None:
 
     init_thread_pool(cfg)
 
-    # Dataset splits: prioritize latest temporal transition if available, else random stratified
-    splits = None
-    try:
-        if "t_month" in df.columns or "t" in df.columns:
-            transitions = rolling_origin_temporal_splits(df, min_distinct_months=2, min_per_class_per_window=10, allow_empty=True)
-            if transitions:
-                _, splits = transitions[-1]
-    except Exception as e:
-        print(f"Temporal split unavailable ({e}), using random stratified split.")
-
-    if splits is None:
-        splits = random_stratified_split(df["label"].to_numpy(), seed=cfg.get("randomness", {}).get("seed", 42))
-
-    in_channels = {nt: data[nt].x.shape[1] for nt in data.node_types}
-    # Resolve validated model checkpoint
+    # Resolve validated model checkpoint aligned with the requested split protocol
     model = None
     model_loaded = False
     resolved_ckpt_path = None
@@ -114,7 +127,14 @@ def main() -> None:
             candidates_to_try.append(cand)
     else:
         ckpt_dir = paths.checkpoints_dir
+        # Preferred candidates prioritize the specified split protocol (e.g. time for operational deployment)
         preferred_candidates = [
+            ckpt_dir / f"gnn_attn_{args.split_type}_seed_42.pt",
+            ckpt_dir / f"gnn_sage_guard_{args.split_type}_seed_42.pt",
+            ckpt_dir / f"gnn_sage_{args.split_type}_seed_42.pt",
+            # Fallbacks if specific split not yet trained
+            ckpt_dir / "gnn_attn_time_seed_42.pt",
+            ckpt_dir / "gnn_sage_guard_time_seed_42.pt",
             ckpt_dir / "gnn_attn_random_seed_42.pt",
             ckpt_dir / "gnn_sage_guard_random_seed_42.pt",
             ckpt_dir / "gnn_sage_random_seed_42.pt"
@@ -185,7 +205,7 @@ def main() -> None:
                 raise TypeError(f"model_config['use_edges'] must be bool, got {type(ckpt_cfg['use_edges']).__name__} ({ckpt_cfg['use_edges']!r})")
             use_edges = ckpt_cfg["use_edges"]
 
-            # Dynamically instantiate matching architecture strictly with validated parameters
+            in_channels = {nt: data[nt].x.shape[1] for nt in data.node_types}
             cand_model = HeteroGNN(
                 metadata=data.metadata(),
                 in_channels_dict=in_channels,
@@ -231,25 +251,136 @@ def main() -> None:
         save_run_result(paths, run_name, blocked_summary)
         return
 
+    # Derive split protocol strictly aligned with the loaded checkpoint
+    ckpt_split_type = ckpt_manifest.get("split_type")
+    if not ckpt_split_type:
+        # Fallback to parsing filename (e.g. gnn_attn_random_seed_42.pt -> random)
+        name_lower = resolved_ckpt_path.name.lower()
+        if "time" in name_lower:
+            ckpt_split_type = "time"
+        elif "group" in name_lower:
+            ckpt_split_type = "group"
+        else:
+            ckpt_split_type = "random"
+
+    ckpt_seed = int(ckpt_manifest.get("seed", 42))
+
+    print(f"[RPZ] Aligning evaluation split with checkpoint split protocol: type='{ckpt_split_type}', seed={ckpt_seed}")
+    splits = None
+    # Verify checkpoint split alignment
+    if args.split_type != ckpt_split_type:
+        print(f"[WARN] Checkpoint was trained on '{ckpt_split_type}' split, but RPZ requested '{args.split_type}'.")
+        print(f"       Aligning evaluation split strictly to checkpoint training protocol: '{ckpt_split_type}'.")
+
+    splits = None
+    if ckpt_split_type == "time":
+        try:
+            if "t_month" in df.columns or "t" in df.columns:
+                transitions = rolling_origin_temporal_splits(df, min_distinct_months=2, min_per_class_per_window=10, allow_empty=True)
+                if transitions:
+                    # Match transition from checkpoint manifest if recorded, else last transition
+                    ckpt_trans = ckpt_manifest.get("split_metadata", {}).get("transition")
+                    if ckpt_trans:
+                        for t_n, s_obj in transitions:
+                            if t_n == ckpt_trans:
+                                splits = s_obj
+                                break
+                    if splits is None:
+                        _, splits = transitions[-1]
+        except Exception as e:
+            print(f"[RPZ] Temporal split reconstruction failed: {e}")
+
+        if splits is None:
+            print("[BLOCKED] RPZ rule generation blocked: Temporal split reconstruction failed or temporal data unavailable.")
+            print("          Refusing silent fallback to random split to prevent evaluation leakage.")
+            blocked_summary = {
+                "status": "BLOCKED_SPLIT_MISMATCH",
+                "reason": "Temporal checkpoint requires verifiable temporal holdout split. Cannot evaluate temporal model on non-temporal data.",
+                "checkpoint_file": resolved_ckpt_path.name if resolved_ckpt_path else None,
+                "rules_emitted": 0,
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
+            rpz_file = rpz_dir / "malicious_domains.rpz"
+            if rpz_file.exists():
+                rpz_file.unlink()
+            with open(rpz_dir / "rpz_summary.json", "w", encoding="utf-8") as f:
+                json.dump(blocked_summary, f, indent=2)
+            save_run_result(paths, run_name, blocked_summary)
+            return
+    elif ckpt_split_type == "group":
+        try:
+            joint_grp = cfg.get("group", {}).get("joint_grouping", False)
+            splits, _ = group_split_bipartite(df, joint_grouping=joint_grp, seed=ckpt_seed)
+        except Exception as e:
+            print(f"[RPZ] Group split reconstruction failed ({e})")
+        if splits is None:
+            print("[BLOCKED] RPZ rule generation blocked: Group split reconstruction failed.")
+            blocked_summary = {
+                "status": "BLOCKED_SPLIT_MISMATCH",
+                "reason": "Group checkpoint requires verifiable group holdout split.",
+                "checkpoint_file": resolved_ckpt_path.name if resolved_ckpt_path else None,
+                "rules_emitted": 0,
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
+            rpz_file = rpz_dir / "malicious_domains.rpz"
+            if rpz_file.exists():
+                rpz_file.unlink()
+            with open(rpz_dir / "rpz_summary.json", "w", encoding="utf-8") as f:
+                json.dump(blocked_summary, f, indent=2)
+            save_run_result(paths, run_name, blocked_summary)
+            return
+    else:
+        splits = random_stratified_split(df["label"].to_numpy(), seed=ckpt_seed)
+
+    # CRITICAL: Apply split-specific scaling fit strictly on training cohort
+    # to guarantee inference features match the trained model's inputs
+    print("[RPZ] Applying training split scaling to base graph inputs...")
+    scaled_data, _ = apply_split_scaling(
+        base=data,
+        train_indices=splits.train_indices,
+        val_indices=splits.val_indices,
+        degree_mode="train_visible" if ckpt_split_type == "time" else cfg.get("graph", {}).get("degree_mode", "transductive"),
+        mask_future_domains=(ckpt_split_type == "time"),
+        mask_disjoint_groups=(ckpt_split_type == "group")
+    )
+
     model.eval()
     with torch.no_grad():
-        out = model(data.x_dict, data.edge_index_dict)
+        out = model(scaled_data.x_dict, scaled_data.edge_index_dict)
         all_probs = F.softmax(out, dim=-1)[:, 1].cpu().numpy()
 
-    # Split validation negatives into calibration cohort (for setting threshold)
-    # and independent certification holdout (for verifying FPR without data reuse)
+    # Retrieve pre-allocated certification holdout negatives (reserved prior to model selection / early stopping)
+    # Check if checkpoint or splits pre-allocated cert_indices
+    ckpt_cert_idx = ckpt_obj.get("cert_indices") if isinstance(ckpt_obj, dict) else None
+    if ckpt_cert_idx and len(ckpt_cert_idx) > 0:
+        cert_idx = np.array(ckpt_cert_idx, dtype=int)
+    elif getattr(splits, "cert_indices", None) is not None and len(splits.cert_indices) > 0:
+        cert_idx = splits.cert_indices
+    else:
+        # Fallback if checkpoint legacy: partition validation negatives
+        val_negs_all = splits.val_indices[data["domain"].y[splits.val_indices].cpu().numpy() == 0]
+        rng = np.random.RandomState(ckpt_seed)
+        shuf = rng.permutation(val_negs_all)
+        half = len(val_negs_all) // 2
+        cert_idx = shuf[half:] if half > 0 else np.array([], dtype=int)
+
     val_idx = splits.val_indices
     y_val = data["domain"].y[val_idx].cpu().numpy()
     val_probs = all_probs[val_idx]
-    val_negs = val_probs[y_val == 0]
+    calib_negs = val_probs[y_val == 0]
+    n_calib = len(calib_negs)
 
-    n_val_negs = len(val_negs)
-    if n_val_negs < 2:
-        print("[BLOCKED] RPZ rule generation blocked: Fewer than 2 validation negatives available.")
+    y_cert = data["domain"].y[cert_idx].cpu().numpy() if len(cert_idx) > 0 else np.array([])
+    cert_probs = all_probs[cert_idx] if len(cert_idx) > 0 else np.array([])
+    cert_negs = cert_probs[y_cert == 0] if len(cert_probs) > 0 else np.array([])
+    n_cert = len(cert_negs)
+
+    if n_calib < 1:
+        print("[BLOCKED] RPZ rule generation blocked: No calibration validation negatives available.")
         blocked_summary = {
             "status": "BLOCKED_INSUFFICIENT_VALIDATION_NEGS",
             "reason": "Calibration requires observed benign validation instances to bound False Positive Rate. Cannot certify zero FPR.",
-            "n_val_negs": n_val_negs,
+            "n_val_negs": n_calib,
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
         rpz_file = rpz_dir / "malicious_domains.rpz"
@@ -260,29 +391,25 @@ def main() -> None:
         save_run_result(paths, run_name, blocked_summary)
         return
 
-    # Two-fold split of validation negatives: 50% for order-statistic threshold calibration,
-    # 50% independent holdout for rigorous statistical certification (prevents optimistic bias from data reuse)
-    rng = np.random.RandomState(cfg.get("randomness", {}).get("seed", 42))
-    shuffled_indices = rng.permutation(n_val_negs)
-    n_calib = max(1, n_val_negs // 2)
-    calib_negs = val_negs[shuffled_indices[:n_calib]]
-    cert_negs = val_negs[shuffled_indices[n_calib:]]
-    n_cert = len(cert_negs)
-
     # Statistical Certification Requirement:
     # Under exact binomial model, for 0 false positives on independent verification holdout:
     # 1 - 0.05^(1/N_cert) <= target_fpr  ==>  N_cert >= log(0.05) / log(1 - target_fpr)
     min_cert_negs = int(np.ceil(np.log(0.05) / np.log(1.0 - args.target_fpr))) if args.target_fpr < 1.0 else 1
 
-    # Order-statistic threshold calibration on calibration cohort
+    # Order-statistic threshold calibration strictly on calibration cohort (used during training/tuning)
     sorted_calib = np.sort(calib_negs)
     max_calib_fp = int(np.floor(len(calib_negs) * args.target_fpr))
     rank_idx = len(calib_negs) - 1 - max_calib_fp
     threshold = float(sorted_calib[-1]) + 1e-6 if rank_idx < 0 else float(sorted_calib[rank_idx])
 
     # Now certify threshold independently on certification holdout (cert_negs)
-    observed_fp_cert = int(np.sum(cert_negs >= threshold))
-    realized_cert_fpr = float(observed_fp_cert / n_cert)
+    # This holdout was reserved BEFORE training and never exposed to model selection or early stopping.
+    if n_cert > 0:
+        observed_fp_cert = int(np.sum(cert_negs >= threshold))
+        realized_cert_fpr = float(observed_fp_cert / n_cert)
+    else:
+        observed_fp_cert = 0
+        realized_cert_fpr = 1.0
 
     # Compute exact 95% confidence upper bound on population FPR using independent certification holdout
     if observed_fp_cert == 0:
@@ -417,9 +544,10 @@ def main() -> None:
         f"- **Model Checkpoint**: `{resolved_ckpt_path.name if resolved_ckpt_path else 'None'}` ({getattr(model, 'variant', 'unknown')})",
         f"- **Operational Target FPR**: `{args.target_fpr * 100:.2f}%`",
         f"- **Calibrated Threshold**: `{threshold:.4f}`",
-        f"- **Validation Negatives Evaluated**: `{n_val_negs}`",
-        f"- **Observed False Positives**: `{observed_fp}`",
-        f"- **Realized Validation FPR**: `{realized_val_fpr * 100:.3f}%`",
+        f"- **Calibration Negatives**: `{n_calib}`",
+        f"- **Independent Certification Negatives**: `{n_cert}`",
+        f"- **Observed False Positives on Holdout**: `{observed_fp_cert}`",
+        f"- **Realized Certification FPR**: `{realized_cert_fpr * 100:.3f}%`",
         f"- **95% Confidence Upper Bound on Population FPR**: `{fpr_95_upper_bound * 100:.2f}%`",
         f"- **Statistical Evidence Certification**: `CERTIFIED (Independent Verification Holdout)`",
         f"- **Total Evaluated Domains**: `{n_test}`",

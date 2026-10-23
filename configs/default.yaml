@@ -72,7 +72,7 @@ temporal:
   min_per_class_per_window: 200 # Minimum instances per class per month window
 
 group:
-  joint_grouping: false # Joint bipartite components across IP, NS, registrar, cert
+  joint_grouping: true # Joint bipartite components across all infrastructure types (IP, NS, registrar, certificate)
   hub_cutoff: 500
   max_prevalence_discrepancy: 0.05 # Stratified split tolerance (within 5 percentage points)
 

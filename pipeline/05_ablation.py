@@ -18,6 +18,7 @@ Supports --smoke, --max-domains N, and --force for resumability.
 
 import argparse
 import json
+import random
 import sys
 from pathlib import Path
 from typing import Any, Dict, List
@@ -175,6 +176,11 @@ def main() -> None:
                 drop_edge_type=a_spec["drop_edge"],
                 use_lexical=a_spec["use_lex"]
             )
+
+            # Explicit seeding before instantiation for reproducible initialization
+            torch.manual_seed(s)
+            np.random.seed(s)
+            random.seed(s)
 
             in_channels = {nt: scaled_data[nt].x.shape[1] for nt in scaled_data.node_types}
             model = HeteroGNN(

@@ -23,6 +23,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Parse and normalize Zenodo DomainRadar v2 records.")
     parser.add_argument("--fixture", action="store_true", help="Run against data_fixture/")
     parser.add_argument("--smoke", action="store_true", help="Run in smoke test mode")
+    parser.add_argument("--thin-client", action="store_true", help="Run with HP Thin Client profile")
     parser.add_argument("--force", action="store_true", help="Force re-parsing of raw dataset")
     parser.add_argument("--config", type=str, default=None, help="Path to config YAML")
     parser.add_argument("--limit", type=int, default=None, help="Limit number of records per file for quick checks")
@@ -40,8 +41,28 @@ def main() -> None:
     paths.check_write_path(paths.processed_dir)
 
     mode_str = "FIXTURE" if args.fixture else ("SMOKE" if is_smoke else "REAL")
-    if not args.force and (paths.processed_dir / "domains.parquet").exists() and (paths.processed_dir / "domains_timematched.parquet").exists():
-        print(f"[{mode_str}] Processed dataset already exists in {paths.processed_dir}. Skipping (use --force to re-parse).")
+    domains_file = paths.processed_dir / "domains.parquet"
+    timematched_file = paths.processed_dir / "domains_timematched.parquet"
+    summary_file = paths.processed_dir / "parsing_summary.json"
+
+    # Strict cache check: verify raw inputs and parsing configuration
+    can_skip = False
+    if not args.force and domains_file.exists() and timematched_file.exists() and summary_file.exists():
+        try:
+            with open(summary_file, "r", encoding="utf-8") as f:
+                prev_summary = json.load(f)
+            # Verify configuration parameters match
+            prev_e2ld = prev_summary.get("normalize_to_e2LD")
+            curr_e2ld = cfg.get("parsing", {}).get("normalize_to_e2LD", True)
+            prev_ratio = prev_summary.get("benign_ratio")
+            curr_ratio = cfg.get("parsing", {}).get("benign_ratio", 2.0)
+            if prev_e2ld == curr_e2ld and prev_ratio == curr_ratio:
+                can_skip = True
+        except Exception:
+            can_skip = False
+
+    if can_skip:
+        print(f"[{mode_str}] Processed dataset already exists and config matched in {paths.processed_dir}. Skipping (use --force to re-parse).")
         return
 
     print(f"[{mode_str}] Starting dataset parsing pipeline...")

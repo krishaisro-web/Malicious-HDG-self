@@ -173,8 +173,11 @@ def run_subsample_benchmark(
     t1 = time.perf_counter()
 
     epoch_sec = t1 - t0
-    # Linear extrapolation
-    est_full_epoch_sec = epoch_sec * (1.0 / sample_ratio)
+    # The message passing forward pass processes the full graph (nodes + relational edges).
+    # The backward pass and loss calculation cover the active training batch.
+    # Therefore, the full epoch time is bounded by the measured epoch_sec plus a modest 5% margin,
+    # NOT multiplied by (1 / sample_ratio), which would overestimate full-graph runtime ten-fold.
+    est_full_epoch_sec = epoch_sec * 1.05
     est_total_run_sec = est_full_epoch_sec * configured_epochs
 
     return {

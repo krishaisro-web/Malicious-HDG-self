@@ -9,6 +9,7 @@ Supports --smoke, --max-domains N, and --force for resumability.
 
 import argparse
 import json
+import random
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -126,9 +127,11 @@ def main() -> None:
             run_name = f"gnn_{var}_{args.split_type}_seed_{s}"
             print(f"\n--- Seed {s} ({var}) [{args.split_type}] ---")
 
+            input_artifacts = [paths.processed_dir / "heterodata.pt", paths.processed_dir / "domains.parquet"]
             exp_fp = compute_experiment_fingerprint(
                 cfg,
                 stage=f"gnn_{var}_{args.split_type}",
+                input_files=input_artifacts,
                 extra_dict={"seed": s, "variant": var, "split_type": args.split_type}
             )
 
@@ -150,6 +153,7 @@ def main() -> None:
             # 1. Create split for this seed
             asn_fallback_meta = None
             temporal_mode = None
+            temp_meta = {}
             if args.split_type == "random":
                 splits = random_stratified_split(df["label"].to_numpy(), seed=s)
             elif args.split_type == "time":
@@ -211,7 +215,13 @@ def main() -> None:
                     }
                     save_run_result(paths.results_dir, run_name, blocked_payload)
                     continue
+                temp_meta = {
+                    "temporal_mode": temporal_mode,
+                    "transition": trans_name if temporal_mode == "rolling_origin" else None,
+                    "target_month": str(target_m) if temporal_mode == "single_chronological_holdout" else None,
+                }
             elif args.split_type == "group":
+                temp_meta = {}
                 joint_grp = cfg.get("group", {}).get("joint_grouping", False)
                 splits, grp_meta = group_split_bipartite(df, joint_grouping=joint_grp, seed=s)
                 print(f"  Giant component fraction: {grp_meta['giant_component_fraction']:.4f}")
@@ -220,17 +230,32 @@ def main() -> None:
                     splits, asn_meta = group_split_by_asn(df, seed=s)
                     asn_fallback_meta = asn_meta.get("leakage_report")
             else:
+                temp_meta = {}
                 splits = random_stratified_split(df["label"].to_numpy(), seed=s)
 
-            # 2. Scale features per split to eliminate leakage
+            # 2. Scale features & mask graph topology per split to eliminate leakage
+            is_time_split = (args.split_type == "time")
+            is_group_split = (args.split_type == "group")
+            # For temporal split, degree mode must strictly be train_visible to prevent future degree exposure
+            deg_mode = "train_visible" if is_time_split else cfg.get("graph", {}).get("degree_mode", "transductive")
+
             scaled_data, scaler_stats = apply_split_scaling(
                 base=base_graph,
                 train_indices=splits.train_indices,
                 val_indices=splits.val_indices,
-                degree_mode=cfg.get("graph", {}).get("degree_mode", "transductive")
+                test_indices=splits.test_indices,
+                degree_mode=deg_mode,
+                mask_future_domains=is_time_split,
+                mask_disjoint_groups=is_group_split
             )
 
-            # 3. Instantiate Model
+            # 3. Instantiate Model (seeded prior to construction for exact weight reproducibility)
+            torch.manual_seed(s)
+            np.random.seed(s)
+            random.seed(s)
+            if torch.cuda.is_available():
+                torch.cuda.manual_seed_all(s)
+
             in_channels = {nt: scaled_data[nt].x.shape[1] for nt in scaled_data.node_types}
             model = HeteroGNN(
                 metadata=scaled_data.metadata(),
@@ -247,6 +272,16 @@ def main() -> None:
             ckpt_path = ckpt_dir / f"{run_name}.pt"
             log_path = logs_dir / f"{run_name}.jsonl"
 
+            split_meta_payload = dict(temp_meta)
+            if args.split_type == "group":
+                split_meta_payload["joint_grouping"] = joint_grp
+                split_meta_payload["giant_component_fraction"] = float(grp_meta.get("giant_component_fraction", 0.0))
+                if asn_fallback_meta:
+                    split_meta_payload["group_mode"] = "asn_fallback"
+                    split_meta_payload["asn_leakage_report"] = asn_fallback_meta
+                else:
+                    split_meta_payload["group_mode"] = "joint_bipartite"
+
             # 4. Train & Evaluate
             test_eval, y_test, y_probs, _ = train_eval_gnn(
                 model=model,
@@ -261,7 +296,9 @@ def main() -> None:
                 checkpoint_path=ckpt_path,
                 log_file=log_path,
                 seed=s,
-                experiment_fingerprint=exp_fp
+                experiment_fingerprint=exp_fp,
+                split_type=args.split_type,
+                split_metadata=split_meta_payload
             )
 
             if asn_fallback_meta:

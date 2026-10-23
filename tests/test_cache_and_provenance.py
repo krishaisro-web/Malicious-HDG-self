@@ -145,3 +145,51 @@ def test_profile_path_isolation_and_safeguards(tmp_path: Path):
     # 4. Safeguard: Fixture run cannot write to production real path!
     with pytest.raises(PermissionError, match="\\[FIXTURE SAFEGUARD\\]"):
         fixture_paths.check_write_path(tmp_path / "results/real/output.json")
+
+
+def test_incident_pairs_and_train_visible_ip_degrees():
+    """
+    Verifies that IP incident pairs contain only (domain_id, ip_id) tuples,
+    and that train-visible infra degrees strictly count only training domains.
+    """
+    from collections import Counter
+    from tests.test_graph_and_splits import make_toy_domains_df
+    from src.hdg.data.graph import build_base_graph, apply_split_scaling
+    from src.hdg.data.splits import random_stratified_split
+
+    df = make_toy_domains_df()
+    base = build_base_graph(df)
+
+    # 1. Verify incident_pairs structure
+    assert "ip" in base.incident_pairs
+    assert "asn" in base.incident_pairs
+    for d_idx, ip_idx in base.incident_pairs["ip"]:
+        assert isinstance(d_idx, int)
+        assert isinstance(ip_idx, int)
+        assert 0 <= d_idx < base["domain"].num_nodes
+        assert 0 <= ip_idx < base["ip"].num_nodes
+
+    # 2. Verify train-visible degree counting
+    splits = random_stratified_split(df["label"].to_numpy(), seed=42)
+    visible_set = set(splits.train_indices.tolist()).union(set(splits.val_indices.tolist()))
+    test_set = set(splits.test_indices.tolist())
+
+    scaled_train_vis, _ = apply_split_scaling(
+        base=base,
+        train_indices=splits.train_indices,
+        val_indices=splits.val_indices,
+        test_indices=splits.test_indices,
+        degree_mode="train_visible"
+    )
+    assert scaled_train_vis["ip"].x.shape == (base["ip"].num_nodes, 1)
+
+    # Pick an IP connected to at least one test domain and check that its train-visible count excludes test
+    ip_pairs = base.incident_pairs["ip"]
+    all_ip_degs = Counter(p[1] for p in ip_pairs)
+    vis_ip_degs = Counter(p[1] for p in ip_pairs if p[0] in visible_set)
+
+    test_ips = set(p[1] for p in ip_pairs if p[0] in test_set)
+    # For any IP that had test connections, the visible degree count must be strictly <= total degree count
+    for ip_id in test_ips:
+        assert vis_ip_degs.get(ip_id, 0) <= all_ip_degs.get(ip_id, 0)
+

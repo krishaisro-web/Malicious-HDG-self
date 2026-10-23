@@ -538,15 +538,21 @@ def should_skip_run(
     path = get_run_output_path(results_dir, run_name)
     if not (path.exists() and path.stat().st_size > 0):
         return False
-    if expected_fingerprint is not None:
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                data = json.load(f)
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        
+        # Operational safety: NEVER skip or treat a previously BLOCKED result as a successful run
+        status = str(data.get("status", "")).upper()
+        if status.startswith("BLOCKED"):
+            return False
+
+        if expected_fingerprint is not None:
             cached_fp = data.get("experiment_fingerprint") or data.get("fingerprint")
             if cached_fp != expected_fingerprint:
                 return False
-        except Exception:
-            return False
+    except Exception:
+        return False
     return True
 
 

@@ -87,18 +87,21 @@ def main() -> None:
         common_flags.append("--fixture")
     if args.smoke:
         common_flags.append("--smoke")
-    if args.thin_client:
-        common_flags.append("--thin-client")
     if args.force:
         common_flags.append("--force")
     if args.config:
         common_flags.extend(["--config", args.config])
+    elif args.thin_client:
+        common_flags.extend(["--config", str(REPO_ROOT / "configs" / "hp_thin_client.yaml")])
 
 
     TOTAL_STAGES = 16
 
     # 0. Preflight
-    run_step(1, TOTAL_STAGES, "Preflight Environment & Resource Audit", [py_exe, "-m", "pipeline.00c_preflight"] + common_flags)
+    preflight_flags = list(common_flags)
+    if args.thin_client and "--thin-client" not in preflight_flags:
+        preflight_flags.append("--thin-client")
+    run_step(1, TOTAL_STAGES, "Preflight Environment & Resource Audit", [py_exe, "-m", "pipeline.00c_preflight"] + preflight_flags)
 
     # 1. Profile Dataset
     run_step(2, TOTAL_STAGES, "Dataset Schema & Date Distribution Profiling", [py_exe, "-m", "pipeline.00_profile_dataset"] + common_flags)
@@ -127,11 +130,12 @@ def main() -> None:
     run_step(6, TOTAL_STAGES, "Tabular & Lexical Baselines Evaluation", base_cmd)
 
     # 6. GNN Evaluation (Random, Time, Group splits)
-    epochs_val = args.epochs if args.epochs is not None else (3 if (args.fixture or args.smoke) else 30)
+    configured_epochs = cfg.get("model", {}).get("training", {}).get("epochs", 200)
+    epochs_val = args.epochs if args.epochs is not None else (3 if (args.fixture or args.smoke) else configured_epochs)
     split_meta = [
         ("Random Split", "random"),
         ("Time Split (Temporal Holdout)", "time"),
-        ("Group Split (Disjoint Infrastructure)", "group")
+        ("Group Split (Joint Infrastructure Components)", "group")
     ]
     step_idx = 7
     for label, s_type in split_meta:

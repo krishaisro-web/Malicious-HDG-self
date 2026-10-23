@@ -53,7 +53,9 @@ def train_eval_gnn(
     device: Optional[torch.device] = None,
     seed: int = 42,
     resume: bool = True,
-    experiment_fingerprint: Optional[str] = None
+    experiment_fingerprint: Optional[str] = None,
+    split_type: Optional[str] = None,
+    split_metadata: Optional[Dict[str, Any]] = None
 ) -> Tuple[Dict[str, Any], np.ndarray, np.ndarray, nn.Module]:
     """
     Trains HeteroGNN with early stopping on validation ROC-AUC and validation-tuned threshold.
@@ -311,9 +313,13 @@ def train_eval_gnn(
             "model_config": arch_config,
             "experiment_fingerprint": experiment_fingerprint,
             "seed": seed,
+            "split_type": split_type or "random",
             "best_val_auc": float(best_val_auc),
             "threshold": float(optimal_th),
             "epochs_trained": len(log_records),
+            "val_indices": splits.val_indices.tolist(),
+            "cert_indices": splits.cert_indices.tolist() if getattr(splits, "cert_indices", None) is not None else [],
+            "test_indices": splits.test_indices.tolist(),
             "created_at": time.time()
         }
         atomic_save_torch(ckpt_payload, checkpoint_path)
@@ -325,9 +331,15 @@ def train_eval_gnn(
             "architecture": arch_config.get("variant", "unknown"),
             "model_config": arch_config,
             "seed": seed,
+            "split_type": split_type or "random",
+            "split_metadata": split_metadata or {},
             "threshold": float(optimal_th),
             "best_val_auc": float(best_val_auc),
             "epochs_trained": len(log_records),
+            "val_count": len(splits.val_indices),
+            "cert_count": len(splits.cert_indices) if getattr(splits, "cert_indices", None) is not None else 0,
+            "test_count": len(splits.test_indices),
+            "cert_indices": splits.cert_indices.tolist() if getattr(splits, "cert_indices", None) is not None else [],
             "created_at": time.time(),
             "target_fprs": target_fprs,
             "operating_points": test_eval.get("operating_points", {}),

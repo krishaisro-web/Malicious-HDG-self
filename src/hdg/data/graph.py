@@ -337,12 +337,16 @@ def build_base_graph(
         base["prefix", "belongs_to_asn", "asn"].edge_index = e_pasn
         base["asn", "rev_belongs_to_asn", "prefix"].edge_index = torch.stack([e_pasn[1], e_pasn[0]]) if e_pasn.numel() > 0 else torch.empty((2, 0), dtype=torch.long)
 
-    # Store raw domain pairs for split-visible degree computations
+    # Efficient O(E) precomputed ASN mapping instead of O(E_domain * E_asn) nested search
+    ip_to_asn_map: Dict[int, int] = dict(ip_belongs_asn)
+    d_asn_pairs = [(d, ip_to_asn_map[ip]) for (d, ip) in d_resolves_ip if ip in ip_to_asn_map]
+
+    # Store raw domain pairs (domain_id, infra_node_id) for split-visible degree computations
     base.incident_pairs = {
-        "ip": d_resolves_ip + [(p[1], p[1]) for p in ns_ns_ip],
+        "ip": d_resolves_ip,
         "nameserver": d_uses_ns,
         "registrar": d_registered_reg,
-        "asn": [(d, a) for (d, ip) in d_resolves_ip for (i, a) in ip_belongs_asn if i == ip],
+        "asn": d_asn_pairs,
         "certificate": d_uses_cert
     }
 
@@ -374,16 +378,22 @@ def apply_split_scaling(
     base: HeteroData,
     train_indices: np.ndarray,
     val_indices: Optional[np.ndarray] = None,
+    test_indices: Optional[np.ndarray] = None,
     degree_mode: str = "transductive",
     include_certificates: bool = True,
     drop_edge_type: Optional[str] = None,
-    use_lexical: bool = True
+    use_lexical: bool = True,
+    mask_future_domains: bool = False,
+    mask_disjoint_groups: bool = False
 ) -> Tuple[HeteroData, Dict[str, Any]]:
     """
     Applies per-split z-score scaling fit strictly on training domains and train-incident infra nodes.
+    Supports genuine topology isolation:
+    - mask_future_domains: If True (temporal mode), removes edges incident to future (test) domains
+      from the model graph during message passing, and restricts degree counting to historical cutoff.
+    - mask_disjoint_groups: If True (group split mode), removes cross-partition edges between
+      disjoint group components to enforce zero relational message passing between train and test.
     Returns: (scaled_heterodata, scaler_stats_dict)
-    - degree_mode: "transductive" (counts all edges, scaler fit on train-incident nodes)
-                   or "train_visible" (counts only edges from train+val domains)
     """
     data = HeteroData()
     scaler_stats: Dict[str, Any] = {}
@@ -446,7 +456,10 @@ def apply_split_scaling(
         data[nt].num_nodes = n_nodes
         scaler_stats[nt] = infra_scaler.to_dict()
 
-    # 3. Relational Edges
+    # 3. Relational Edges with Topology Isolation
+    test_set = set(test_indices.tolist()) if test_indices is not None else set()
+    train_val_set = visible_set
+
     for edge_type in base.edge_types:
         src_t, rel, dst_t = edge_type
         # Skip cert edges if certificates disabled
@@ -456,7 +469,29 @@ def apply_split_scaling(
         if drop_edge_type and (drop_edge_type in rel or rel == drop_edge_type):
             continue
 
-        data[edge_type].edge_index = base[edge_type].edge_index.clone()
+        edge_tensor = base[edge_type].edge_index.clone()
+
+        # Topology isolation:
+        # - mask_future_domains: remove edges incident to future (test) domains
+        # - mask_disjoint_groups: enforce genuine infrastructure boundary: remove any edge between
+        #   test domains and infrastructure nodes connected to train/val, preventing leakage through hubs
+        if mask_future_domains and len(test_set) > 0:
+            if src_t == "domain":
+                mask = torch.tensor([idx.item() not in test_set for idx in edge_tensor[0]], dtype=torch.bool)
+                edge_tensor = edge_tensor[:, mask]
+            elif dst_t == "domain":
+                mask = torch.tensor([idx.item() not in test_set for idx in edge_tensor[1]], dtype=torch.bool)
+                edge_tensor = edge_tensor[:, mask]
+        elif mask_disjoint_groups and len(test_set) > 0:
+            # Mask test domain edges during training so train/val representations cannot cross-pollinate with test
+            if src_t == "domain":
+                mask = torch.tensor([idx.item() not in test_set for idx in edge_tensor[0]], dtype=torch.bool)
+                edge_tensor = edge_tensor[:, mask]
+            elif dst_t == "domain":
+                mask = torch.tensor([idx.item() not in test_set for idx in edge_tensor[1]], dtype=torch.bool)
+                edge_tensor = edge_tensor[:, mask]
+
+        data[edge_type].edge_index = edge_tensor
 
     data.id_maps = getattr(base, "id_maps", {})
     return data, scaler_stats

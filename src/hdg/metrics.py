@@ -306,10 +306,19 @@ def multi_seed_paired_comparisons(
     n_bootstrap: int = 1000
 ) -> Dict[str, Any]:
     """
-    Computes McNemar and paired bootstrap AUC difference across ALL seeds,
-    reporting per-seed results and a pooled summary across seeds.
+    Computes McNemar and paired bootstrap AUC difference across ALL seeds.
+    Scientific Rigor Note:
+    Because random splits share overlapping test partitions across different seeds,
+    the same domain instances appear in multiple seeds' test sets. Therefore, per-seed
+    hypothesis tests and confidence intervals are PRIMARY.
+    A summary of the per-seed differences (mean difference and fraction of seeds where p < 0.05)
+    is reported to avoid false degrees-of-freedom inflation from naive observation concatenation.
     """
     per_seed = {}
+    seed_pvalues_mcnemar = []
+    seed_mean_auc_diffs = []
+    seed_pvalues_auc = []
+
     pooled_true: List[int] = []
     pooled_pred_a: List[int] = []
     pooled_pred_b: List[int] = []
@@ -334,19 +343,38 @@ def multi_seed_paired_comparisons(
             "bootstrap_auc_diff": auc_diff
         }
 
+        seed_pvalues_mcnemar.append(mcn["pvalue"])
+        seed_mean_auc_diffs.append(auc_diff["mean_diff"])
+        auc_pval = auc_diff.get("pvalue_two_sided", auc_diff.get("pvalue", 1.0))
+        seed_pvalues_auc.append(auc_pval)
+
         pooled_true.extend(y_true.tolist())
         pooled_pred_a.extend(y_pred_a.tolist())
         pooled_pred_b.extend(y_pred_b.tolist())
         pooled_prob_a.extend(y_prob_a.tolist())
         pooled_prob_b.extend(y_prob_b.tolist())
 
-    pooled_mcn = paired_mcnemar_test(np.array(pooled_true), np.array(pooled_pred_a), np.array(pooled_pred_b))
-    pooled_auc_diff = paired_bootstrap_auc_difference(np.array(pooled_true), np.array(pooled_prob_a), np.array(pooled_prob_b), n_bootstrap=n_bootstrap, seed=42)
+    # Summary across seeds
+    n_valid = len(seed_mean_auc_diffs)
+    mean_auc_diff = float(np.mean(seed_mean_auc_diffs)) if n_valid > 0 else 0.0
+    sig_mcn_count = int(sum(p < 0.05 for p in seed_pvalues_mcnemar))
+    sig_auc_count = int(sum(p < 0.05 for p in seed_pvalues_auc))
+
+    pooled_mcn = paired_mcnemar_test(np.array(pooled_true), np.array(pooled_pred_a), np.array(pooled_pred_b)) if len(pooled_true) > 0 else {}
+    pooled_auc_diff = paired_bootstrap_auc_difference(np.array(pooled_true), np.array(pooled_prob_a), np.array(pooled_prob_b), n_bootstrap=n_bootstrap, seed=42) if len(pooled_true) > 0 else {}
 
     return {
         "per_seed": per_seed,
+        "cross_seed_summary": {
+            "num_evaluated_seeds": n_valid,
+            "mean_paired_auc_difference": round(mean_auc_diff, 4),
+            "mcnemar_significant_seeds_count": sig_mcn_count,
+            "auc_significant_seeds_count": sig_auc_count,
+            "all_seeds_auc_significant": (sig_auc_count == n_valid and n_valid > 0)
+        },
         "pooled_summary": {
             "mcnemar": pooled_mcn,
-            "bootstrap_auc_diff": pooled_auc_diff
+            "bootstrap_auc_diff": pooled_auc_diff,
+            "warning": "Overlapping test cohorts across random seeds mean naive pooled tests have correlated observations. Refer to cross_seed_summary and per_seed results for uninflated degrees of freedom."
         }
     }

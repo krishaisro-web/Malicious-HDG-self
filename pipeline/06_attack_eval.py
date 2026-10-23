@@ -12,6 +12,7 @@ Supports --smoke, --max-domains N, and --force for resumability.
 
 import argparse
 import json
+import random
 import sys
 from pathlib import Path
 from typing import Any, Dict, List
@@ -110,6 +111,9 @@ def main() -> None:
 
         # Model A: Standard SAGE (undefended)
         print(f"  Training clean SAGE model (Seed {s})...")
+        torch.manual_seed(s)
+        np.random.seed(s)
+        random.seed(s)
         model_sage = HeteroGNN(metadata=clean_scaled.metadata(), in_channels_dict=in_channels, variant="sage")
         eval_sage_clean, y_test, p_sage_clean, trained_sage = train_eval_gnn(
             model=model_sage, data=clean_scaled, splits=splits, df=df, epochs=train_epochs, patience=patience, seed=s
@@ -117,6 +121,9 @@ def main() -> None:
 
         # Model D: SAGE_Guard (defense)
         print(f"  Training clean SAGE_Guard model (Seed {s})...")
+        torch.manual_seed(s)
+        np.random.seed(s)
+        random.seed(s)
         model_guard = HeteroGNN(metadata=clean_scaled.metadata(), in_channels_dict=in_channels, variant="sage_guard")
         eval_guard_clean, _, p_guard_clean, trained_guard = train_eval_gnn(
             model=model_guard, data=clean_scaled, splits=splits, df=df, epochs=train_epochs, patience=patience, seed=s
