@@ -294,19 +294,51 @@ def train_eval_gnn(
     if checkpoint_path is not None:
         checkpoint_path = Path(checkpoint_path)
         checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
-        atomic_save_torch(model.state_dict(), checkpoint_path)
+        
+        # Comprehensive architecture metadata
+        arch_config = model.get_model_config() if hasattr(model, "get_model_config") else {
+            "variant": getattr(model, "variant", "unknown"),
+            "hidden_dim": getattr(model, "hidden_dim", 64),
+            "out_dim": getattr(model, "out_dim", 32),
+            "num_layers": getattr(model, "num_layers", 2),
+            "num_heads": getattr(model, "num_heads", 4),
+            "dropout": getattr(model, "dropout", 0.2),
+            "use_edges": getattr(model, "use_edges", True)
+        }
+        
+        ckpt_payload = {
+            "model_state_dict": model.state_dict(),
+            "model_config": arch_config,
+            "experiment_fingerprint": experiment_fingerprint,
+            "seed": seed,
+            "best_val_auc": float(best_val_auc),
+            "threshold": float(optimal_th),
+            "epochs_trained": len(log_records),
+            "created_at": time.time()
+        }
+        atomic_save_torch(ckpt_payload, checkpoint_path)
 
         manifest_path = checkpoint_path.parent / f"{checkpoint_path.stem}_manifest.json"
         manifest_payload = {
             "checkpoint_file": checkpoint_path.name,
             "experiment_fingerprint": experiment_fingerprint,
+            "architecture": arch_config.get("variant", "unknown"),
+            "model_config": arch_config,
             "seed": seed,
             "threshold": float(optimal_th),
             "best_val_auc": float(best_val_auc),
             "epochs_trained": len(log_records),
             "created_at": time.time(),
             "target_fprs": target_fprs,
-            "operating_points": test_eval.get("operating_points", {})
+            "operating_points": test_eval.get("operating_points", {}),
+            "metrics": {
+                "roc_auc": test_eval.get("roc_auc"),
+                "pr_auc": test_eval.get("pr_auc"),
+                "f1": test_eval.get("f1"),
+                "accuracy": test_eval.get("accuracy"),
+                "precision": test_eval.get("precision"),
+                "recall": test_eval.get("recall")
+            }
         }
         atomic_save_json(manifest_payload, manifest_path)
 

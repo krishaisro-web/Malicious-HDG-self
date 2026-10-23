@@ -205,9 +205,32 @@ def main() -> None:
         save_run_result(paths, run_name, blocked_summary)
         return
 
+    # Statistical Calibration Evidence Policy:
+    # Rule of Three / Binomial upper confidence bound:
+    # To certify that FPR <= target_fpr with 95% confidence when 0 false positives are observed,
+    # we require N_negs >= 3 / target_fpr (e.g. 300 for 1% FPR, 3000 for 0.1% FPR).
+    # For small testing slices or sandbox runs, if N_negs is smaller than this rigorous threshold,
+    # we compute the 95% Clopper-Pearson / Wilson upper confidence bound and report statistical power warnings.
+    min_negs_for_target = int(np.ceil(3.0 / args.target_fpr))
+    
+    # Absolute minimum floor required to attempt order-statistic calibration (at least 20 negatives)
+    if n_val_negs < 20:
+        print(f"[BLOCKED] RPZ rule generation blocked: Insufficient validation negatives for calibration "
+              f"(found {n_val_negs}, minimum statistical floor is 20).")
+        blocked_summary = {
+            "status": "BLOCKED_INSUFFICIENT_EVIDENCE",
+            "reason": f"Sample size (N={n_val_negs}) is statistically inadequate to certify FPR <= {args.target_fpr * 100:.2f}%.",
+            "n_val_negs": n_val_negs,
+            "min_required_negs": min_negs_for_target,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        with open(rpz_dir / "rpz_summary.json", "w", encoding="utf-8") as f:
+            json.dump(blocked_summary, f, indent=2)
+        save_run_result(paths, run_name, blocked_summary)
+        return
+
     # Order-statistic threshold calibration with strict upper bounding
     sorted_negs = np.sort(val_negs)
-    # Target maximum allowed false positives: floor(n_val_negs * target_fpr)
     max_allowed_fp = int(np.floor(n_val_negs * args.target_fpr))
     rank_idx = n_val_negs - 1 - max_allowed_fp
 
@@ -215,24 +238,42 @@ def main() -> None:
         threshold = float(sorted_negs[-1]) + 1e-6
     else:
         raw_cut = float(sorted_negs[rank_idx])
-        # To strictly enforce empirical FPR <= target_fpr even with ties,
-        # we pick threshold just above identical tie values if necessary
         threshold = raw_cut
 
     # Realized validation FPR under >= threshold
-    realized_val_fpr = float(np.mean(val_negs >= threshold))
-    # If ties caused realized_val_fpr > target_fpr, adjust threshold upward to next distinct value
+    observed_fp = int(np.sum(val_negs >= threshold))
+    realized_val_fpr = float(observed_fp / n_val_negs)
+
+    # Tie handling: if score ties caused realized_val_fpr > target_fpr, adjust threshold upward
     if realized_val_fpr > args.target_fpr:
         strictly_higher = sorted_negs[sorted_negs > threshold]
         if len(strictly_higher) > 0:
             threshold = float(strictly_higher[0])
-            realized_val_fpr = float(np.mean(val_negs >= threshold))
+            observed_fp = int(np.sum(val_negs >= threshold))
+            realized_val_fpr = float(observed_fp / n_val_negs)
         else:
             threshold = float(sorted_negs[-1]) + 1e-6
+            observed_fp = 0
             realized_val_fpr = 0.0
 
+    # 95% Confidence Upper Bound on Population FPR (Rule-of-Three / Wilson score bound)
+    if observed_fp == 0:
+        fpr_95_upper_bound = min(1.0, 3.0 / n_val_negs)
+    else:
+        # Wilson score upper bound at 95% confidence (z = 1.96)
+        z = 1.96
+        p_hat = realized_val_fpr
+        denom = 1.0 + (z**2) / n_val_negs
+        centre = p_hat + (z**2) / (2.0 * n_val_negs)
+        spread = z * np.sqrt((p_hat * (1.0 - p_hat) + (z**2) / (4.0 * n_val_negs)) / n_val_negs)
+        fpr_95_upper_bound = min(1.0, float((centre + spread) / denom))
+
+    adequate_evidence = n_val_negs >= min_negs_for_target
     print(f"Operating Target FPR: {args.target_fpr * 100:.2f}% | Calibrated Threshold: {threshold:.4f} "
-          f"(Val FPR: {realized_val_fpr * 100:.3f}% on N={n_val_negs} negatives)")
+          f"(Val FPR: {realized_val_fpr * 100:.3f}%, Observed FP: {observed_fp}/{n_val_negs}, 95% Upper Bound: {fpr_95_upper_bound * 100:.2f}%)")
+    if not adequate_evidence:
+        print(f"  [STATISTICAL POWER NOTE] Validation negatives ({n_val_negs}) below standard 95% power target ({min_negs_for_target}). "
+              f"Realized FPR is empirical on current cohort.")
 
     # Evaluate test cohort
     test_idx = splits.test_indices
@@ -282,9 +323,15 @@ def main() -> None:
 
     summary = {
         "generated_at": now_iso,
+        "checkpoint_file": resolved_ckpt_path.name if resolved_ckpt_path else None,
+        "architecture": getattr(model, "variant", "unknown"),
         "target_fpr": args.target_fpr,
         "calibrated_threshold": round(threshold, 4),
+        "validation_negatives_evaluated": n_val_negs,
+        "validation_false_positives_observed": observed_fp,
         "realized_val_fpr": round(realized_val_fpr, 5),
+        "fpr_95_upper_bound": round(fpr_95_upper_bound, 5),
+        "adequate_evidence_for_target": adequate_evidence,
         "total_test_domains": n_test,
         "rules_emitted": n_blocked,
         "blocking_rate_pct": round(blocking_rate, 2),
@@ -304,9 +351,14 @@ def main() -> None:
         "",
         "## Policy Configuration",
         f"- **Generated At**: `{now_iso}`",
+        f"- **Model Checkpoint**: `{resolved_ckpt_path.name if resolved_ckpt_path else 'None'}` ({getattr(model, 'variant', 'unknown')})",
         f"- **Operational Target FPR**: `{args.target_fpr * 100:.2f}%`",
         f"- **Calibrated Threshold**: `{threshold:.4f}`",
+        f"- **Validation Negatives Evaluated**: `{n_val_negs}`",
+        f"- **Observed False Positives**: `{observed_fp}`",
         f"- **Realized Validation FPR**: `{realized_val_fpr * 100:.3f}%`",
+        f"- **95% Confidence Upper Bound on Population FPR**: `{fpr_95_upper_bound * 100:.2f}%`",
+        f"- **Statistical Evidence Certification**: `{'CERTIFIED' if adequate_evidence else 'EMPIRICAL (Limited Sample Size)'}`",
         f"- **Total Evaluated Domains**: `{n_test}`",
         f"- **Rules Emitted**: `{n_blocked}`",
         f"- **Estimated Blocking Rate**: `{blocking_rate:.2f}%`",

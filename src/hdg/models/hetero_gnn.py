@@ -143,8 +143,13 @@ class HeteroGNN(nn.Module):
         super().__init__()
         self.variant = variant.lower()
         self.metadata = metadata
+        self.in_channels_dict = in_channels_dict
+        self.hidden_dim = hidden_dim
+        self.out_dim = out_dim
         self.num_layers = num_layers
+        self.num_heads = num_heads
         self.dropout = dropout
+        self.prune_threshold = prune_threshold
         self.use_edges = use_edges
 
         node_types, edge_types = metadata
@@ -236,3 +241,16 @@ class HeteroGNN(nn.Module):
         domain_emb = h_dict["domain"]
         logits = self.classifier(domain_emb)
         return logits
+
+    def get_model_config(self) -> Dict[str, Any]:
+        """Returns comprehensive architecture config for reliable checkpoint serialization."""
+        return {
+            "variant": self.variant,
+            "hidden_dim": self.hidden_dim,
+            "out_dim": self.out_dim,
+            "num_layers": self.num_layers,
+            "num_heads": self.num_heads,
+            "dropout": self.dropout,
+            "prune_threshold": self.prune_threshold,
+            "use_edges": self.use_edges
+        }

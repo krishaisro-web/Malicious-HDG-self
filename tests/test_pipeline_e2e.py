@@ -111,3 +111,33 @@ def test_hetero_gnn_forward_pass_both_variants() -> None:
     with torch.no_grad():
         out_attn = model_attn(data.x_dict, data.edge_index_dict)
     assert out_attn.shape == (data["domain"].num_nodes, 2)
+
+
+def test_checkpoint_model_config_contract() -> None:
+    """Verifies that get_model_config provides complete architecture metadata."""
+    cfg = load_config()
+    repo_root = Path(__file__).resolve().parent.parent
+    paths = get_resolved_paths(cfg, is_fixture=False, root_dir=repo_root)
+
+    graph_file = paths.processed_dir / "heterodata.pt"
+    data = torch.load(graph_file, weights_only=False)
+    in_channels = {nt: data[nt].x.shape[1] for nt in data.node_types}
+
+    model = HeteroGNN(
+        metadata=data.metadata(),
+        in_channels_dict=in_channels,
+        variant="attn",
+        hidden_dim=64,
+        out_dim=32,
+        num_layers=3,
+        num_heads=4,
+        dropout=0.25
+    )
+    conf = model.get_model_config()
+    assert conf["variant"] == "attn"
+    assert conf["hidden_dim"] == 64
+    assert conf["out_dim"] == 32
+    assert conf["num_layers"] == 3
+    assert conf["num_heads"] == 4
+    assert conf["dropout"] == 0.25
+    assert "use_edges" in conf
