@@ -204,7 +204,7 @@ def test_checkpoint_round_trip_reconstruction(tmp_path: Path) -> None:
         # Exact logit equivalence check
         torch.testing.assert_close(out1, out2)
 
-    # Test isolated MLP baseline (use_edges=False, non-default prune_threshold)
+    # Test isolated MLP baseline (use_edges=False, non-default prune_threshold) with full round-trip
     m_mlp = HeteroGNN(
         metadata=data.metadata(),
         in_channels_dict=in_channels,
@@ -214,6 +214,36 @@ def test_checkpoint_round_trip_reconstruction(tmp_path: Path) -> None:
         prune_threshold=0.35,
         use_edges=False
     )
-    mlp_cfg = m_mlp.get_model_config()
+    m_mlp.eval()
+    with torch.no_grad():
+        out_mlp1 = m_mlp(data.x_dict, data.edge_index_dict)
+
+    mlp_ckpt_p = tmp_path / "test_mlp_no_edges.pt"
+    torch.save({
+        "model_state_dict": m_mlp.state_dict(),
+        "model_config": m_mlp.get_model_config()
+    }, mlp_ckpt_p)
+
+    mlp_loaded = torch.load(mlp_ckpt_p, weights_only=False)
+    mlp_cfg = mlp_loaded["model_config"]
     assert mlp_cfg["use_edges"] is False
     assert mlp_cfg["prune_threshold"] == 0.35
+
+    m_mlp2 = HeteroGNN(
+        metadata=data.metadata(),
+        in_channels_dict=in_channels,
+        variant=mlp_cfg["variant"],
+        hidden_dim=mlp_cfg["hidden_dim"],
+        out_dim=mlp_cfg["out_dim"],
+        num_layers=mlp_cfg["num_layers"],
+        num_heads=mlp_cfg["num_heads"],
+        dropout=mlp_cfg["dropout"],
+        prune_threshold=mlp_cfg["prune_threshold"],
+        use_edges=mlp_cfg["use_edges"]
+    )
+    m_mlp2.load_state_dict(mlp_loaded["model_state_dict"])
+    m_mlp2.eval()
+    with torch.no_grad():
+        out_mlp2 = m_mlp2(data.x_dict, data.edge_index_dict)
+
+    torch.testing.assert_close(out_mlp1, out_mlp2)
