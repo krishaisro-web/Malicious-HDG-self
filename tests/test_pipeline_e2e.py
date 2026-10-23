@@ -387,3 +387,192 @@ def test_objective_acceptance_criteria_exact():
     )
     assert statuses_b["O1"][1] == "MET"
 
+
+def test_rpz_fail_closed_on_split_mismatch_and_missing_cert(tmp_path: Path, minimal_synthetic_heterodata) -> None:
+    """
+    Regression test for:
+    1. RPZ split mismatch: never substitute another checkpoint/split; fail closed with BLOCKED_SPLIT_MISMATCH.
+    2. RPZ certification metadata: missing cert_indices must strictly block emission.
+    """
+    import json
+    import subprocess
+    import sys
+    from src.hdg.data.graph import load_aligned_graph_cohort
+    data, _, _ = load_aligned_graph_cohort(Path("data/processed/real"))
+    in_channels = {nt: data[nt].x.shape[1] for nt in data.node_types}
+
+    model = HeteroGNN(
+        metadata=data.metadata(),
+        in_channels_dict=in_channels,
+        variant="sage",
+        hidden_dim=32,
+        out_dim=16
+    )
+
+    # Checkpoint trained on 'random' split
+    ckpt_random_path = tmp_path / "gnn_sage_random_seed_42.pt"
+    torch.save({
+        "model_state_dict": model.state_dict(),
+        "model_config": model.get_model_config(),
+        "split_type": "random",
+        "cert_indices": [0, 1]
+    }, ckpt_random_path)
+    with open(tmp_path / "gnn_sage_random_seed_42_manifest.json", "w") as f:
+        json.dump({"split_type": "random", "seed": 42}, f)
+
+    # Test 1: Request 'time' split with 'random' checkpoint -> must block with BLOCKED_SPLIT_MISMATCH
+    cmd = [
+        sys.executable, "-m", "pipeline.10_emit_rpz",
+        "--force",
+        "--checkpoint", str(ckpt_random_path),
+        "--split-type", "time"
+    ]
+    res = subprocess.run(cmd, capture_output=True, text=True)
+    assert res.returncode == 0
+    assert "BLOCKED_SPLIT_MISMATCH" in res.stdout or "BLOCKED_SPLIT_MISMATCH" in res.stderr
+
+    # Test 2: Checkpoint missing cert_indices -> must block with BLOCKED_MISSING_CERT_METADATA
+    ckpt_no_cert = tmp_path / "gnn_sage_random_no_cert.pt"
+    torch.save({
+        "model_state_dict": model.state_dict(),
+        "model_config": model.get_model_config(),
+        "split_type": "random",
+        "cert_indices": []  # empty/missing
+    }, ckpt_no_cert)
+    with open(tmp_path / "gnn_sage_random_no_cert_manifest.json", "w") as f:
+        json.dump({"split_type": "random", "seed": 42}, f)
+
+    cmd2 = [
+        sys.executable, "-m", "pipeline.10_emit_rpz",
+        "--force",
+        "--checkpoint", str(ckpt_no_cert),
+        "--split-type", "random"
+    ]
+    res2 = subprocess.run(cmd2, capture_output=True, text=True)
+    assert res2.returncode == 0
+    assert "BLOCKED_MISSING_CERT_METADATA" in res2.stdout or "BLOCKED" in res2.stdout
+
+
+def test_latency_checkpoint_strict_validation(tmp_path: Path, minimal_synthetic_heterodata) -> None:
+    """
+    Regression test for:
+    3. Latency checkpoint reconstruction: load and validate all 8 architecture fields,
+       including num_heads and prune_threshold.
+    """
+    import subprocess
+    import sys
+    data = minimal_synthetic_heterodata
+    in_channels = {nt: data[nt].x.shape[1] for nt in data.node_types}
+
+    model = HeteroGNN(
+        metadata=data.metadata(),
+        in_channels_dict=in_channels,
+        variant="attn",
+        hidden_dim=32,
+        out_dim=16,
+        num_heads=2
+    )
+
+    # Incomplete config missing num_heads and prune_threshold
+    bad_cfg = {
+        "variant": "attn",
+        "hidden_dim": 32,
+        "out_dim": 16,
+        "num_layers": 2,
+        "dropout": 0.2,
+        "use_edges": True
+        # missing num_heads and prune_threshold!
+    }
+    bad_ckpt = tmp_path / "incomplete_arch_ckpt.pt"
+    torch.save({
+        "model_state_dict": model.state_dict(),
+        "model_config": bad_cfg
+    }, bad_ckpt)
+
+    cmd = [
+        sys.executable, "-m", "pipeline.07_latency_eval",
+        "--force",
+        "--checkpoint", str(bad_ckpt)
+    ]
+    res = subprocess.run(cmd, capture_output=True, text=True)
+    assert res.returncode == 0
+    # Must fail to load incomplete checkpoint and log warning
+    assert "missing required fields" in res.stdout or "Could not load checkpoint" in res.stdout
+
+
+def test_o3_and_o4_reporting_criteria() -> None:
+    """
+    Regression test for:
+    4. O3 report criterion: remove the AUROC-difference fallback; if valid statistical
+       significance evidence (p < 0.05) is unavailable, report NOT MET/INSUFFICIENT EVIDENCE.
+    5. O4 criterion: make documentation and implementation use exactly the same latency acceptance rule.
+    """
+    import importlib
+    mod_report = importlib.import_module("pipeline.11_make_report")
+    evaluate_objective_statuses = mod_report.evaluate_objective_statuses
+
+    baselines = {
+        "xgboost_tabular": {"roc_auc_mean": 0.85}
+    }
+    # Case A: HeteroGNN has higher AUC (0.88 > 0.85), but no p < 0.05 evidence
+    gnn_no_stat_sig = {
+        "random": {
+            "variants": {
+                "sage": {
+                    "roc_auc_mean": 0.88,
+                    "runs": [{
+                        "bootstrap_ci": {
+                            "roc_auc": {"ci_lower": 0.82, "ci_upper": 0.94}  # overlaps 0.85!
+                        }
+                    }]
+                }
+            },
+            "paired_comparisons": {}
+        }
+    }
+    statuses = evaluate_objective_statuses(
+        gnn_evaluations=gnn_no_stat_sig,
+        baselines_data=baselines,
+        latency_data=None,
+        attack_data=None,
+        is_fixture=False
+    )
+    # Must be NOT MET/INSUFFICIENT EVIDENCE (heuristic fallback removed)
+    assert statuses["O3"][1] == "NOT MET/INSUFFICIENT EVIDENCE"
+
+    # Case B: CPU Latency Budget (Mean < 50 ms AND P95 < 50 ms)
+    # Mean < 50 ms and P95 < 50 ms -> MET
+    latency_compliant = {
+        "benchmarks": [{
+            "batch_size": 1,
+            "threads": 1,
+            "end_to_end": {"mean_ms": 15.2, "p95_ms": 32.1}
+        }]
+    }
+    statuses_lat = evaluate_objective_statuses(
+        gnn_evaluations=None,
+        baselines_data=None,
+        latency_data=latency_compliant,
+        attack_data=None,
+        is_fixture=False
+    )
+    assert statuses_lat["O4"][1] == "MET"
+
+    # Mean < 50 ms but P95 >= 50 ms -> NOT MET
+    latency_p95_spike = {
+        "benchmarks": [{
+            "batch_size": 1,
+            "threads": 1,
+            "end_to_end": {"mean_ms": 25.0, "p95_ms": 52.4}
+        }]
+    }
+    statuses_lat2 = evaluate_objective_statuses(
+        gnn_evaluations=None,
+        baselines_data=None,
+        latency_data=latency_p95_spike,
+        attack_data=None,
+        is_fixture=False
+    )
+    assert statuses_lat2["O4"][1] == "NOT MET"
+
+

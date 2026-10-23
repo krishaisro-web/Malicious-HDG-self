@@ -69,6 +69,8 @@ def evaluate_objective_statuses(
     Returns: {obj_id: (observed_result_str, status_str)}
     """
     statuses = {}
+    if gnn_evaluations is None:
+        gnn_evaluations = {}
 
     # O1: Low-FPR Operation
     o1_val = "N/A"
@@ -156,18 +158,18 @@ def evaluate_objective_statuses(
                 stat_sig = True
                 o3_val = f"HeteroGNN: {gnn_auc:.4f} [95% CI: {ci_lower:.4f}, {boot_ci.get('ci_upper', 1.0):.4f}] vs XGBoost: {xgb_auc:.4f} (Δ: +{diff:.4f}, p < 0.05 by CI separation)"
             else:
-                stat_sig = (diff > 0.02)  # Conservative margin
-                o3_val = f"HeteroGNN: {gnn_auc:.4f} vs XGBoost: {xgb_auc:.4f} (Δ: {'+' if diff >= 0 else ''}{diff:.4f})"
+                stat_sig = False
+                o3_val = f"HeteroGNN: {gnn_auc:.4f} vs XGBoost: {xgb_auc:.4f} (Δ: {'+' if diff >= 0 else ''}{diff:.4f}, no significant difference p < 0.05)"
 
         if is_fixture:
             o3_stat = "MET (FIXTURE)"
         elif stat_sig and diff > 0:
             o3_stat = "MET"
         else:
-            o3_stat = "NOT MET"
+            o3_stat = "NOT MET/INSUFFICIENT EVIDENCE"
     statuses["O3"] = (o3_val, o3_stat)
 
-    # O4: CPU Latency Budget (Mean < 20 ms AND P95 < 50 ms)
+    # O4: CPU Latency Budget (Mean < 50 ms AND P95 < 50 ms)
     o4_val = "N/A"
     o4_stat = "PENDING"
     if latency_data and "benchmarks" in latency_data:

@@ -128,21 +128,70 @@ def main() -> None:
         try:
             ckpt_obj = torch.load(cand_path, map_location="cpu", weights_only=False)
             state_dict = ckpt_obj.get("model_state_dict", ckpt_obj) if isinstance(ckpt_obj, dict) else ckpt_obj
-            ckpt_cfg = ckpt_obj.get("model_config", {})
+            
+            # Strict model_config validation: validate all 8 architectural fields
+            ckpt_cfg = ckpt_obj.get("model_config") if isinstance(ckpt_obj, dict) else None
+            if not isinstance(ckpt_cfg, dict):
+                raise ValueError("Checkpoint is missing required 'model_config' dictionary.")
+
+            required_fields = ["variant", "hidden_dim", "out_dim", "num_layers", "num_heads", "dropout", "prune_threshold", "use_edges"]
+            missing_fields = [f for f in required_fields if f not in ckpt_cfg]
+            if missing_fields:
+                raise ValueError(f"Checkpoint model_config is incomplete; missing required fields: {missing_fields}")
+
+            # 1. Variant
+            if not isinstance(ckpt_cfg["variant"], str):
+                raise TypeError(f"model_config['variant'] must be str, got {type(ckpt_cfg['variant']).__name__}")
+            variant = ckpt_cfg["variant"].strip().lower()
+            if variant not in ["sage", "attn", "sage_guard"]:
+                raise ValueError(f"Unsupported architecture variant: '{variant}'. Must be one of ['sage', 'attn', 'sage_guard']")
+
+            # 2. Dimensions and Layers (must be strictly int, not bool or str)
+            for int_f, min_v in [("hidden_dim", 4), ("out_dim", 2), ("num_layers", 1), ("num_heads", 1)]:
+                val = ckpt_cfg[int_f]
+                if not isinstance(val, int) or isinstance(val, bool):
+                    raise TypeError(f"model_config['{int_f}'] must be int, got {type(val).__name__} ({val!r})")
+                if val < min_v:
+                    raise ValueError(f"model_config['{int_f}'] must be >= {min_v}, got {val}")
+
+            hidden_dim = ckpt_cfg["hidden_dim"]
+            out_dim = ckpt_cfg["out_dim"]
+            num_layers = ckpt_cfg["num_layers"]
+            num_heads = ckpt_cfg["num_heads"]
+
+            # 3. Dropout and prune_threshold (must be float/int in [0.0, 1.0])
+            for float_f in ["dropout", "prune_threshold"]:
+                val = ckpt_cfg[float_f]
+                if not isinstance(val, (float, int)) or isinstance(val, bool):
+                    raise TypeError(f"model_config['{float_f}'] must be float, got {type(val).__name__} ({val!r})")
+                if not (0.0 <= float(val) <= 1.0):
+                    raise ValueError(f"model_config['{float_f}'] must be in [0.0, 1.0], got {val}")
+
+            dropout = float(ckpt_cfg["dropout"])
+            prune_threshold = float(ckpt_cfg["prune_threshold"])
+
+            # 4. use_edges (must strictly be bool)
+            if not isinstance(ckpt_cfg["use_edges"], bool):
+                raise TypeError(f"model_config['use_edges'] must be bool, got {type(ckpt_cfg['use_edges']).__name__} ({ckpt_cfg['use_edges']!r})")
+            use_edges = ckpt_cfg["use_edges"]
+
             cand_model = HeteroGNN(
                 metadata=scaled_data.metadata(),
                 in_channels_dict=in_channels,
-                variant=ckpt_cfg.get("variant", "sage"),
-                hidden_dim=ckpt_cfg.get("hidden_dim", 64),
-                out_dim=ckpt_cfg.get("out_dim", 32),
-                num_layers=ckpt_cfg.get("num_layers", 2),
-                dropout=ckpt_cfg.get("dropout", 0.2),
-                use_edges=ckpt_cfg.get("use_edges", True)
+                variant=variant,
+                hidden_dim=hidden_dim,
+                out_dim=out_dim,
+                num_layers=num_layers,
+                num_heads=num_heads,
+                dropout=dropout,
+                prune_threshold=prune_threshold,
+                use_edges=use_edges
             )
             cand_model.load_state_dict(state_dict)
             model = cand_model
             loaded_ckpt_file = cand_path.name
-            print(f"[LATENCY] Loaded production checkpoint: {cand_path.name}")
+            print(f"[LATENCY] Loaded verified production checkpoint: {cand_path.name} "
+                  f"(variant={variant}, hidden_dim={hidden_dim}, out_dim={out_dim}, layers={num_layers}, heads={num_heads})")
             break
         except Exception as e:
             print(f"[LATENCY] Could not load checkpoint {cand_path.name} ({e}), trying next candidate...")
