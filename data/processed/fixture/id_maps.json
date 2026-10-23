@@ -10790,7 +10790,7 @@
     "ns-cloud-a1.googledomains.com": 7
   },
   "registrar": {
-    "nan": 0,
+    "NaN": 0,
     "Tucows Domains Inc.": 1,
     "MarkMonitor Inc.": 2,
     "Cloudflare, Inc.": 3,
@@ -10807,7 +10807,7 @@
     "20940": 5
   },
   "certificate": {
-    "nan": 0,
+    "NaN": 0,
     "34c42a60f53b0085": 1,
     "a42a72a79f3df83c": 2,
     "51b40dd2703d8832": 3,

@@ -13,12 +13,18 @@ env*/
 data/raw/
 data/processed/real/*
 !data/processed/real/.gitkeep
+data/processed/smoke/*
+!data/processed/smoke/.gitkeep
 
 # Production Results and Checkpoints (gitignored)
 results/real/*
 !results/real/.gitkeep
+results/smoke/*
+!results/smoke/.gitkeep
 artifacts/checkpoints/real/*
 !artifacts/checkpoints/real/.gitkeep
+artifacts/checkpoints/smoke/*
+!artifacts/checkpoints/smoke/.gitkeep
 
 # Large checkpoint weights and archives
 artifacts/checkpoints/**/*.pt

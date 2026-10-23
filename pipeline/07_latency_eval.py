@@ -70,38 +70,10 @@ def main() -> None:
     num_queries = args.num_queries if args.num_queries is not None else cfg_lat.get("num_queries", 50 if args.smoke or args.fixture else 500)
     warmup = args.warmup if args.warmup is not None else cfg_lat.get("warmup", 5 if args.smoke or args.fixture else 20)
 
-    print(f"[{'FIXTURE' if args.fixture else 'REAL'}] Loading graph and dataset...")
-    df = pd.read_parquet(parquet_file)
-    data = torch.load(graph_file, weights_only=False)
+    from src.hdg.data.graph import load_aligned_graph_cohort
 
-    # Align dataframe rows with the saved graph domain-node indices.
-    # The graph may contain a capped random sample of the full dataset.
-    id_maps_file = paths.processed_dir / "id_maps.json"
-    if not id_maps_file.exists():
-        raise FileNotFoundError(
-            f"Graph ID mapping not found: {id_maps_file}. Rebuild the graph first."
-        )
-
-    with open(id_maps_file, "r", encoding="utf-8") as f:
-        domain_to_graph_idx = json.load(f).get("domain", {})
-
-    if not domain_to_graph_idx:
-        raise ValueError(f"No domain mapping found in {id_maps_file}")
-
-    if df["domain"].duplicated().any():
-        raise ValueError("Source dataframe contains duplicate domains; cannot align safely.")
-
-    df["_graph_idx"] = df["domain"].map(domain_to_graph_idx)
-    df = df[df["_graph_idx"].notna()].copy()
-    df["_graph_idx"] = df["_graph_idx"].astype(int)
-    df = df.sort_values("_graph_idx").reset_index(drop=True)
-
-    expected_indices = list(range(len(domain_to_graph_idx)))
-    if df["_graph_idx"].tolist() != expected_indices:
-        raise ValueError(
-            "Dataframe domains do not align exactly with graph domain indices: "
-            f"aligned_rows={len(df)}, mapped_domains={len(domain_to_graph_idx)}"
-        )
+    print(f"[{'FIXTURE' if args.fixture else 'REAL'}] Loading aligned graph and dataset...")
+    data, df, manifest = load_aligned_graph_cohort(paths.processed_dir)
 
     if len(df) != data["domain"].num_nodes:
         raise ValueError(
@@ -109,7 +81,8 @@ def main() -> None:
             f"dataframe={len(df)}, graph={data['domain'].num_nodes}"
         )
 
-    df = df.drop(columns=["_graph_idx"])
+    if "_graph_idx" in df.columns:
+        df = df.drop(columns=["_graph_idx"])
     print(f"[LATENCY] Aligned {len(df):,} dataframe rows to graph domain-node order.")
 
     in_channels = {nt: data[nt].x.shape[1] for nt in data.node_types}

@@ -90,29 +90,21 @@ def main() -> None:
     run_cmd(preflight_cmd)
 
     # 1. Profile Dataset
-    profile_cmd = [py_exe, "-m", "pipeline.00_profile_dataset"]
-    if args.fixture:
-        profile_cmd.append("--fixture")
+    profile_cmd = [py_exe, "-m", "pipeline.00_profile_dataset"] + common_flags
     run_cmd(profile_cmd)
 
     # 2. Parse & Normalize
-    parse_cmd = [py_exe, "-m", "pipeline.01_parse"]
-    if args.fixture:
-        parse_cmd.append("--fixture")
+    parse_cmd = [py_exe, "-m", "pipeline.01_parse"] + common_flags
     if args.max_domains is not None:
         parse_cmd.extend(["--limit", str(args.max_domains)])
     run_cmd(parse_cmd)
 
     # 3. Shortcut Audit
-    audit_cmd = [py_exe, "-m", "pipeline.00b_audit_shortcuts"]
-    if args.fixture:
-        audit_cmd.append("--fixture")
+    audit_cmd = [py_exe, "-m", "pipeline.00b_audit_shortcuts"] + common_flags
     run_cmd(audit_cmd)
 
     # 4. Build Graph
-    graph_cmd = [py_exe, "-m", "pipeline.02_build_graph"]
-    if args.fixture:
-        graph_cmd.append("--fixture")
+    graph_cmd = [py_exe, "-m", "pipeline.02_build_graph"] + common_flags
     if args.max_domains is not None:
         graph_cmd.extend(["--max-domains", str(args.max_domains)])
     run_cmd(graph_cmd)
@@ -125,18 +117,20 @@ def main() -> None:
         base_cmd.extend(["--single-seed", "42"])
     run_cmd(base_cmd)
 
-    # 6. GNN Evaluation
+    # 6. GNN Evaluation (Random, Time, Group splits)
     epochs_val = args.epochs if args.epochs is not None else (3 if (args.fixture or args.smoke) else 30)
-    gnn_cmd = [
-        py_exe, "-m", "pipeline.04_train_gnn",
-        "--variant", "both",
-        "--epochs", str(epochs_val)
-    ] + common_flags
-    if args.single_seed is not None:
-        gnn_cmd.extend(["--single-seed", str(args.single_seed)])
-    elif args.fixture or args.smoke:
-        gnn_cmd.extend(["--single-seed", "42"])
-    run_cmd(gnn_cmd)
+    for s_type in ["random", "time", "group"]:
+        gnn_cmd = [
+            py_exe, "-m", "pipeline.04_train_gnn",
+            "--split-type", s_type,
+            "--variant", "both",
+            "--epochs", str(epochs_val)
+        ] + common_flags
+        if args.single_seed is not None:
+            gnn_cmd.extend(["--single-seed", str(args.single_seed)])
+        elif args.fixture or args.smoke:
+            gnn_cmd.extend(["--single-seed", "42"])
+        run_cmd(gnn_cmd)
 
     # 7. Ablation Study
     abl_cmd = [

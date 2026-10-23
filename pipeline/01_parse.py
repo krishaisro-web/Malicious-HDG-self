@@ -22,16 +22,29 @@ from src.hdg.data.parse import parse_and_process_dataset
 def main() -> None:
     parser = argparse.ArgumentParser(description="Parse and normalize Zenodo DomainRadar v2 records.")
     parser.add_argument("--fixture", action="store_true", help="Run against data_fixture/")
+    parser.add_argument("--smoke", action="store_true", help="Run in smoke test mode")
+    parser.add_argument("--force", action="store_true", help="Force re-parsing of raw dataset")
     parser.add_argument("--config", type=str, default=None, help="Path to config YAML")
     parser.add_argument("--limit", type=int, default=None, help="Limit number of records per file for quick checks")
     args = parser.parse_args()
 
+    # Safeguard: if --limit is supplied without --fixture, route to --smoke to protect production data
+    is_smoke = args.smoke
+    if args.limit is not None and not args.fixture and not args.smoke:
+        print("[SAFETY] --limit supplied without --fixture or --smoke flag. Automatically routing to smoke profile (data/processed/smoke) to prevent overwriting production data.")
+        is_smoke = True
+
     cfg = load_config(args.config)
-    paths = get_resolved_paths(cfg, is_fixture=args.fixture, root_dir=REPO_ROOT)
+    paths = get_resolved_paths(cfg, is_fixture=args.fixture, is_smoke=is_smoke, root_dir=REPO_ROOT)
 
     paths.check_write_path(paths.processed_dir)
 
-    print(f"[{'FIXTURE' if args.fixture else 'REAL'}] Starting dataset parsing pipeline...")
+    mode_str = "FIXTURE" if args.fixture else ("SMOKE" if is_smoke else "REAL")
+    if not args.force and (paths.processed_dir / "domains.parquet").exists() and (paths.processed_dir / "domains_timematched.parquet").exists():
+        print(f"[{mode_str}] Processed dataset already exists in {paths.processed_dir}. Skipping (use --force to re-parse).")
+        return
+
+    print(f"[{mode_str}] Starting dataset parsing pipeline...")
     print(f"  Raw data: {paths.raw_dir}")
     print(f"  Processed destination: {paths.processed_dir}")
     if args.limit:

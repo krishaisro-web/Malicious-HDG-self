@@ -30,7 +30,7 @@ from src.hdg.config import (
     should_skip_run,
     save_run_result
 )
-from src.hdg.data.graph import apply_split_scaling
+from src.hdg.data.graph import apply_split_scaling, load_aligned_graph_cohort
 from src.hdg.metrics import (
     multi_seed_paired_comparisons,
     compute_bootstrap_cis
@@ -38,10 +38,13 @@ from src.hdg.metrics import (
 from src.hdg.data.splits import (
     random_stratified_split,
     rolling_origin_temporal_splits,
+    single_chronological_holdout_split,
     group_split_bipartite,
     group_split_by_asn,
     DataSplits
 )
+from src.hdg.data.temporal import analyze_temporal_eligibility
+from src.hdg.cache import compute_experiment_fingerprint
 from src.hdg.training.train import train_eval_gnn
 
 
@@ -77,13 +80,8 @@ def main() -> None:
         raise FileNotFoundError("Processed data not found. Run 01_parse.py and 02_build_graph.py first.")
 
     pfx = "[SMOKE] " if args.smoke else ("[FIXTURE] " if args.fixture else "[REAL] ")
-    print(f"{pfx}Loading graph and domain metadata...")
-    df = pd.read_parquet(parquet_file)
-    max_d = args.max_domains or (5000 if args.smoke else cfg.get("graph", {}).get("max_domains"))
-    if max_d is not None and len(df) > max_d:
-        df = df.sample(n=max_d, random_state=42).reset_index(drop=True)
-
-    base_graph = torch.load(graph_file, weights_only=False)
+    print(f"{pfx}Loading aligned graph-cohort bundle from {paths.processed_dir}...")
+    base_graph, df, manifest = load_aligned_graph_cohort(paths.processed_dir)
 
     if args.single_seed is not None:
         seeds = [args.single_seed]
@@ -128,10 +126,19 @@ def main() -> None:
             run_name = f"gnn_{var}_{args.split_type}_seed_{s}"
             print(f"\n--- Seed {s} ({var}) [{args.split_type}] ---")
 
-            if should_skip_run(paths.results_dir, run_name, force=args.force):
-                print(f"  [RESUME] Skipping already completed run: {run_name}")
+            exp_fp = compute_experiment_fingerprint(
+                cfg,
+                stage=f"gnn_{var}_{args.split_type}",
+                extra_dict={"seed": s, "variant": var, "split_type": args.split_type}
+            )
+
+            if should_skip_run(paths.results_dir, run_name, force=args.force, expected_fingerprint=exp_fp):
+                print(f"  [RESUME] Skipping already completed run (fingerprint matched): {run_name}")
                 with open(paths.results_dir / "runs" / f"{run_name}.json", "r", encoding="utf-8") as f:
                     cached_res = json.load(f)
+                if cached_res.get("status") == "BLOCKED_INSUFFICIENT_DATA":
+                    print(f"  [RESUME] Cached run is marked BLOCKED_INSUFFICIENT_DATA.")
+                    continue
                 results_by_variant[var].append(cached_res["metrics"])
                 predictions_by_variant[var][s] = {
                     "y_true": np.array(cached_res["predictions"]["y_true"]),
@@ -142,24 +149,59 @@ def main() -> None:
 
             # 1. Create split for this seed
             asn_fallback_meta = None
+            temporal_mode = None
             if args.split_type == "random":
                 splits = random_stratified_split(df["label"].to_numpy(), seed=s)
             elif args.split_type == "time":
-                # Rolling-origin evaluation
-                tm_file = paths.processed_dir / "domains_timematched.parquet"
-                time_df = pd.read_parquet(tm_file) if tm_file.exists() else df
-                transitions = rolling_origin_temporal_splits(
-                    time_df,
-                    min_distinct_months=cfg.get("temporal", {}).get("min_distinct_months", 3),
-                    min_per_class_per_window=cfg.get("temporal", {}).get("min_per_class_per_window", 200),
-                    seed=s
+                # Analyze temporal eligibility on complete chronological cohort
+                min_months = cfg.get("temporal", {}).get("min_distinct_months", 3)
+                min_p_class = 10 if (args.fixture or args.smoke) else cfg.get("temporal", {}).get("min_per_class_per_window", 200)
+                elig = analyze_temporal_eligibility(
+                    df,
+                    min_distinct_months=min_months,
+                    min_per_class=min_p_class
                 )
-                if not transitions:
-                    print("  [WARN] No valid rolling-origin transitions available; skipping time split.")
+
+                if elig.rolling_origin_available:
+                    transitions = rolling_origin_temporal_splits(
+                        df,
+                        min_distinct_months=min_months,
+                        min_per_class_per_window=min_p_class,
+                        seed=s,
+                        allow_empty=True
+                    )
+                    if transitions:
+                        trans_name, splits = transitions[0]
+                        temporal_mode = "rolling_origin"
+                        print(f"  [TEMPORAL] Rolling-Origin Transition: {trans_name}")
+                    else:
+                        elig.rolling_origin_available = False
+
+                if not elig.rolling_origin_available and elig.single_holdout_available:
+                    target_m = elig.eligible_target_months[0]
+                    splits = single_chronological_holdout_split(
+                        df,
+                        target_month=target_m,
+                        min_historical_per_class=10 if (args.fixture or args.smoke) else 50,
+                        min_target_per_class=10 if (args.fixture or args.smoke) else 50,
+                        seed=s
+                    )
+                    temporal_mode = "single_chronological_holdout"
+                    print(f"  [TEMPORAL] Single Chronological Holdout (Historical Prefix -> Target {target_m})")
+                elif not elig.rolling_origin_available and not elig.single_holdout_available:
+                    print(f"  [BLOCKED] Insufficient temporal evidence: {elig.reasons}")
+                    blocked_payload = {
+                        "experiment": "gnn_evaluation",
+                        "status": "BLOCKED_INSUFFICIENT_DATA",
+                        "experiment_fingerprint": exp_fp,
+                        "variant": var,
+                        "split_type": "time",
+                        "seed": s,
+                        "reasons": elig.reasons,
+                        "temporal_diagnostics": elig.to_dict()
+                    }
+                    save_run_result(paths.results_dir, run_name, blocked_payload)
                     continue
-                # Evaluate on the primary transition
-                trans_name, splits = transitions[0]
-                print(f"  Rolling-Origin Transition: {trans_name}")
             elif args.split_type == "group":
                 joint_grp = cfg.get("group", {}).get("joint_grouping", False)
                 splits, grp_meta = group_split_bipartite(df, joint_grouping=joint_grp, seed=s)
@@ -209,7 +251,8 @@ def main() -> None:
                 bootstrap_samples=boot_samples,
                 checkpoint_path=ckpt_path,
                 log_file=log_path,
-                seed=s
+                seed=s,
+                experiment_fingerprint=exp_fp
             )
 
             if asn_fallback_meta:
@@ -226,8 +269,11 @@ def main() -> None:
             # Persist run JSON for resumability
             run_payload = {
                 "experiment": "gnn_evaluation",
+                "status": "SUCCESS",
+                "experiment_fingerprint": exp_fp,
                 "variant": var,
                 "split_type": args.split_type,
+                "temporal_mode": temporal_mode,
                 "seed": s,
                 "metrics": test_eval,
                 "predictions": {
@@ -306,10 +352,15 @@ def main() -> None:
         "| Architecture | ROC-AUC | F1 Score | PR-AUC | TPR @ 0.1% FPR |",
         "|---|---|---|---|---|"
     ]
-    for var, stat in aggregated_gnn.items():
-        md_lines.append(
-            f"| `HeteroGNN ({var.upper()})` | {stat['roc_auc_mean']:.4f} ± {stat['roc_auc_std']:.4f} | {stat['f1_mean']:.4f} ± {stat['f1_std']:.4f} | {stat['pr_auc_mean']:.4f} ± {stat['pr_auc_std']:.4f} | {stat['tpr_at_0.1pct_fpr_mean']:.4f} |"
-        )
+    if not aggregated_gnn:
+        md_lines.append(f"| `HeteroGNN` | BLOCKED | BLOCKED | BLOCKED | BLOCKED |")
+        md_lines.append("")
+        md_lines.append(f"> **Note**: Evaluation on split `{args.split_type}` was blocked due to insufficient temporal/cohort evidence.")
+    else:
+        for var, stat in aggregated_gnn.items():
+            md_lines.append(
+                f"| `HeteroGNN ({var.upper()})` | {stat['roc_auc_mean']:.4f} ± {stat['roc_auc_std']:.4f} | {stat['f1_mean']:.4f} ± {stat['f1_std']:.4f} | {stat['pr_auc_mean']:.4f} ± {stat['pr_auc_std']:.4f} | {stat['tpr_at_0.1pct_fpr_mean']:.4f} |"
+            )
     md_lines.append("")
 
     if paired_comparison_results:

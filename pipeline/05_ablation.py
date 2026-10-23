@@ -68,17 +68,17 @@ def main() -> None:
     if not parquet_file.exists():
         raise FileNotFoundError(f"Domains file not found: {parquet_file}")
 
-    pfx = "[SMOKE] " if args.smoke else ("[FIXTURE] " if args.fixture else "[REAL] ")
-    print(f"{pfx}Loading domain data and base graph...")
-    df = pd.read_parquet(parquet_file)
-    max_d = args.max_domains or (5000 if args.smoke else cfg.get("graph", {}).get("max_domains"))
-    if max_d is not None and len(df) > max_d:
-        df = df.sample(n=max_d, random_state=42).reset_index(drop=True)
+    from src.hdg.data.graph import load_aligned_graph_cohort
 
-    # Load cached base graph or build if missing
-    if graph_file.exists() and not args.max_domains and not args.smoke:
-        base_graph_cn = torch.load(graph_file, weights_only=False)
+    pfx = "[SMOKE] " if args.smoke else ("[FIXTURE] " if args.fixture else "[REAL] ")
+    print(f"{pfx}Loading aligned domain data and base graph...")
+    if graph_file.exists():
+        base_graph_cn, df, manifest = load_aligned_graph_cohort(paths.processed_dir)
     else:
+        df = pd.read_parquet(parquet_file)
+        max_d = args.max_domains or (5000 if args.smoke else cfg.get("graph", {}).get("max_domains"))
+        if max_d is not None and len(df) > max_d:
+            df = df.sample(n=max_d, random_state=42).reset_index(drop=True)
         cfg_cn = {**cfg, "graph": {**cfg.get("graph", {}), "cert_key_mode": "cn"}}
         base_graph_cn = build_base_graph(df, config=cfg_cn)
 

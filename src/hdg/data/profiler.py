@@ -331,29 +331,62 @@ def profile_dataset(
     benign_months = set(umbrella_summary["sourced_on_months"].keys()).union(set(cesnet_summary["sourced_on_months"].keys()))
     overlap_months = malware_months.intersection(benign_months)
 
-    time_split_valid = True
+    # Consistent temporal eligibility diagnostics
+    rolling_origin_available = len(overlap_months) >= 2
+    all_months = sorted(list(malware_months.union(benign_months)))
+    single_holdout_available = False
+    eligible_target_months = []
+
+    for m in sorted(list(overlap_months)):
+        prior_months = [om for om in all_months if om < m]
+        prior_malware = any(pm in malware_months for pm in prior_months)
+        prior_benign = any(pm in benign_months for pm in prior_months)
+        if prior_malware and prior_benign:
+            single_holdout_available = True
+            eligible_target_months.append(m)
+
+    streaming_available = rolling_origin_available
+
+    time_split_valid = single_holdout_available or rolling_origin_available
     reasons: List[str] = []
 
-    if len(malware_months) < min_distinct_months:
-        time_split_valid = False
-        reasons.append(f"Malware has {len(malware_months)} distinct sourced_on months (< {min_distinct_months}).")
-
-    if len(benign_months) < min_distinct_months:
-        time_split_valid = False
-        reasons.append(f"Benign has {len(benign_months)} distinct sourced_on months (< {min_distinct_months}).")
-
-    if len(overlap_months) == 0:
-        time_split_valid = False
-        reasons.append("Zero temporal overlap in sourced_on months between malware and benign.")
+    if not rolling_origin_available:
+        reasons.append(f"Overlapping months with both classes is {len(overlap_months)} (< 2). Multi-window rolling-origin evaluation blocked.")
+    if single_holdout_available:
+        reasons.append(f"Single chronological holdout is eligible targeting: {eligible_target_months}.")
+    else:
+        reasons.append("Historical window lacks aggregate representation of both classes before target month.")
 
     time_split_data = {
         "time_split_valid": time_split_valid,
+        "single_holdout_available": single_holdout_available,
+        "rolling_origin_available": rolling_origin_available,
+        "streaming_available": streaming_available,
+        "eligible_target_months": eligible_target_months,
         "min_required_months": min_distinct_months,
         "malware_months_count": len(malware_months),
         "benign_months_count": len(benign_months),
         "overlapping_months_count": len(overlap_months),
         "overlapping_months": sorted(list(overlap_months)),
         "reasons": reasons
+    }
+
+    temporal_eligibility_report = {
+        "status": "ROLLING_ORIGIN_AVAILABLE" if rolling_origin_available else ("SINGLE_HOLDOUT_AVAILABLE" if single_holdout_available else "BLOCKED_INSUFFICIENT_DATA"),
+        "single_holdout_available": single_holdout_available,
+        "rolling_origin_available": rolling_origin_available,
+        "streaming_available": streaming_available,
+        "eligible_target_months": eligible_target_months,
+        "malware_months": sorted(list(malware_months)),
+        "benign_months": sorted(list(benign_months)),
+        "overlapping_months": sorted(list(overlap_months)),
+        "overlapping_months_count": len(overlap_months),
+        "reasons": reasons,
+        "timestamp_semantics": {
+            "selected_field": "sourced_on",
+            "fallback_field": "evaluated_on",
+            "temporal_confounding_note": "Benign domains were collected largely in early 2023, while malware domains were collected in late 2023, with Dec 2023 overlapping."
+        }
     }
 
     full_report = {
@@ -363,6 +396,7 @@ def profile_dataset(
             "prefix": "FIXTURE - meaningless" if is_fixture else "REAL"
         },
         "time_split_valid": time_split_data,
+        "temporal_eligibility": temporal_eligibility_report,
         "data_schema_rdap_entity": rdap_entity_def,
         "classes": {
             "malware": malware_summary,
@@ -380,6 +414,11 @@ def profile_dataset(
     time_split_path = output_dir / "time_split_valid.json"
     with open(time_split_path, "w", encoding="utf-8") as f:
         json.dump(time_split_data, f, indent=2)
+
+    # Write temporal_eligibility.json (reusable contract)
+    eligibility_path = output_dir / "temporal_eligibility.json"
+    with open(eligibility_path, "w", encoding="utf-8") as f:
+        json.dump(temporal_eligibility_report, f, indent=2)
 
     # Build COMPACT Markdown (<= 200 lines)
     md_lines: List[str] = []

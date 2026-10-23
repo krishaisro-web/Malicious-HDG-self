@@ -2,9 +2,17 @@
 Configuration loader, path validation, and run management for Malicious-HDG.
 """
 
+import os
+# Ensure safe OpenMP multi-threading initialization on macOS / Linux CPU environments
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "1")
+os.environ.setdefault("VECLIB_MAXIMUM_THREADS", "1")
+os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
+os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
+
 from dataclasses import dataclass
 import json
-import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 import torch
@@ -21,7 +29,7 @@ class ResolvedPaths:
     is_smoke: bool = False
 
     def check_write_path(self, target_path: Path) -> None:
-        """Enforces that fixture runs never write to real results."""
+        """Enforces that fixture/smoke runs never write to real production paths, and real runs don't overwrite test paths."""
         resolved = str(target_path.resolve()).replace("\\", "/")
         if self.is_fixture:
             allowed_tokens = [
@@ -36,6 +44,20 @@ class ResolvedPaths:
                 raise PermissionError(
                     f"[FIXTURE SAFEGUARD] Refusing to write fixture output to production path: {resolved}. "
                     f"Fixture output must only go to results/fixture/, data/processed/fixture/, or artifacts/checkpoints/fixture/."
+                )
+        elif self.is_smoke:
+            allowed_tokens = [
+                "/results/smoke",
+                "/results_smoke",
+                "/data/smoke",
+                "/data/processed/smoke",
+                "/data_smoke",
+                "/artifacts/checkpoints/smoke",
+            ]
+            if not any(token in resolved for token in allowed_tokens):
+                raise PermissionError(
+                    f"[SMOKE SAFEGUARD] Refusing to write smoke output to production path: {resolved}. "
+                    f"Smoke output must only go to results/smoke/, data/processed/smoke/, or artifacts/checkpoints/smoke/."
                 )
 
 
@@ -393,8 +415,7 @@ def init_thread_pool(cfg: Optional[Dict[str, Any]] = None) -> int:
         "VECLIB_MAXIMUM_THREADS",
         "NUMEXPR_NUM_THREADS",
     ]:
-        if env_var not in os.environ:
-            os.environ[env_var] = str(num_threads)
+        os.environ[env_var] = str(num_threads)
 
     return num_threads
 
@@ -453,15 +474,18 @@ def get_resolved_paths(
     if is_fixture:
         raw_dir = root_dir / p.get("fixture_raw_dir", "data/fixture/zenodo")
         processed_dir = root_dir / p.get("fixture_processed_dir", "data/processed/fixture")
-        base_results = root_dir / p.get("fixture_results_dir", "results/fixture")
+        results_dir = root_dir / p.get("fixture_results_dir", "results/fixture")
         checkpoints_dir = root_dir / p.get("fixture_checkpoints_dir", "artifacts/checkpoints/fixture")
-        results_dir = base_results
+    elif is_smoke:
+        raw_dir = root_dir / p.get("raw_data_dir", "data/raw/zenodo")
+        processed_dir = root_dir / p.get("smoke_processed_dir", "data/processed/smoke")
+        results_dir = root_dir / p.get("smoke_results_dir", "results/smoke")
+        checkpoints_dir = root_dir / p.get("smoke_checkpoints_dir", "artifacts/checkpoints/smoke")
     else:
         raw_dir = root_dir / p.get("raw_data_dir", "data/raw/zenodo")
         processed_dir = root_dir / p.get("processed_data_dir", "data/processed/real")
-        base_results = root_dir / p.get("results_dir", "results/real")
+        results_dir = root_dir / p.get("results_dir", "results/real")
         checkpoints_dir = root_dir / p.get("checkpoints_dir", "artifacts/checkpoints/real")
-        results_dir = (base_results / "smoke") if is_smoke else base_results
 
     return ResolvedPaths(
         raw_dir=raw_dir,
@@ -487,19 +511,37 @@ def get_run_output_path(results_dir: Union[Path, ResolvedPaths], run_name: str) 
     return runs_dir / f"{run_name}.json"
 
 
-def should_skip_run(results_dir: Union[Path, ResolvedPaths], run_name: str, force: bool = False) -> bool:
-    """Checks if run JSON already exists to allow resumability unless --force is specified."""
+def should_skip_run(
+    results_dir: Union[Path, ResolvedPaths],
+    run_name: str,
+    force: bool = False,
+    expected_fingerprint: Optional[str] = None
+) -> bool:
+    """Checks if run JSON already exists and matches expected fingerprint (if provided) to allow safe resumability."""
     if force:
         return False
     path = get_run_output_path(results_dir, run_name)
-    return path.exists() and path.stat().st_size > 0
+    if not (path.exists() and path.stat().st_size > 0):
+        return False
+    if expected_fingerprint is not None:
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            cached_fp = data.get("experiment_fingerprint") or data.get("fingerprint")
+            if cached_fp != expected_fingerprint:
+                return False
+        except Exception:
+            return False
+    return True
 
 
 def save_run_result(results_dir: Union[Path, ResolvedPaths], run_name: str, data: Dict[str, Any]) -> Path:
-    """Persists an individual run JSON for resumability and report aggregation."""
+    try:
+        from src.hdg.cache import atomic_save_json
+    except ImportError:
+        from hdg.cache import atomic_save_json
     path = get_run_output_path(results_dir, run_name)
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
+    atomic_save_json(data, path)
     return path
 
 

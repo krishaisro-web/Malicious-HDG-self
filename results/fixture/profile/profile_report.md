@@ -1,5 +1,5 @@
 # [FIXTURE - meaningless] Dataset Profile Report: Zenodo DomainRadar v2
-*Generated at: 2026-10-01T03:34:30.044143+00:00*
+*Generated at: 2026-10-23T14:01:25.223911+00:00*
 
 ## 1. Summary Counts & Schema Keys
 | Dataset File | Record Count | DNS Null % | RDAP Null % | TLS Null % | IP Null % | No A/AAAA % |
@@ -14,6 +14,7 @@
 
 ## 2. Temporal Feasibility & Split Validity
 - **Time Split Valid**: `True`
+  - *Reason*: Single chronological holdout is eligible targeting: ['2023-05', '2023-06', '2023-07', '2023-08', '2023-09', '2023-10', '2023-11', '2023-12', '2024-01', '2024-02', '2024-03', '2024-04', '2024-05', '2024-06', '2024-07'].
 - Distinct Months: Malware=16, Benign=16, Overlapping=16
 - Sourced_on Range (Malware): 2023-04-01T12:00:00+00:00 to 2024-07-28T12:00:00+00:00
 

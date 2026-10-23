@@ -20,6 +20,9 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from src.hdg.config import load_config, get_resolved_paths, init_thread_pool
+init_thread_pool()
+
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
@@ -28,7 +31,6 @@ import xgboost as xgb
 import torch
 
 from src.hdg.models.hetero_gnn import HeteroGNN
-from src.hdg.config import load_config, get_resolved_paths, init_thread_pool
 from src.hdg.data.graph import extract_domain_features_vectorized, apply_split_scaling
 from src.hdg.data.splits import DataSplits
 from src.hdg.training.train import train_eval_gnn
@@ -245,14 +247,18 @@ def main() -> None:
     if not parquet_file.exists():
         raise FileNotFoundError(f"Domains file not found: {parquet_file}")
 
-    pfx = "[SMOKE] " if args.smoke else ("[FIXTURE] " if args.fixture else "[REAL] ")
-    print(f"{pfx}Loading domain data and graph for provenance audits...")
-    df = pd.read_parquet(parquet_file)
-    max_d = args.max_domains or (5000 if args.smoke else None)
-    if max_d is not None and len(df) > max_d:
-        df = df.sample(n=max_d, random_state=42).reset_index(drop=True)
+    from src.hdg.data.graph import load_aligned_graph_cohort
 
-    base_graph = torch.load(graph_file, weights_only=False) if graph_file.exists() else None
+    pfx = "[SMOKE] " if args.smoke else ("[FIXTURE] " if args.fixture else "[REAL] ")
+    print(f"{pfx}Loading aligned domain data and graph for provenance audits...")
+    if graph_file.exists():
+        base_graph, df, manifest = load_aligned_graph_cohort(paths.processed_dir)
+    else:
+        df = pd.read_parquet(parquet_file)
+        max_d = args.max_domains or (5000 if args.smoke else None)
+        if max_d is not None and len(df) > max_d:
+            df = df.sample(n=max_d, random_state=42).reset_index(drop=True)
+        base_graph = None
 
     # 1. Benign vs Benign
     print(f"{pfx}1. Evaluating benign-vs-benign source classifier (Umbrella vs CESNET)...")

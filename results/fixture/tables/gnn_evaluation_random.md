@@ -3,11 +3,11 @@
 
 | Architecture | ROC-AUC | F1 Score | PR-AUC | TPR @ 0.1% FPR |
 |---|---|---|---|---|
-| `HeteroGNN (SAGE)` | 0.4903 ± 0.0000 | 0.7282 ± 0.0000 | 0.5749 ± 0.0000 | 0.0000 |
-| `HeteroGNN (ATTN)` | 0.5203 ± 0.0000 | 0.7314 ± 0.0000 | 0.5941 ± 0.0000 | 0.0092 |
+| `HeteroGNN (SAGE)` | 0.4689 ± 0.0000 | 0.6682 ± 0.0000 | 0.4912 ± 0.0000 | 0.0000 |
+| `HeteroGNN (ATTN)` | 0.4902 ± 0.0000 | 0.6682 ± 0.0000 | 0.4997 ± 0.0000 | 0.0000 |
 
 ## Paired Hypothesis Testing (Across All Seeds)
 ### Comparison: `sage_vs_attn`
-- **Pooled Exact McNemar Statistic (min(b,c))**: 0.0 (p = 0.25)
-- **Pooled Paired Bootstrap AUC Difference**: -0.0326 (95% CI: [-0.1151, 0.0403], p = 0.44)
+- **Pooled Exact McNemar Statistic (min(b,c))**: 0.0 (p = 1.0)
+- **Pooled Paired Bootstrap AUC Difference**: -0.0217 (95% CI: [-0.0736, 0.0297], p = 0.52)
 

@@ -52,14 +52,18 @@ def train_eval_gnn(
     log_file: Optional[Path] = None,
     device: Optional[torch.device] = None,
     seed: int = 42,
-    resume: bool = True
+    resume: bool = True,
+    experiment_fingerprint: Optional[str] = None
 ) -> Tuple[Dict[str, Any], np.ndarray, np.ndarray, nn.Module]:
     """
     Trains HeteroGNN with early stopping on validation ROC-AUC and validation-tuned threshold.
     Supports atomic epoch-level checkpointing and resumption so long-running training
     (e.g. multi-day CPU runs) can resume immediately after interrupts without starting from scratch.
+    Validates experiment_fingerprint before resumption to prevent restoring incompatible state.
     Returns: (eval_results_dict, y_test_true, y_test_prob, trained_model)
     """
+    from src.hdg.cache import atomic_save_torch, atomic_save_json
+
     if device is None:
         device = torch.device("cpu")
 
@@ -104,18 +108,25 @@ def train_eval_gnn(
     chosen_lr = lr
     resumed_ckpt = None
 
-    # Attempt checkpoint resumption
+    # Attempt checkpoint resumption with fingerprint validation
     if resume and state_ckpt_path is not None and state_ckpt_path.exists():
         try:
             resumed_ckpt = torch.load(state_ckpt_path, map_location=device, weights_only=False)
-            model.load_state_dict(resumed_ckpt["model_state_dict"])
-            start_epoch = int(resumed_ckpt["epoch"]) + 1
-            best_val_auc = float(resumed_ckpt["best_val_auc"])
-            best_weights = resumed_ckpt["best_weights"]
-            epochs_no_improve = int(resumed_ckpt["epochs_no_improve"])
-            log_records = resumed_ckpt.get("log_records", [])
-            chosen_lr = resumed_ckpt.get("chosen_lr", lr)
-            print(f"  [CHECKPOINT RESUME] Found existing checkpoint! Resuming training from epoch {start_epoch}/{epochs} (best val ROC-AUC: {best_val_auc:.4f})")
+            cached_fp = resumed_ckpt.get("experiment_fingerprint")
+            if experiment_fingerprint is not None and cached_fp is not None and cached_fp != experiment_fingerprint:
+                print(f"  [CHECKPOINT REJECTED] Incompatible experiment fingerprint in {state_ckpt_path.name} "
+                      f"(found {cached_fp[:10]}..., expected {experiment_fingerprint[:10]}...). Starting fresh run.")
+                resumed_ckpt = None
+                start_epoch = 1
+            else:
+                model.load_state_dict(resumed_ckpt["model_state_dict"])
+                start_epoch = int(resumed_ckpt["epoch"]) + 1
+                best_val_auc = float(resumed_ckpt["best_val_auc"])
+                best_weights = resumed_ckpt["best_weights"]
+                epochs_no_improve = int(resumed_ckpt["epochs_no_improve"])
+                log_records = resumed_ckpt.get("log_records", [])
+                chosen_lr = resumed_ckpt.get("chosen_lr", lr)
+                print(f"  [CHECKPOINT RESUME] Found verified checkpoint! Resuming training from epoch {start_epoch}/{epochs} (best val ROC-AUC: {best_val_auc:.4f})")
         except Exception as e:
             print(f"  [WARN] Failed to load checkpoint {state_ckpt_path}: {e}. Starting fresh from epoch 1.")
             start_epoch = 1
@@ -213,8 +224,7 @@ def train_eval_gnn(
 
         # Atomically checkpoint training state after each epoch
         if state_ckpt_path is not None:
-            tmp_path = state_ckpt_path.with_suffix(".tmp")
-            torch.save({
+            atomic_save_torch({
                 "epoch": epoch,
                 "model_state_dict": model.state_dict(),
                 "optimizer_state_dict": optimizer.state_dict(),
@@ -224,8 +234,8 @@ def train_eval_gnn(
                 "epochs_no_improve": epochs_no_improve,
                 "log_records": log_records,
                 "chosen_lr": chosen_lr,
-            }, tmp_path)
-            tmp_path.replace(state_ckpt_path)
+                "experiment_fingerprint": experiment_fingerprint
+            }, state_ckpt_path)
 
         if epochs_no_improve >= patience:
             print(f"  [EARLY STOPPING] Validation AUC did not improve for {patience} epochs. Stopping at epoch {epoch}.")
@@ -242,19 +252,6 @@ def train_eval_gnn(
     # Load best model weights
     if best_weights is not None:
         model.load_state_dict(best_weights)
-
-    # Save finalized model checkpoint
-    if checkpoint_path is not None:
-        checkpoint_path = Path(checkpoint_path)
-        checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
-        torch.save(model.state_dict(), checkpoint_path)
-
-    # Clean up intermediate training state on clean completion
-    if state_ckpt_path is not None and state_ckpt_path.exists():
-        try:
-            state_ckpt_path.unlink()
-        except Exception:
-            pass
 
     model.eval()
     with torch.no_grad():
@@ -278,6 +275,33 @@ def train_eval_gnn(
         target_fprs=target_fprs,
         prevalence_pis=prevalence_pis
     )
+
+    # Save finalized model checkpoint and manifest
+    if checkpoint_path is not None:
+        checkpoint_path = Path(checkpoint_path)
+        checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+        atomic_save_torch(model.state_dict(), checkpoint_path)
+
+        manifest_path = checkpoint_path.parent / f"{checkpoint_path.stem}_manifest.json"
+        manifest_payload = {
+            "checkpoint_file": checkpoint_path.name,
+            "experiment_fingerprint": experiment_fingerprint,
+            "seed": seed,
+            "threshold": float(optimal_th),
+            "best_val_auc": float(best_val_auc),
+            "epochs_trained": len(log_records),
+            "created_at": time.time(),
+            "target_fprs": target_fprs,
+            "operating_points": test_eval.get("operating_points", {})
+        }
+        atomic_save_json(manifest_payload, manifest_path)
+
+    # Clean up intermediate training state on clean completion
+    if state_ckpt_path is not None and state_ckpt_path.exists():
+        try:
+            state_ckpt_path.unlink()
+        except Exception:
+            pass
 
     # Bootstrap confidence intervals on test set
     test_eval["bootstrap_ci"] = compute_bootstrap_cis(

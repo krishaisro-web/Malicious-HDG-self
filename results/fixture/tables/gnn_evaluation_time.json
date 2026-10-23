@@ -1,0 +1,403 @@
+{
+  "is_fixture": true,
+  "is_smoke": false,
+  "split_type": "time",
+  "variants": {
+    "sage": {
+      "num_seeds": 1,
+      "split_type": "time",
+      "roc_auc_mean": 0.6183,
+      "roc_auc_std": 0.0,
+      "f1_mean": 0.6,
+      "f1_std": 0.0,
+      "pr_auc_mean": 0.6104,
+      "pr_auc_std": 0.0,
+      "tpr_at_0.1pct_fpr_mean": 0.0861,
+      "runs": [
+        {
+          "roc_auc": 0.6183,
+          "pr_auc": 0.6104,
+          "f1": 0.6,
+          "precision": 0.4895,
+          "recall": 0.7748,
+          "specificity": 0.3068,
+          "threshold": 0.59,
+          "test_counts": {
+            "total": 327,
+            "positives": 151,
+            "negatives": 176,
+            "sample_prevalence": 0.4618
+          },
+          "confusion_matrix": {
+            "tp": 117,
+            "tn": 54,
+            "fp": 122,
+            "fn": 34
+          },
+          "operating_points": {
+            "tpr_at_1.0pct_fpr": {
+              "tpr": 0.0861,
+              "threshold": 0.8022,
+              "realised_test_fpr": 0.017045,
+              "f1_at_operating_point": 0.1557,
+              "precision_at_operating_point": 0.8125,
+              "recall_at_operating_point": 0.0861,
+              "prevalence_adjusted_precision": {
+                "pi_1.0pct": 0.0485,
+                "pi_0.1pct": 0.005
+              },
+              "expected_fp": 2,
+              "warning": "Expected false positives at 1.0% FPR is 2 (< 10). Test sample size (176 negatives) provides limited statistical power at this FPR."
+            },
+            "tpr_at_0.1pct_fpr": {
+              "tpr": 0.0861,
+              "threshold": 0.8022,
+              "realised_test_fpr": 0.017045,
+              "f1_at_operating_point": 0.1557,
+              "precision_at_operating_point": 0.8125,
+              "recall_at_operating_point": 0.0861,
+              "prevalence_adjusted_precision": {
+                "pi_1.0pct": 0.0485,
+                "pi_0.1pct": 0.005
+              },
+              "expected_fp": 0,
+              "warning": "Expected false positives at 0.1% FPR is 0 (< 10). Test sample size (176 negatives) provides limited statistical power at this FPR."
+            }
+          },
+          "bootstrap_ci": {
+            "roc_auc": {
+              "point": 0.616,
+              "ci_lower": 0.5478,
+              "ci_upper": 0.6789,
+              "std": 0.0338
+            },
+            "pr_auc": {
+              "point": 0.6135,
+              "ci_lower": 0.5315,
+              "ci_upper": 0.6902,
+              "std": 0.041
+            },
+            "f1": {
+              "point": 0.598,
+              "ci_lower": 0.542,
+              "ci_upper": 0.6561,
+              "std": 0.0303
+            }
+          },
+          "breakdowns": {
+            "by_resolution": {
+              "resolved": {
+                "count": 288,
+                "roc_auc": 0.5988,
+                "f1": 0.5663
+              },
+              "no_ip": {
+                "count": 39,
+                "roc_auc": 0.6902,
+                "f1": 0.7931
+              }
+            },
+            "by_source": {
+              "CESNET": {
+                "count": 94,
+                "accuracy": 0.3191
+              },
+              "Firebog": {
+                "count": 34,
+                "accuracy": 0.6471
+              },
+              "MISP": {
+                "count": 27,
+                "accuracy": 0.7778
+              },
+              "ThreatFox": {
+                "count": 31,
+                "accuracy": 0.8387
+              },
+              "URLhaus": {
+                "count": 37,
+                "accuracy": 0.8649
+              },
+              "Umbrella": {
+                "count": 82,
+                "accuracy": 0.2927
+              },
+              "abuse.ch": {
+                "count": 22,
+                "accuracy": 0.7273
+              }
+            },
+            "by_malware_family": {
+              "agenttesla": {
+                "count": 20,
+                "detection_rate_recall": 0.85
+              },
+              "asyncrat": {
+                "count": 19,
+                "detection_rate_recall": 0.8421
+              },
+              "emotet": {
+                "count": 22,
+                "detection_rate_recall": 0.7727
+              },
+              "formbook": {
+                "count": 23,
+                "detection_rate_recall": 0.7391
+              },
+              "qakbot": {
+                "count": 21,
+                "detection_rate_recall": 0.619
+              },
+              "redline": {
+                "count": 22,
+                "detection_rate_recall": 0.8182
+              },
+              "unknown": {
+                "count": 24,
+                "detection_rate_recall": 0.7917
+              }
+            }
+          },
+          "training_metadata": {
+            "chosen_lr": 0.005,
+            "lr_grid": [
+              0.001,
+              0.003,
+              0.005
+            ],
+            "epochs_trained": 3,
+            "best_val_auc": 0.6111,
+            "use_class_weights": false,
+            "checkpoint_path": "/Users/urvagandhi/Developer/Personal/Krisha/Malicious-HDG-self/artifacts/checkpoints/fixture/gnn_sage_time_seed_42.pt"
+          }
+        }
+      ]
+    },
+    "attn": {
+      "num_seeds": 1,
+      "split_type": "time",
+      "roc_auc_mean": 0.6184,
+      "roc_auc_std": 0.0,
+      "f1_mean": 0.6318,
+      "f1_std": 0.0,
+      "pr_auc_mean": 0.5751,
+      "pr_auc_std": 0.0,
+      "tpr_at_0.1pct_fpr_mean": 0.0927,
+      "runs": [
+        {
+          "roc_auc": 0.6184,
+          "pr_auc": 0.5751,
+          "f1": 0.6318,
+          "precision": 0.4618,
+          "recall": 1.0,
+          "specificity": 0.0,
+          "threshold": 0.45,
+          "test_counts": {
+            "total": 327,
+            "positives": 151,
+            "negatives": 176,
+            "sample_prevalence": 0.4618
+          },
+          "confusion_matrix": {
+            "tp": 151,
+            "tn": 0,
+            "fp": 176,
+            "fn": 0
+          },
+          "operating_points": {
+            "tpr_at_1.0pct_fpr": {
+              "tpr": 0.0927,
+              "threshold": 0.6534,
+              "realised_test_fpr": 0.022727,
+              "f1_at_operating_point": 0.1657,
+              "precision_at_operating_point": 0.7778,
+              "recall_at_operating_point": 0.0927,
+              "prevalence_adjusted_precision": {
+                "pi_1.0pct": 0.0396,
+                "pi_0.1pct": 0.0041
+              },
+              "expected_fp": 2,
+              "warning": "Expected false positives at 1.0% FPR is 2 (< 10). Test sample size (176 negatives) provides limited statistical power at this FPR."
+            },
+            "tpr_at_0.1pct_fpr": {
+              "tpr": 0.0927,
+              "threshold": 0.6534,
+              "realised_test_fpr": 0.022727,
+              "f1_at_operating_point": 0.1657,
+              "precision_at_operating_point": 0.7778,
+              "recall_at_operating_point": 0.0927,
+              "prevalence_adjusted_precision": {
+                "pi_1.0pct": 0.0396,
+                "pi_0.1pct": 0.0041
+              },
+              "expected_fp": 0,
+              "warning": "Expected false positives at 0.1% FPR is 0 (< 10). Test sample size (176 negatives) provides limited statistical power at this FPR."
+            }
+          },
+          "bootstrap_ci": {
+            "roc_auc": {
+              "point": 0.6199,
+              "ci_lower": 0.5559,
+              "ci_upper": 0.6706,
+              "std": 0.0297
+            },
+            "pr_auc": {
+              "point": 0.5831,
+              "ci_lower": 0.499,
+              "ci_upper": 0.6714,
+              "std": 0.0441
+            },
+            "f1": {
+              "point": 0.6329,
+              "ci_lower": 0.5797,
+              "ci_upper": 0.6802,
+              "std": 0.0277
+            }
+          },
+          "breakdowns": {
+            "by_resolution": {
+              "resolved": {
+                "count": 288,
+                "roc_auc": 0.599,
+                "f1": 0.6154
+              },
+              "no_ip": {
+                "count": 39,
+                "roc_auc": 0.6223,
+                "f1": 0.7419
+              }
+            },
+            "by_source": {
+              "CESNET": {
+                "count": 94,
+                "accuracy": 0.0
+              },
+              "Firebog": {
+                "count": 34,
+                "accuracy": 1.0
+              },
+              "MISP": {
+                "count": 27,
+                "accuracy": 1.0
+              },
+              "ThreatFox": {
+                "count": 31,
+                "accuracy": 1.0
+              },
+              "URLhaus": {
+                "count": 37,
+                "accuracy": 1.0
+              },
+              "Umbrella": {
+                "count": 82,
+                "accuracy": 0.0
+              },
+              "abuse.ch": {
+                "count": 22,
+                "accuracy": 1.0
+              }
+            },
+            "by_malware_family": {
+              "agenttesla": {
+                "count": 20,
+                "detection_rate_recall": 1.0
+              },
+              "asyncrat": {
+                "count": 19,
+                "detection_rate_recall": 1.0
+              },
+              "emotet": {
+                "count": 22,
+                "detection_rate_recall": 1.0
+              },
+              "formbook": {
+                "count": 23,
+                "detection_rate_recall": 1.0
+              },
+              "qakbot": {
+                "count": 21,
+                "detection_rate_recall": 1.0
+              },
+              "redline": {
+                "count": 22,
+                "detection_rate_recall": 1.0
+              },
+              "unknown": {
+                "count": 24,
+                "detection_rate_recall": 1.0
+              }
+            }
+          },
+          "training_metadata": {
+            "chosen_lr": 0.005,
+            "lr_grid": [
+              0.001,
+              0.003,
+              0.005
+            ],
+            "epochs_trained": 3,
+            "best_val_auc": 0.537,
+            "use_class_weights": false,
+            "checkpoint_path": "/Users/urvagandhi/Developer/Personal/Krisha/Malicious-HDG-self/artifacts/checkpoints/fixture/gnn_attn_time_seed_42.pt"
+          }
+        }
+      ]
+    }
+  },
+  "paired_comparisons": {
+    "sage_vs_attn": {
+      "per_seed": {
+        "42": {
+          "mcnemar": {
+            "exact_statistic_min_b_c": 34.0,
+            "pvalue": 0.04221061162240417,
+            "discordant_a_better": 54,
+            "discordant_b_better": 34,
+            "contingency_table": [
+              [
+                117,
+                54
+              ],
+              [
+                34,
+                122
+              ]
+            ],
+            "interpretation": "statistically significant difference"
+          },
+          "bootstrap_auc_diff": {
+            "mean_diff": -0.0038,
+            "ci_lower": -0.0585,
+            "ci_upper": 0.0487,
+            "pvalue_two_sided": 0.92
+          }
+        }
+      },
+      "pooled_summary": {
+        "mcnemar": {
+          "exact_statistic_min_b_c": 34.0,
+          "pvalue": 0.04221061162240417,
+          "discordant_a_better": 54,
+          "discordant_b_better": 34,
+          "contingency_table": [
+            [
+              117,
+              54
+            ],
+            [
+              34,
+              122
+            ]
+          ],
+          "interpretation": "statistically significant difference"
+        },
+        "bootstrap_auc_diff": {
+          "mean_diff": -0.0038,
+          "ci_lower": -0.0585,
+          "ci_upper": 0.0487,
+          "pvalue_two_sided": 0.92
+        }
+      }
+    }
+  }
+}

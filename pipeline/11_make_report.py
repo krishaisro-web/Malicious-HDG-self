@@ -137,17 +137,21 @@ def main() -> None:
     if "random" in gnn_evaluations and "variants" in gnn_evaluations["random"]:
         r_f1 = gnn_evaluations["random"]["variants"].get("sage", {}).get("f1_mean")
     if "time" in gnn_evaluations and "variants" in gnn_evaluations["time"]:
-        t_f1 = gnn_evaluations["time"]["variants"].get("sage", {}).get("f1_mean")
-    elif "stratified_group" in gnn_evaluations and "variants" in gnn_evaluations["stratified_group"]:
-        t_f1 = gnn_evaluations["stratified_group"]["variants"].get("sage", {}).get("f1_mean")
+        time_eval = gnn_evaluations["time"]
+        if time_eval.get("variants", {}).get("sage", {}).get("status") == "BLOCKED_INSUFFICIENT_DATA":
+            o2_val = "BLOCKED: Insufficient temporal overlap for multi-window rolling-origin evaluation"
+            o2_stat = "BLOCKED"
+        else:
+            t_f1 = time_eval["variants"].get("sage", {}).get("f1_mean")
 
     if r_f1 is not None and t_f1 is not None:
         gap = r_f1 - t_f1
-        o2_val = f"Random F1: {r_f1:.4f} $\\to$ Split F1: {t_f1:.4f} (Gap: {gap:.4f})"
+        o2_val = f"Random F1: {r_f1:.4f} $\\to$ Temporal F1: {t_f1:.4f} (Gap: {gap:.4f})"
         o2_stat = "MET" if abs(gap) <= 0.10 or args.fixture else "EVALUATED"
-    elif r_f1 is not None:
-        o2_val = f"Random F1: {r_f1:.4f} (Temporal split pending)"
-        o2_stat = "MET" if args.fixture else "PENDING"
+    elif o2_stat != "BLOCKED":
+        if r_f1 is not None:
+            o2_val = f"Random F1: {r_f1:.4f} (Temporal evaluation pending or blocked)"
+            o2_stat = "PENDING"
     doc.append(f"| **O2: Temporal Generalization** | F1 degradation $\\le 0.10$ on $T \\to T+1$ | {o2_val} | {o2_stat} |")
 
     # O3: AUROC comparison vs XGBoost
@@ -354,10 +358,15 @@ def main() -> None:
     doc.append("## 5. Streaming & Continual Domain Updates")
     doc.append("Online evaluation across chronological monthly cohorts comparing retraining from scratch, naive fine-tuning, and reservoir replay (M=1000).")
     doc.append("")
-    doc.append("| Step | Target Month | Strategy | New Month F1 | New Month TPR@0.1% FPR | Month 1 F1 | Backward Transfer (ΔF1) |")
-    doc.append("|:---:|:---:|:---:|:---:|:---:|:---:|:---:|")
 
-    if streaming_data and "steps" in streaming_data:
+    if streaming_data and streaming_data.get("status") == "BLOCKED_INSUFFICIENT_DATA":
+        doc.append("> [!WARNING]")
+        doc.append(f"> **Status: BLOCKED_INSUFFICIENT_DATA**")
+        doc.append(f"> {streaming_data.get('reason')}")
+        doc.append(r"> Continual-learning evaluation requires $\ge 2$ consecutive multi-class months ($T \to T+1$).")
+    elif streaming_data and "steps" in streaming_data and streaming_data["steps"]:
+        doc.append("| Step | Target Month | Strategy | New Month F1 | New Month TPR@0.1% FPR | Month 1 F1 | Backward Transfer (ΔF1) |")
+        doc.append("|:---:|:---:|:---:|:---:|:---:|:---:|:---:|")
         for s in streaming_data["steps"]:
             st_num = s["step"]
             m_str = s["month"]
@@ -369,6 +378,8 @@ def main() -> None:
             doc.append(
                 f"| {st_num} | {m_str} | `{strat}` | {cur['f1']:.4f} | {cur['tpr_at_01_fpr']:.4f} | {m0_p['f1']:.4f} | **{bwt_str}** |"
             )
+    else:
+        doc.append("Streaming continual-learning evaluation pending or unexecuted.")
 
     doc.append("")
 
@@ -377,10 +388,15 @@ def main() -> None:
     # =========================================================================
     doc.append("## 6. Operational BIND RPZ Deployment")
     if rpz_data:
-        doc.append(f"- **Calibrated Threshold**: `{rpz_data.get('calibrated_threshold')}` (Operating Target FPR: `{rpz_data.get('target_fpr', 0.001)*100:.2f}%`)")
-        doc.append(f"- **Realized Validation FPR**: `{rpz_data.get('realized_val_fpr', 0.0)*100:.3f}%`")
-        doc.append(f"- **Rules Emitted**: `{rpz_data.get('rules_emitted')}` of `{rpz_data.get('total_test_domains')}` test domains ({rpz_data.get('blocking_rate_pct')}%)")
-        doc.append(f"- **Top Malware Families**: `{json.dumps(rpz_data.get('top_malware_families', {}))}`")
+        if rpz_data.get("status") == "BLOCKED_MISSING_MODEL":
+            doc.append("> [!WARNING]")
+            doc.append(f"> **Status: BLOCKED_MISSING_MODEL**")
+            doc.append(f"> {rpz_data.get('reason')}")
+        else:
+            doc.append(f"- **Calibrated Threshold**: `{rpz_data.get('calibrated_threshold')}` (Operating Target FPR: `{rpz_data.get('target_fpr', 0.001)*100:.2f}%`)")
+            doc.append(f"- **Realized Validation FPR**: `{rpz_data.get('realized_val_fpr', 0.0)*100:.3f}%`")
+            doc.append(f"- **Rules Emitted**: `{rpz_data.get('rules_emitted')}` of `{rpz_data.get('total_test_domains')}` test domains ({rpz_data.get('blocking_rate_pct')}%)")
+            doc.append(f"- **Top Malware Families**: `{json.dumps(rpz_data.get('top_malware_families', {}))}`")
     else:
         doc.append("RPZ rules not yet compiled. Run `10_emit_rpz.py`.")
     doc.append("")
