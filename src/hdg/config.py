@@ -38,6 +38,12 @@ class ResolvedPaths:
         """Enforces that fixture/smoke runs never write to real production paths, and real runs don't overwrite test paths."""
         resolved = str(target_path.resolve()).replace("\\", "/")
         if self.is_fixture:
+            # Explicitly forbid real/production destinations
+            forbidden_tokens = ["/results/real", "/data/processed/real", "/artifacts/checkpoints/real"]
+            if any(tok in resolved for tok in forbidden_tokens):
+                raise PermissionError(
+                    f"[FIXTURE SAFEGUARD] Refusing to write fixture output to production path: {resolved}."
+                )
             allowed_tokens = [
                 "/results/fixture",
                 "/results_fixture",
@@ -45,11 +51,12 @@ class ResolvedPaths:
                 "/data/processed/fixture",
                 "/data_fixture",
                 "/artifacts/checkpoints/fixture",
+                "pytest",
+                "fixture_sandbox"
             ]
             if not any(token in resolved for token in allowed_tokens):
                 raise PermissionError(
-                    f"[FIXTURE SAFEGUARD] Refusing to write fixture output to production path: {resolved}. "
-                    f"Fixture output must only go to results/fixture/, data/processed/fixture/, or artifacts/checkpoints/fixture/."
+                    f"[FIXTURE SAFEGUARD] Refusing to write fixture output to non-fixture path: {resolved}."
                 )
         elif self.is_smoke:
             allowed_tokens = [

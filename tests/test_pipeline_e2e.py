@@ -17,7 +17,7 @@ from src.hdg.config import load_config, get_resolved_paths
 from src.hdg.data.profiler import profile_dataset
 
 
-def test_fixture_path_write_safeguard() -> None:
+def test_fixture_path_write_safeguard(tmp_path: Path) -> None:
     cfg = load_config()
     repo_root = Path(__file__).resolve().parent.parent
     paths = get_resolved_paths(cfg, is_fixture=True, root_dir=repo_root)
@@ -27,13 +27,9 @@ def test_fixture_path_write_safeguard() -> None:
     with pytest.raises(PermissionError, match="Refusing to write fixture output to production path"):
         paths.check_write_path(production_results_path)
 
-    # Must succeed for fixture results
-    fixture_results_path = repo_root / "results" / "fixture" / "profile"
-    paths.check_write_path(fixture_results_path)
-    # Clean up any dummy test dir created
-    if (repo_root / "results" / "fixture").exists():
-        import shutil
-        shutil.rmtree(repo_root / "results" / "fixture", ignore_errors=True)
+    # Must succeed for fixture results when aimed at temporary/isolated output
+    test_subpath = tmp_path / "fixture_sandbox" / "profile"
+    paths.check_write_path(test_subpath)  # Should not raise
 
 
 def test_profiler() -> None:

@@ -108,14 +108,18 @@ def train_eval_gnn(
     chosen_lr = lr
     resumed_ckpt = None
 
-    # Attempt checkpoint resumption with fingerprint validation
+    # Attempt checkpoint resumption with strict fingerprint validation
     if resume and state_ckpt_path is not None and state_ckpt_path.exists():
         try:
             resumed_ckpt = torch.load(state_ckpt_path, map_location=device, weights_only=False)
             cached_fp = resumed_ckpt.get("experiment_fingerprint")
-            if experiment_fingerprint is not None and cached_fp is not None and cached_fp != experiment_fingerprint:
+            
+            # Require exact fingerprint match if an experiment fingerprint was supplied
+            fp_mismatch = (experiment_fingerprint is not None) and (cached_fp != experiment_fingerprint)
+            if fp_mismatch:
+                reason = "missing fingerprint" if cached_fp is None else f"found {cached_fp[:10]}..., expected {experiment_fingerprint[:10]}..."
                 print(f"  [CHECKPOINT REJECTED] Incompatible experiment fingerprint in {state_ckpt_path.name} "
-                      f"(found {cached_fp[:10]}..., expected {experiment_fingerprint[:10]}...). Starting fresh run.")
+                      f"({reason}). Starting fresh run.")
                 resumed_ckpt = None
                 start_epoch = 1
             else:

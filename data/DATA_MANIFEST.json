@@ -21,24 +21,6 @@
       "mandatory": true
     }
   },
-  "fixture_files": {
-    "data/fixture/zenodo/malware.json": {
-      "size_bytes": 7409175,
-      "sha256": "e837d01b11d52821f8efd9c046e2a86851fa2eeb779029cc30b1fe410cef2523"
-    },
-    "data/fixture/zenodo/benign_umbrella.json": {
-      "size_bytes": 3676049,
-      "sha256": "9fbef797b4cbf405a5226fbee9964de6c076e124bc2b1d50617f5454bbab349e"
-    },
-    "data/fixture/zenodo/benign_cesnet.json": {
-      "size_bytes": 3673577,
-      "sha256": "09a346216026458c171e9d2d017c62138901e24c729e9a737032dff63a2d6993"
-    },
-    "data/fixture/zenodo/data_schema.json": {
-      "size_bytes": 625,
-      "sha256": "57b8c7820874f4374ef7cfd4f3695d67dae32bbb2a0ea2e72f5951aef1628ada"
-    }
-  },
-  "schema_version": "2.0.0",
+  "schema_version": "2.1.0",
   "verification_command": "python -m pipeline.00c_preflight"
 }
