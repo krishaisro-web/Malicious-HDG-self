@@ -141,3 +141,51 @@ def test_checkpoint_model_config_contract() -> None:
     assert conf["num_heads"] == 4
     assert conf["dropout"] == 0.25
     assert "use_edges" in conf
+
+
+def test_checkpoint_round_trip_reconstruction(tmp_path: Path) -> None:
+    """Verifies that each supported architecture round-trips state_dict + config exactly."""
+    cfg = load_config()
+    repo_root = Path(__file__).resolve().parent.parent
+    paths = get_resolved_paths(cfg, is_fixture=False, root_dir=repo_root)
+
+    graph_file = paths.processed_dir / "heterodata.pt"
+    data = torch.load(graph_file, weights_only=False)
+    in_channels = {nt: data[nt].x.shape[1] for nt in data.node_types}
+
+    for variant in ["sage", "attn", "sage_guard"]:
+        m1 = HeteroGNN(
+            metadata=data.metadata(),
+            in_channels_dict=in_channels,
+            variant=variant,
+            hidden_dim=48,
+            out_dim=24,
+            num_layers=2,
+            num_heads=3 if variant == "attn" else 4,
+            dropout=0.15
+        )
+        saved_payload = {
+            "model_state_dict": m1.state_dict(),
+            "model_config": m1.get_model_config()
+        }
+        ckpt_p = tmp_path / f"test_{variant}.pt"
+        torch.save(saved_payload, ckpt_p)
+
+        # Reconstruct
+        loaded_obj = torch.load(ckpt_p, weights_only=False)
+        l_cfg = loaded_obj["model_config"]
+        m2 = HeteroGNN(
+            metadata=data.metadata(),
+            in_channels_dict=in_channels,
+            variant=l_cfg["variant"],
+            hidden_dim=l_cfg["hidden_dim"],
+            out_dim=l_cfg["out_dim"],
+            num_layers=l_cfg["num_layers"],
+            num_heads=l_cfg["num_heads"],
+            dropout=l_cfg["dropout"]
+        )
+        m2.load_state_dict(loaded_obj["model_state_dict"])
+        m2.eval()
+        with torch.no_grad():
+            out = m2(data.x_dict, data.edge_index_dict)
+        assert out.shape == (data["domain"].num_nodes, 2)
