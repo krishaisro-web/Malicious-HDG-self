@@ -397,8 +397,57 @@ def test_rpz_fail_closed_on_split_mismatch_and_missing_cert(tmp_path: Path, mini
     import json
     import subprocess
     import sys
-    from src.hdg.data.graph import load_aligned_graph_cohort
-    data, _, _ = load_aligned_graph_cohort(Path("data/processed/real"))
+    import pandas as pd
+    import yaml
+
+    data = minimal_synthetic_heterodata.clone()
+    n_domains = 100
+    data["domain"].x = torch.randn((n_domains, data["domain"].x.shape[1]))
+    data["domain"].raw_x = data["domain"].x.clone()
+    data["domain"].y = torch.tensor([i % 2 for i in range(n_domains)], dtype=torch.long)
+    data["domain"].num_nodes = n_domains
+
+    # Expand domain-to-infrastructure edges and populate degree metadata.
+    data.incident_pairs = {}
+
+    for edge_type in [
+        ("domain", "resolves_to", "ip"),
+        ("domain", "uses_ns", "nameserver"),
+        ("domain", "registered_by", "registrar"),
+        ("domain", "uses_cert", "certificate"),
+    ]:
+        src_type, rel, dst_type = edge_type
+        dst_count = data[dst_type].num_nodes
+        src = torch.arange(n_domains, dtype=torch.long)
+        dst = src % dst_count
+
+        data[edge_type].edge_index = torch.stack([src, dst])
+        reverse_type = (dst_type, "rev_" + rel, src_type)
+        if reverse_type in data.edge_types:
+            data[reverse_type].edge_index = torch.stack([dst, src])
+
+        data.incident_pairs[dst_type] = list(zip(src.tolist(), dst.tolist()))
+
+    data.incident_pairs["asn"] = []
+
+    processed_dir = tmp_path / "processed"
+    results_dir = tmp_path / "results"
+    checkpoints_dir = tmp_path / "checkpoints"
+    for directory in (processed_dir, results_dir, checkpoints_dir):
+        directory.mkdir(parents=True, exist_ok=True)
+
+    torch.save(data, processed_dir / "heterodata.pt")
+    pd.DataFrame({
+        "domain": [f"example{i}.com" for i in range(n_domains)],
+        "label": data["domain"].y.cpu().numpy(),
+    }).to_parquet(processed_dir / "domains.parquet", index=False)
+
+    config = yaml.safe_load(Path("configs/default.yaml").read_text())
+    config["paths"]["processed_data_dir"] = str(processed_dir)
+    config["paths"]["results_dir"] = str(results_dir)
+    config["paths"]["checkpoints_dir"] = str(checkpoints_dir)
+    config_path = tmp_path / "test_config.yaml"
+    config_path.write_text(yaml.safe_dump(config))
     in_channels = {nt: data[nt].x.shape[1] for nt in data.node_types}
 
     model = HeteroGNN(
@@ -423,6 +472,7 @@ def test_rpz_fail_closed_on_split_mismatch_and_missing_cert(tmp_path: Path, mini
     # Test 1: Request 'time' split with 'random' checkpoint -> must block with BLOCKED_SPLIT_MISMATCH
     cmd = [
         sys.executable, "-m", "pipeline.10_emit_rpz",
+        "--config", str(config_path),
         "--force",
         "--checkpoint", str(ckpt_random_path),
         "--split-type", "time"
@@ -444,6 +494,7 @@ def test_rpz_fail_closed_on_split_mismatch_and_missing_cert(tmp_path: Path, mini
 
     cmd2 = [
         sys.executable, "-m", "pipeline.10_emit_rpz",
+        "--config", str(config_path),
         "--force",
         "--checkpoint", str(ckpt_no_cert),
         "--split-type", "random"
@@ -461,7 +512,57 @@ def test_latency_checkpoint_strict_validation(tmp_path: Path, minimal_synthetic_
     """
     import subprocess
     import sys
-    data = minimal_synthetic_heterodata
+    import pandas as pd
+    import yaml
+
+    data = minimal_synthetic_heterodata.clone()
+    n_domains = 100
+    data["domain"].x = torch.randn((n_domains, data["domain"].x.shape[1]))
+    data["domain"].raw_x = data["domain"].x.clone()
+    data["domain"].y = torch.tensor([i % 2 for i in range(n_domains)], dtype=torch.long)
+    data["domain"].num_nodes = n_domains
+
+    # Expand domain-to-infrastructure edges and populate degree metadata.
+    data.incident_pairs = {}
+
+    for edge_type in [
+        ("domain", "resolves_to", "ip"),
+        ("domain", "uses_ns", "nameserver"),
+        ("domain", "registered_by", "registrar"),
+        ("domain", "uses_cert", "certificate"),
+    ]:
+        src_type, rel, dst_type = edge_type
+        dst_count = data[dst_type].num_nodes
+        src = torch.arange(n_domains, dtype=torch.long)
+        dst = src % dst_count
+
+        data[edge_type].edge_index = torch.stack([src, dst])
+        reverse_type = (dst_type, "rev_" + rel, src_type)
+        if reverse_type in data.edge_types:
+            data[reverse_type].edge_index = torch.stack([dst, src])
+
+        data.incident_pairs[dst_type] = list(zip(src.tolist(), dst.tolist()))
+
+    data.incident_pairs["asn"] = []
+
+    processed_dir = tmp_path / "processed"
+    results_dir = tmp_path / "results"
+    checkpoints_dir = tmp_path / "checkpoints"
+    for directory in (processed_dir, results_dir, checkpoints_dir):
+        directory.mkdir(parents=True, exist_ok=True)
+
+    torch.save(data, processed_dir / "heterodata.pt")
+    pd.DataFrame({
+        "domain": [f"example{i}.com" for i in range(n_domains)],
+        "label": data["domain"].y.cpu().numpy(),
+    }).to_parquet(processed_dir / "domains.parquet", index=False)
+
+    config = yaml.safe_load(Path("configs/default.yaml").read_text())
+    config["paths"]["processed_data_dir"] = str(processed_dir)
+    config["paths"]["results_dir"] = str(results_dir)
+    config["paths"]["checkpoints_dir"] = str(checkpoints_dir)
+    config_path = tmp_path / "test_config.yaml"
+    config_path.write_text(yaml.safe_dump(config))
     in_channels = {nt: data[nt].x.shape[1] for nt in data.node_types}
 
     model = HeteroGNN(
@@ -491,6 +592,7 @@ def test_latency_checkpoint_strict_validation(tmp_path: Path, minimal_synthetic_
 
     cmd = [
         sys.executable, "-m", "pipeline.07_latency_eval",
+        "--config", str(config_path),
         "--force",
         "--checkpoint", str(bad_ckpt)
     ]

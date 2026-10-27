@@ -353,18 +353,11 @@ def main() -> None:
         mask_disjoint_groups=(ckpt_split_type == "group")
     )
 
-    model.eval()
-    with torch.no_grad():
-        out = model(scaled_data.x_dict, scaled_data.edge_index_dict)
-        all_probs = F.softmax(out, dim=-1)[:, 1].cpu().numpy()
-
     # Retrieve pre-allocated certification holdout negatives (reserved prior to model selection / early stopping)
     # Fail-closed: missing cert_indices must strictly block emission without ad-hoc post-hoc partitioning
     ckpt_cert_idx = ckpt_obj.get("cert_indices") if isinstance(ckpt_obj, dict) else None
-    if ckpt_cert_idx and len(ckpt_cert_idx) > 0:
+    if ckpt_cert_idx is not None and len(ckpt_cert_idx) > 0:
         cert_idx = np.array(ckpt_cert_idx, dtype=int)
-    elif getattr(splits, "cert_indices", None) is not None and len(splits.cert_indices) > 0:
-        cert_idx = np.array(splits.cert_indices, dtype=int)
     else:
         print("[BLOCKED_MISSING_CERT_METADATA] RPZ rule generation blocked: Missing pre-allocated certification metadata ('cert_indices').")
         print("          Refusing post-hoc validation partitioning to guarantee zero data leakage during certification.")
@@ -382,6 +375,12 @@ def main() -> None:
             json.dump(blocked_summary, f, indent=2)
         save_run_result(paths, run_name, blocked_summary)
         return
+
+
+    model.eval()
+    with torch.no_grad():
+        out = model(scaled_data.x_dict, scaled_data.edge_index_dict)
+        all_probs = F.softmax(out, dim=-1)[:, 1].cpu().numpy()
 
     val_idx = splits.val_indices
     y_val = data["domain"].y[val_idx].cpu().numpy()
