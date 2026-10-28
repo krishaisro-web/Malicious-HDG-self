@@ -388,15 +388,8 @@ def test_objective_acceptance_criteria_exact():
     assert statuses_b["O1"][1] == "MET"
 
 
-def test_rpz_fail_closed_on_split_mismatch_and_missing_cert(tmp_path: Path, minimal_synthetic_heterodata) -> None:
-    """
-    Regression test for:
-    1. RPZ split mismatch: never substitute another checkpoint/split; fail closed with BLOCKED_SPLIT_MISMATCH.
-    2. RPZ certification metadata: missing cert_indices must strictly block emission.
-    """
-    import json
-    import subprocess
-    import sys
+def _setup_isolated_synthetic_cohort(tmp_path: Path, minimal_synthetic_heterodata):
+    """Creates an isolated synthetic cohort, parquet, and test config in tmp_path."""
     import pandas as pd
     import yaml
 
@@ -448,6 +441,22 @@ def test_rpz_fail_closed_on_split_mismatch_and_missing_cert(tmp_path: Path, mini
     config["paths"]["checkpoints_dir"] = str(checkpoints_dir)
     config_path = tmp_path / "test_config.yaml"
     config_path.write_text(yaml.safe_dump(config))
+
+    return data, config_path
+
+
+def test_rpz_fail_closed_on_split_mismatch_and_missing_cert(tmp_path: Path, minimal_synthetic_heterodata) -> None:
+    """
+    Regression test for:
+    1. RPZ split mismatch: never substitute another checkpoint/split; fail closed with BLOCKED_SPLIT_MISMATCH.
+    2. RPZ certification metadata: missing cert_indices must strictly block emission.
+    3. RPZ out-of-bounds certification metadata: must fail-closed with BLOCKED_INVALID_CERT_METADATA.
+    """
+    import json
+    import subprocess
+    import sys
+
+    data, config_path = _setup_isolated_synthetic_cohort(tmp_path, minimal_synthetic_heterodata)
     in_channels = {nt: data[nt].x.shape[1] for nt in data.node_types}
 
     model = HeteroGNN(
@@ -503,66 +512,39 @@ def test_rpz_fail_closed_on_split_mismatch_and_missing_cert(tmp_path: Path, mini
     assert res2.returncode == 0
     assert "BLOCKED_MISSING_CERT_METADATA" in res2.stdout or "BLOCKED" in res2.stdout
 
+    # Test 3: Checkpoint with out-of-bounds cert_indices -> must block with BLOCKED_INVALID_CERT_METADATA
+    ckpt_bad_bounds = tmp_path / "gnn_sage_random_bad_bounds.pt"
+    torch.save({
+        "model_state_dict": model.state_dict(),
+        "model_config": model.get_model_config(),
+        "split_type": "random",
+        "cert_indices": [99999]  # out of bounds (> 100)
+    }, ckpt_bad_bounds)
+    with open(tmp_path / "gnn_sage_random_bad_bounds_manifest.json", "w") as f:
+        json.dump({"split_type": "random", "seed": 42}, f)
+
+    cmd3 = [
+        sys.executable, "-m", "pipeline.10_emit_rpz",
+        "--config", str(config_path),
+        "--force",
+        "--checkpoint", str(ckpt_bad_bounds),
+        "--split-type", "random"
+    ]
+    res3 = subprocess.run(cmd3, capture_output=True, text=True)
+    assert res3.returncode == 0
+    assert "BLOCKED_INVALID_CERT_METADATA" in res3.stdout or "BLOCKED" in res3.stdout
+
 
 def test_latency_checkpoint_strict_validation(tmp_path: Path, minimal_synthetic_heterodata) -> None:
     """
     Regression test for:
-    3. Latency checkpoint reconstruction: load and validate all 8 architecture fields,
+    4. Latency checkpoint reconstruction: load and validate all 8 architecture fields,
        including num_heads and prune_threshold.
     """
     import subprocess
     import sys
-    import pandas as pd
-    import yaml
 
-    data = minimal_synthetic_heterodata.clone()
-    n_domains = 100
-    data["domain"].x = torch.randn((n_domains, data["domain"].x.shape[1]))
-    data["domain"].raw_x = data["domain"].x.clone()
-    data["domain"].y = torch.tensor([i % 2 for i in range(n_domains)], dtype=torch.long)
-    data["domain"].num_nodes = n_domains
-
-    # Expand domain-to-infrastructure edges and populate degree metadata.
-    data.incident_pairs = {}
-
-    for edge_type in [
-        ("domain", "resolves_to", "ip"),
-        ("domain", "uses_ns", "nameserver"),
-        ("domain", "registered_by", "registrar"),
-        ("domain", "uses_cert", "certificate"),
-    ]:
-        src_type, rel, dst_type = edge_type
-        dst_count = data[dst_type].num_nodes
-        src = torch.arange(n_domains, dtype=torch.long)
-        dst = src % dst_count
-
-        data[edge_type].edge_index = torch.stack([src, dst])
-        reverse_type = (dst_type, "rev_" + rel, src_type)
-        if reverse_type in data.edge_types:
-            data[reverse_type].edge_index = torch.stack([dst, src])
-
-        data.incident_pairs[dst_type] = list(zip(src.tolist(), dst.tolist()))
-
-    data.incident_pairs["asn"] = []
-
-    processed_dir = tmp_path / "processed"
-    results_dir = tmp_path / "results"
-    checkpoints_dir = tmp_path / "checkpoints"
-    for directory in (processed_dir, results_dir, checkpoints_dir):
-        directory.mkdir(parents=True, exist_ok=True)
-
-    torch.save(data, processed_dir / "heterodata.pt")
-    pd.DataFrame({
-        "domain": [f"example{i}.com" for i in range(n_domains)],
-        "label": data["domain"].y.cpu().numpy(),
-    }).to_parquet(processed_dir / "domains.parquet", index=False)
-
-    config = yaml.safe_load(Path("configs/default.yaml").read_text())
-    config["paths"]["processed_data_dir"] = str(processed_dir)
-    config["paths"]["results_dir"] = str(results_dir)
-    config["paths"]["checkpoints_dir"] = str(checkpoints_dir)
-    config_path = tmp_path / "test_config.yaml"
-    config_path.write_text(yaml.safe_dump(config))
+    data, config_path = _setup_isolated_synthetic_cohort(tmp_path, minimal_synthetic_heterodata)
     in_channels = {nt: data[nt].x.shape[1] for nt in data.node_types}
 
     model = HeteroGNN(

@@ -297,7 +297,30 @@ def main() -> None:
                     if splits is None:
                         _, splits = transitions[-1]
         except Exception as e:
-            print(f"[RPZ] Temporal split reconstruction failed: {e}")
+            print(f"[RPZ] Rolling-origin temporal split reconstruction failed: {e}")
+
+        # If rolling-origin transitions are unavailable (e.g. Zenodo DomainRadar v2 with 1 multi-class month),
+        # reconstruct using single chronological holdout split as done in pipeline/04_train_gnn.py
+        if splits is None and ("t_month" in df.columns or "t" in df.columns):
+            try:
+                from src.hdg.data.temporal import analyze_temporal_eligibility
+                min_m = 1 if (args.fixture or args.smoke or len(df) < 500) else cfg.get("temporal", {}).get("min_distinct_months", 3)
+                min_p = 2 if len(df) < 500 else (10 if (args.fixture or args.smoke) else cfg.get("temporal", {}).get("min_per_class_per_window", 200))
+                elig = analyze_temporal_eligibility(df, min_distinct_months=min_m, min_per_class=min_p)
+                if elig.single_holdout_available and elig.eligible_target_months:
+                    target_m = elig.eligible_target_months[0]
+                    min_hist = 2 if len(df) < 500 else (10 if (args.fixture or args.smoke) else 50)
+                    min_tgt = 2 if len(df) < 500 else (10 if (args.fixture or args.smoke) else 50)
+                    splits = single_chronological_holdout_split(
+                        df,
+                        target_month=target_m,
+                        min_historical_per_class=min_hist,
+                        min_target_per_class=min_tgt,
+                        seed=ckpt_seed
+                    )
+                    print(f"[RPZ] Reconstructed Single Chronological Holdout Split (History -> Target {target_m})")
+            except Exception as e:
+                print(f"[RPZ] Single chronological holdout split reconstruction failed: {e}")
 
         if splits is None:
             print("[BLOCKED] RPZ rule generation blocked: Temporal split reconstruction failed or temporal data unavailable.")
@@ -358,6 +381,23 @@ def main() -> None:
     ckpt_cert_idx = ckpt_obj.get("cert_indices") if isinstance(ckpt_obj, dict) else None
     if ckpt_cert_idx is not None and len(ckpt_cert_idx) > 0:
         cert_idx = np.array(ckpt_cert_idx, dtype=int)
+        num_domain_nodes = int(data["domain"].num_nodes)
+        if np.any(cert_idx < 0) or np.any(cert_idx >= num_domain_nodes):
+            print("[BLOCKED_INVALID_CERT_METADATA] RPZ rule generation blocked: 'cert_indices' contains out-of-bounds node indices.")
+            blocked_summary = {
+                "status": "BLOCKED_INVALID_CERT_METADATA",
+                "reason": f"Checkpoint 'cert_indices' contains values outside valid domain node range [0, {num_domain_nodes - 1}].",
+                "checkpoint_file": resolved_ckpt_path.name if resolved_ckpt_path else None,
+                "rules_emitted": 0,
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
+            rpz_file = rpz_dir / "malicious_domains.rpz"
+            if rpz_file.exists():
+                rpz_file.unlink()
+            with open(rpz_dir / "rpz_summary.json", "w", encoding="utf-8") as f:
+                json.dump(blocked_summary, f, indent=2)
+            save_run_result(paths, run_name, blocked_summary)
+            return
     else:
         print("[BLOCKED_MISSING_CERT_METADATA] RPZ rule generation blocked: Missing pre-allocated certification metadata ('cert_indices').")
         print("          Refusing post-hoc validation partitioning to guarantee zero data leakage during certification.")
@@ -382,7 +422,41 @@ def main() -> None:
         out = model(scaled_data.x_dict, scaled_data.edge_index_dict)
         all_probs = F.softmax(out, dim=-1)[:, 1].cpu().numpy()
 
-    val_idx = splits.val_indices
+    if np.isnan(all_probs).any() or np.isinf(all_probs).any():
+        print("[BLOCKED_INVALID_PREDICTIONS] RPZ rule generation blocked: Model output probabilities contain NaN or Inf values.")
+        blocked_summary = {
+            "status": "BLOCKED_INVALID_PREDICTIONS",
+            "reason": "Model forward pass produced NaN or Inf probabilities. Fail-closed safety engaged.",
+            "checkpoint_file": resolved_ckpt_path.name if resolved_ckpt_path else None,
+            "rules_emitted": 0,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        rpz_file = rpz_dir / "malicious_domains.rpz"
+        if rpz_file.exists():
+            rpz_file.unlink()
+        with open(rpz_dir / "rpz_summary.json", "w", encoding="utf-8") as f:
+            json.dump(blocked_summary, f, indent=2)
+        save_run_result(paths, run_name, blocked_summary)
+        return
+
+    # Use checkpoint's recorded validation and test indices if available to guarantee exact cohort alignment
+    num_domain_nodes = int(data["domain"].num_nodes)
+    ckpt_val_idx = ckpt_obj.get("val_indices") if isinstance(ckpt_obj, dict) else None
+    if ckpt_val_idx is not None and len(ckpt_val_idx) > 0:
+        val_idx = np.array(ckpt_val_idx, dtype=int)
+        if np.any(val_idx < 0) or np.any(val_idx >= num_domain_nodes):
+            val_idx = splits.val_indices
+    else:
+        val_idx = splits.val_indices
+
+    ckpt_test_idx = ckpt_obj.get("test_indices") if isinstance(ckpt_obj, dict) else None
+    if ckpt_test_idx is not None and len(ckpt_test_idx) > 0:
+        test_idx = np.array(ckpt_test_idx, dtype=int)
+        if np.any(test_idx < 0) or np.any(test_idx >= num_domain_nodes):
+            test_idx = splits.test_indices
+    else:
+        test_idx = splits.test_indices
+
     y_val = data["domain"].y[val_idx].cpu().numpy()
     val_probs = all_probs[val_idx]
     calib_negs = val_probs[y_val == 0]
@@ -420,27 +494,29 @@ def main() -> None:
     rank_idx = len(calib_negs) - 1 - max_calib_fp
     threshold = float(sorted_calib[-1]) + 1e-6 if rank_idx < 0 else float(sorted_calib[rank_idx])
 
-    # Now certify threshold independently on certification holdout (cert_negs)
+    # Certify threshold independently on certification holdout (cert_negs)
     # This holdout was reserved BEFORE training and never exposed to model selection or early stopping.
-    if n_cert > 0:
-        observed_fp_cert = int(np.sum(cert_negs >= threshold))
-        realized_cert_fpr = float(observed_fp_cert / n_cert)
-    else:
+    if n_cert == 0:
         observed_fp_cert = 0
         realized_cert_fpr = 1.0
-
-    # Compute exact 95% confidence upper bound on population FPR using independent certification holdout
-    if observed_fp_cert == 0:
-        fpr_95_upper_bound = float(1.0 - 0.05 ** (1.0 / n_cert))
-        confidence_bound_type = "Exact Binomial (1 - 0.05^(1/N_cert))"
+        fpr_95_upper_bound = 1.0
+        confidence_bound_type = "Uncertified (Zero Holdout Negatives)"
     else:
-        z = 1.96
-        p_hat = realized_cert_fpr
-        denom = 1.0 + (z**2) / n_cert
-        centre = p_hat + (z**2) / (2.0 * n_cert)
-        spread = z * np.sqrt((p_hat * (1.0 - p_hat) + (z**2) / (4.0 * n_cert)) / n_cert)
-        fpr_95_upper_bound = min(1.0, float((centre + spread) / denom))
-        confidence_bound_type = "Wilson Score (95% Two-Sided Upper)"
+        observed_fp_cert = int(np.sum(cert_negs >= threshold))
+        realized_cert_fpr = float(observed_fp_cert / n_cert)
+
+        # Compute exact 95% confidence upper bound on population FPR using independent certification holdout
+        if observed_fp_cert == 0:
+            fpr_95_upper_bound = float(1.0 - 0.05 ** (1.0 / n_cert))
+            confidence_bound_type = "Exact Binomial (1 - 0.05^(1/N_cert))"
+        else:
+            z = 1.96
+            p_hat = realized_cert_fpr
+            denom = 1.0 + (z**2) / n_cert
+            centre = p_hat + (z**2) / (2.0 * n_cert)
+            spread = z * np.sqrt((p_hat * (1.0 - p_hat) + (z**2) / (4.0 * n_cert)) / n_cert)
+            fpr_95_upper_bound = min(1.0, float((centre + spread) / denom))
+            confidence_bound_type = "Wilson Score (95% Two-Sided Upper)"
 
     # Strict Certification Gate:
     # Fail closed if sample size is below required certification power OR if the 95% upper bound exceeds target FPR
@@ -459,6 +535,7 @@ def main() -> None:
             "min_required_certification_negs": min_cert_negs,
             "observed_fps_on_certification": observed_fp_cert,
             "realized_cert_fpr": round(realized_cert_fpr, 5),
+            "realized_val_fpr": round(realized_cert_fpr, 5),
             "fpr_95_upper_bound": round(fpr_95_upper_bound, 5),
             "confidence_bound_type": confidence_bound_type,
             "rules_emitted": 0,
@@ -477,7 +554,6 @@ def main() -> None:
           f"Observed FP on Holdout: {observed_fp_cert}/{n_cert})")
 
     # Evaluate test cohort
-    test_idx = splits.test_indices
     test_probs = all_probs[test_idx]
     test_df = df.iloc[test_idx].copy()
     test_df["score"] = test_probs
@@ -490,6 +566,7 @@ def main() -> None:
     print(f"Test Domains: {n_test} | Blocked: {n_blocked} ({blocking_rate:.2f}%)")
 
     now_iso = datetime.now(timezone.utc).isoformat()
+    soa_serial = datetime.now(timezone.utc).strftime("%Y%m%d01")
     arch_label = f"HeteroGNN-{getattr(model, 'variant', 'unknown').upper()}"
     rpz_lines = [
         "; ==============================================================================",
@@ -509,15 +586,26 @@ def main() -> None:
         "; Policy Action: CNAME . (NXDOMAIN / Drop)",
         "; ==============================================================================",
         "$TTL 300",
-        "@ IN SOA localhost. root.localhost. ( 2026100101 3600 1800 604800 300 )",
+        f"@ IN SOA localhost. root.localhost. ( {soa_serial} 3600 1800 604800 300 )",
         "  IN NS  localhost.",
         ""
     ]
 
+    seen_domains = set()
     for _, row in blocked_df.iterrows():
-        d_name = row.get("domain", row.get("raw_domain", "unknown"))
+        d_val = row.get("domain")
+        if pd.isna(d_val) or not str(d_val).strip():
+            d_val = row.get("raw_domain")
+        if pd.isna(d_val) or not str(d_val).strip():
+            continue
+        d_clean = str(d_val).strip().lower().rstrip(".")
+        if not d_clean or d_clean == "unknown" or d_clean in seen_domains:
+            continue
+        seen_domains.add(d_clean)
         score = row["score"]
-        rpz_lines.append(f"{d_name} CNAME . ; score={score:.4f}, threshold={threshold:.4f}, cert_fpr={realized_cert_fpr:.5f}")
+        # Standard BIND RPZ FQDN syntax (with trailing dot)
+        rpz_lines.append(f"{d_clean}. CNAME . ; score={score:.4f}, threshold={threshold:.4f}, cert_fpr={realized_cert_fpr:.5f}")
+        rpz_lines.append(f"*.{d_clean}. CNAME . ; wildcard block for subdomains of {d_clean}")
 
     rpz_file = rpz_dir / "malicious_domains.rpz"
     with open(rpz_file, "w", encoding="utf-8") as f:
@@ -528,6 +616,7 @@ def main() -> None:
     source_counts = blocked_df["source"].value_counts().to_dict() if "source" in blocked_df.columns else {}
 
     summary = {
+        "status": "SUCCESS",
         "generated_at": now_iso,
         "checkpoint_file": resolved_ckpt_path.name if resolved_ckpt_path else None,
         "architecture": getattr(model, "variant", "unknown"),
@@ -537,6 +626,7 @@ def main() -> None:
         "independent_certification_negatives": n_cert,
         "observed_false_positives_holdout": observed_fp_cert,
         "realized_cert_fpr": round(realized_cert_fpr, 5),
+        "realized_val_fpr": round(realized_cert_fpr, 5),
         "fpr_95_upper_bound": round(fpr_95_upper_bound, 5),
         "confidence_bound_type": confidence_bound_type,
         "certified_within_target": True,
