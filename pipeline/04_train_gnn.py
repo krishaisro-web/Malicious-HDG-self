@@ -328,6 +328,7 @@ def main() -> None:
                     "y_pred": y_pred.tolist()
                 }
             }
+            save_run_result(paths.results_dir, run_name, run_payload)
             tpr_01 = test_eval.get('operating_points', {}).get('tpr_at_0.1pct_fpr', {}).get('tpr', 0.0)
             print(f"  ┌── [TEST METRICS: {var.upper()} on {args.split_type.upper()}] ─────────────────────────")
             print(f"  │  ROC-AUC:   {test_eval['roc_auc']:.4f}  |  PR-AUC:   {test_eval['pr_auc']:.4f}")
