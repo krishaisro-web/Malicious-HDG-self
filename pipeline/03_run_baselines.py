@@ -105,73 +105,200 @@ def main() -> None:
     for s in seeds:
         print(f"\n--- Evaluating Seed {s} ---")
         splits = random_stratified_split(df["label"].to_numpy(), seed=s)
+        pq_inputs = [paths.processed_dir / "domains.parquet"] if (paths.processed_dir / "domains.parquet").exists() else []
 
         # 1. TF-IDF + Logistic Regression
         r_name = f"baseline_tfidf_logreg_seed_{s}"
-        if not should_skip_run(paths.results_dir, r_name, force=args.force):
-            res_tfidf, _, _ = run_tfidf_lexical_baseline(df, splits, cfg, seed=s)
+        exp_fp = compute_experiment_fingerprint(
+            cfg,
+            stage="baseline_tfidf_logreg",
+            input_files=pq_inputs,
+            extra_dict={"seed": s}
+        )
+        need_rerun = args.force or not should_skip_run(paths.results_dir, r_name, force=args.force, expected_fingerprint=exp_fp)
+        if not need_rerun:
+            try:
+                with open(paths.results_dir / "runs" / f"{r_name}.json", "r", encoding="utf-8") as f:
+                    res_tfidf = json.load(f)
+                if "predictions" not in res_tfidf:
+                    need_rerun = True
+            except Exception:
+                need_rerun = True
+
+        if need_rerun:
+            res_tfidf, y_test, test_probs = run_tfidf_lexical_baseline(df, splits, cfg, seed=s)
+            y_pred = (test_probs >= res_tfidf["threshold"]).astype(int)
+            res_tfidf["experiment_fingerprint"] = exp_fp
+            res_tfidf["predictions"] = {
+                "y_true": y_test.tolist(),
+                "y_prob": test_probs.tolist(),
+                "y_pred": y_pred.tolist()
+            }
             save_run_result(paths.results_dir, r_name, res_tfidf)
-        else:
-            with open(paths.results_dir / "runs" / f"{r_name}.json", "r", encoding="utf-8") as f:
-                res_tfidf = json.load(f)
+
         results_by_model["tfidf_logreg_e2ld"].append(res_tfidf)
         print(f"  [TF-IDF LogReg] ROC-AUC: {res_tfidf['roc_auc']:.4f}, F1: {res_tfidf['f1']:.4f}")
 
         # 2. XGBoost Tabular
         r_name = f"baseline_xgboost_tabular_seed_{s}"
-        if not should_skip_run(paths.results_dir, r_name, force=args.force):
-            res_xgb_tab, _, _ = run_xgboost_baseline(df, splits, cfg, use_lexical=False, seed=s)
+        exp_fp = compute_experiment_fingerprint(
+            cfg,
+            stage="baseline_xgboost_tabular",
+            input_files=pq_inputs,
+            extra_dict={"seed": s, "use_lexical": False}
+        )
+        need_rerun = args.force or not should_skip_run(paths.results_dir, r_name, force=args.force, expected_fingerprint=exp_fp)
+        if not need_rerun:
+            try:
+                with open(paths.results_dir / "runs" / f"{r_name}.json", "r", encoding="utf-8") as f:
+                    res_xgb_tab = json.load(f)
+                if "predictions" not in res_xgb_tab:
+                    need_rerun = True
+            except Exception:
+                need_rerun = True
+
+        if need_rerun:
+            res_xgb_tab, y_test, test_probs = run_xgboost_baseline(df, splits, cfg, use_lexical=False, seed=s)
+            y_pred = (test_probs >= res_xgb_tab["threshold"]).astype(int)
+            res_xgb_tab["experiment_fingerprint"] = exp_fp
+            res_xgb_tab["predictions"] = {
+                "y_true": y_test.tolist(),
+                "y_prob": test_probs.tolist(),
+                "y_pred": y_pred.tolist()
+            }
             save_run_result(paths.results_dir, r_name, res_xgb_tab)
-        else:
-            with open(paths.results_dir / "runs" / f"{r_name}.json", "r", encoding="utf-8") as f:
-                res_xgb_tab = json.load(f)
+
         results_by_model["xgboost_tabular"].append(res_xgb_tab)
         print(f"  [XGBoost Tabular] ROC-AUC: {res_xgb_tab['roc_auc']:.4f}, F1: {res_xgb_tab['f1']:.4f}")
 
         # 3. XGBoost Tabular + Lexical
         r_name = f"baseline_xgboost_lexical_seed_{s}"
-        if not should_skip_run(paths.results_dir, r_name, force=args.force):
-            res_xgb_all, _, _ = run_xgboost_baseline(df, splits, cfg, use_lexical=True, seed=s)
+        exp_fp = compute_experiment_fingerprint(
+            cfg,
+            stage="baseline_xgboost_lexical",
+            input_files=pq_inputs,
+            extra_dict={"seed": s, "use_lexical": True}
+        )
+        need_rerun = args.force or not should_skip_run(paths.results_dir, r_name, force=args.force, expected_fingerprint=exp_fp)
+        if not need_rerun:
+            try:
+                with open(paths.results_dir / "runs" / f"{r_name}.json", "r", encoding="utf-8") as f:
+                    res_xgb_all = json.load(f)
+                if "predictions" not in res_xgb_all:
+                    need_rerun = True
+            except Exception:
+                need_rerun = True
+
+        if need_rerun:
+            res_xgb_all, y_test, test_probs = run_xgboost_baseline(df, splits, cfg, use_lexical=True, seed=s)
+            y_pred = (test_probs >= res_xgb_all["threshold"]).astype(int)
+            res_xgb_all["experiment_fingerprint"] = exp_fp
+            res_xgb_all["predictions"] = {
+                "y_true": y_test.tolist(),
+                "y_prob": test_probs.tolist(),
+                "y_pred": y_pred.tolist()
+            }
             save_run_result(paths.results_dir, r_name, res_xgb_all)
-        else:
-            with open(paths.results_dir / "runs" / f"{r_name}.json", "r", encoding="utf-8") as f:
-                res_xgb_all = json.load(f)
+
         results_by_model["xgboost_tabular_lexical"].append(res_xgb_all)
         print(f"  [XGBoost Tabular+Lexical] ROC-AUC: {res_xgb_all['roc_auc']:.4f}, F1: {res_xgb_all['f1']:.4f}")
 
         # 4. Single-feature length
         r_name = f"baseline_single_length_seed_{s}"
-        if not should_skip_run(paths.results_dir, r_name, force=args.force):
-            res_len, _, _ = run_single_feature_baseline(df, splits, feature_name="length", seed=s)
+        exp_fp = compute_experiment_fingerprint(
+            cfg,
+            stage="baseline_single_length",
+            input_files=pq_inputs,
+            extra_dict={"seed": s, "feature": "length"}
+        )
+        need_rerun = args.force or not should_skip_run(paths.results_dir, r_name, force=args.force, expected_fingerprint=exp_fp)
+        if not need_rerun:
+            try:
+                with open(paths.results_dir / "runs" / f"{r_name}.json", "r", encoding="utf-8") as f:
+                    res_len = json.load(f)
+                if "predictions" not in res_len:
+                    need_rerun = True
+            except Exception:
+                need_rerun = True
+
+        if need_rerun:
+            res_len, y_test, test_probs = run_single_feature_baseline(df, splits, feature_name="length", seed=s)
+            y_pred = (test_probs >= res_len["threshold"]).astype(int)
+            res_len["experiment_fingerprint"] = exp_fp
+            res_len["predictions"] = {
+                "y_true": y_test.tolist(),
+                "y_prob": test_probs.tolist(),
+                "y_pred": y_pred.tolist()
+            }
             save_run_result(paths.results_dir, r_name, res_len)
-        else:
-            with open(paths.results_dir / "runs" / f"{r_name}.json", "r", encoding="utf-8") as f:
-                res_len = json.load(f)
+
         results_by_model["single_feat_length"].append(res_len)
         print(f"  [Single-Feat Length] ROC-AUC: {res_len['roc_auc']:.4f}, F1: {res_len['f1']:.4f}")
 
         # 5. Single-feature no_ip
         r_name = f"baseline_single_no_ip_seed_{s}"
-        if not should_skip_run(paths.results_dir, r_name, force=args.force):
-            res_noip, _, _ = run_single_feature_baseline(df, splits, feature_name="no_ip", seed=s)
+        exp_fp = compute_experiment_fingerprint(
+            cfg,
+            stage="baseline_single_no_ip",
+            input_files=pq_inputs,
+            extra_dict={"seed": s, "feature": "no_ip"}
+        )
+        need_rerun = args.force or not should_skip_run(paths.results_dir, r_name, force=args.force, expected_fingerprint=exp_fp)
+        if not need_rerun:
+            try:
+                with open(paths.results_dir / "runs" / f"{r_name}.json", "r", encoding="utf-8") as f:
+                    res_noip = json.load(f)
+                if "predictions" not in res_noip:
+                    need_rerun = True
+            except Exception:
+                need_rerun = True
+
+        if need_rerun:
+            res_noip, y_test, test_probs = run_single_feature_baseline(df, splits, feature_name="no_ip", seed=s)
+            y_pred = (test_probs >= res_noip["threshold"]).astype(int)
+            res_noip["experiment_fingerprint"] = exp_fp
+            res_noip["predictions"] = {
+                "y_true": y_test.tolist(),
+                "y_prob": test_probs.tolist(),
+                "y_pred": y_pred.tolist()
+            }
             save_run_result(paths.results_dir, r_name, res_noip)
-        else:
-            with open(paths.results_dir / "runs" / f"{r_name}.json", "r", encoding="utf-8") as f:
-                res_noip = json.load(f)
+
         results_by_model["single_feat_no_ip"].append(res_noip)
         print(f"  [Single-Feat No-IP] ROC-AUC: {res_noip['roc_auc']:.4f}, F1: {res_noip['f1']:.4f}")
 
         # 6. Isolated Domain MLP (HeteroGNN with use_edges=False)
         if base_graph is not None:
             r_name = f"baseline_mlp_no_edges_seed_{s}"
-            if not should_skip_run(paths.results_dir, r_name, force=args.force):
+            exp_fp = compute_experiment_fingerprint(
+                cfg,
+                stage="baseline_mlp_no_edges",
+                input_files=[paths.processed_dir / "heterodata.pt"],
+                extra_dict={"seed": s}
+            )
+            need_rerun = args.force or not should_skip_run(paths.results_dir, r_name, force=args.force, expected_fingerprint=exp_fp)
+            if not need_rerun:
+                try:
+                    with open(paths.results_dir / "runs" / f"{r_name}.json", "r", encoding="utf-8") as f:
+                        res_mlp = json.load(f)
+                    if "predictions" not in res_mlp:
+                        need_rerun = True
+                except Exception:
+                    need_rerun = True
+
+            if need_rerun:
                 scaled_g, _ = apply_split_scaling(base_graph, splits.train_indices)
                 epochs_mlp = 3 if (args.smoke or args.fixture) else 30
-                res_mlp, _, _ = run_mlp_no_edges_baseline(scaled_g, splits, df, cfg, epochs=epochs_mlp, seed=s)
+                res_mlp, y_test, test_probs = run_mlp_no_edges_baseline(scaled_g, splits, df, cfg, epochs=epochs_mlp, seed=s)
+                y_pred = (test_probs >= res_mlp["threshold"]).astype(int)
+                res_mlp["experiment_fingerprint"] = exp_fp
+                res_mlp["predictions"] = {
+                    "y_true": y_test.tolist(),
+                    "y_prob": test_probs.tolist(),
+                    "y_pred": y_pred.tolist()
+                }
                 save_run_result(paths.results_dir, r_name, res_mlp)
-            else:
-                with open(paths.results_dir / "runs" / f"{r_name}.json", "r", encoding="utf-8") as f:
-                    res_mlp = json.load(f)
+
             results_by_model["mlp_no_edges"].append(res_mlp)
             print(f"  [Isolated Domain MLP] ROC-AUC: {res_mlp['roc_auc']:.4f}, F1: {res_mlp['f1']:.4f}")
 

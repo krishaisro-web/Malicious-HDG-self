@@ -35,6 +35,27 @@ def get_cpu_model_name() -> str:
     return proc if proc else platform.machine()
 
 
+def _get_adj_cache(data: HeteroData) -> Dict[Tuple[str, str, str], Dict[int, np.ndarray]]:
+    """Caches forward adjacency lookup (source_id -> array of target_ids) per edge type."""
+    if not hasattr(data, "_latency_adj_cache"):
+        cache: Dict[Tuple[str, str, str], Dict[int, np.ndarray]] = {}
+        for et in data.edge_types:
+            e_arr = data[et].edge_index.cpu().numpy()
+            if e_arr.shape[1] == 0:
+                cache[et] = {}
+                continue
+            src = e_arr[0]
+            dst = e_arr[1]
+            order = np.argsort(src)
+            src_s = src[order]
+            dst_s = dst[order]
+            uniq_src, idxs = np.unique(src_s, return_index=True)
+            splits = np.split(dst_s, idxs[1:])
+            cache[et] = dict(zip(uniq_src.tolist(), splits))
+        data._latency_adj_cache = cache
+    return data._latency_adj_cache
+
+
 def build_ego_subgraph(
     data: HeteroData,
     target_domain_indices: List[int],
@@ -46,23 +67,29 @@ def build_ego_subgraph(
     Returns: (ego_subgraph_heterodata, local_target_indices)
     """
     sub_data = HeteroData()
+    adj_cache = _get_adj_cache(data)
 
     # Track visited node IDs per node type
     visited: Dict[str, Set[int]] = {nt: set() for nt in data.node_types}
     for d_idx in target_domain_indices:
         visited["domain"].add(d_idx)
 
-    # Hop 1: Outgoing edges from domains to infrastructure
+    # Hop 1 & 2: Outgoing edges from domains to infrastructure
     for hop in range(num_hops):
         current_visited = {nt: list(visited[nt]) for nt in data.node_types}
         for et in data.edge_types:
             src_t, rel, dst_t = et
-            if current_visited[src_t]:
-                e_arr = data[et].edge_index.cpu().numpy()
-                if e_arr.shape[1] > 0:
-                    mask = np.isin(e_arr[0], current_visited[src_t])
-                    if np.any(mask):
-                        visited[dst_t].update(e_arr[1][mask].tolist())
+            src_nodes = current_visited[src_t]
+            if not src_nodes:
+                continue
+            et_adj = adj_cache.get(et, {})
+            if not et_adj:
+                continue
+            dst_set = visited[dst_t]
+            for u in src_nodes:
+                nbrs = et_adj.get(u)
+                if nbrs is not None:
+                    dst_set.update(nbrs.tolist())
 
     # Create sorted local ID mappings: target domains are mapped to the first consecutive local indices
     local_maps: Dict[str, Dict[int, int]] = {}
@@ -93,20 +120,29 @@ def build_ego_subgraph(
     # Remap edges that connect nodes within the visited ego subgraph
     for et in data.edge_types:
         src_t, rel, dst_t = et
-        if et not in data.edge_types:
-            continue
-        e_arr = data[et].edge_index.cpu().numpy()
-        if e_arr.shape[1] == 0:
+        et_adj = adj_cache.get(et, {})
+        if not et_adj:
             sub_data[et].edge_index = torch.empty((2, 0), dtype=torch.long)
             continue
 
         src_map = local_maps[src_t]
         dst_map = local_maps[dst_t]
 
-        mask = np.isin(e_arr[0], list(src_map.keys())) & np.isin(e_arr[1], list(dst_map.keys()))
-        if np.any(mask):
-            sub_src = [src_map[u] for u in e_arr[0][mask]]
-            sub_dst = [dst_map[v] for v in e_arr[1][mask]]
+        sub_src: List[int] = []
+        sub_dst: List[int] = []
+
+        # Iterate only through the visited source nodes (small set, microsecond scale)
+        for u in visited[src_t]:
+            nbrs = et_adj.get(u)
+            if nbrs is not None:
+                u_mapped = src_map[u]
+                for v in nbrs:
+                    v_mapped = dst_map.get(v)
+                    if v_mapped is not None:
+                        sub_src.append(u_mapped)
+                        sub_dst.append(v_mapped)
+
+        if sub_src:
             sub_data[et].edge_index = torch.tensor([sub_src, sub_dst], dtype=torch.long)
         else:
             sub_data[et].edge_index = torch.empty((2, 0), dtype=torch.long)

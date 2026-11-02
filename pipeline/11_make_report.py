@@ -22,6 +22,8 @@ import os
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+import math
+import numpy as np
 
 # Ensure repo root is on sys.path
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -143,7 +145,13 @@ def evaluate_objective_statuses(
         # Check paired comparisons in random_gnn if present
         paired = random_gnn.get("paired_comparisons", {})
         if "sage_vs_xgboost" in paired:
-            p_val = paired["sage_vs_xgboost"].get("pooled_summary", {}).get("mcnemar", {}).get("pvalue")
+            # Check paired bootstrap AUROC difference test first, fallback to McNemar
+            comp = paired["sage_vs_xgboost"]
+            auc_test = comp.get("pooled_summary", {}).get("bootstrap_auc_diff", {})
+            mcn_test = comp.get("pooled_summary", {}).get("mcnemar", {})
+            p_val = auc_test.get("pvalue_two_sided")
+            if p_val is None or np.isnan(p_val):
+                p_val = mcn_test.get("pvalue")
 
         if p_val is not None:
             o3_val = f"HeteroGNN: {gnn_auc:.4f} vs XGBoost: {xgb_auc:.4f} (Δ: {'+' if diff >= 0 else ''}{diff:.4f}, p={p_val:.4f})"

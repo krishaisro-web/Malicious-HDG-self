@@ -143,11 +143,12 @@ def main() -> None:
                     print(f"  [RESUME] Cached run is marked BLOCKED_INSUFFICIENT_DATA.")
                     continue
                 results_by_variant[var].append(cached_res["metrics"])
-                predictions_by_variant[var][s] = {
-                    "y_true": np.array(cached_res["predictions"]["y_true"]),
-                    "y_prob": np.array(cached_res["predictions"]["y_prob"]),
-                    "y_pred": np.array(cached_res["predictions"]["y_pred"])
-                }
+                if "predictions" in cached_res and isinstance(cached_res["predictions"], dict):
+                    predictions_by_variant[var][s] = {
+                        "y_true": np.array(cached_res["predictions"]["y_true"]),
+                        "y_prob": np.array(cached_res["predictions"]["y_prob"]),
+                        "y_pred": np.array(cached_res["predictions"]["y_pred"])
+                    }
                 continue
 
             # 1. Create split for this seed
@@ -381,6 +382,36 @@ def main() -> None:
             predictions_b=predictions_by_variant["sage_guard"],
             n_bootstrap=boot_samples
         )
+
+    # Paired comparison against XGBoost tabular baseline (specifically on random split)
+    if "sage" in variants and len(seeds) > 0:
+        xgb_preds = {}
+        for s in seeds:
+            xgb_run_path = paths.results_dir / "runs" / f"baseline_xgboost_tabular_seed_{s}.json"
+            if xgb_run_path.exists():
+                try:
+                    with open(xgb_run_path, "r", encoding="utf-8") as f:
+                        xgb_data = json.load(f)
+                    if "predictions" in xgb_data and "y_true" in xgb_data["predictions"]:
+                        p_true = np.array(xgb_data["predictions"]["y_true"])
+                        p_prob = np.array(xgb_data["predictions"]["y_prob"])
+                        th = float(xgb_data.get("threshold", 0.5))
+                        p_pred = np.array(xgb_data["predictions"].get("y_pred", (p_prob >= th).astype(int)))
+                        xgb_preds[s] = {
+                            "y_true": p_true,
+                            "y_prob": p_prob,
+                            "y_pred": p_pred
+                        }
+                except Exception:
+                    pass
+        if len(xgb_preds) == len(seeds) and all(s in predictions_by_variant.get("sage", {}) for s in seeds):
+            paired_comparison_results["sage_vs_xgboost"] = multi_seed_paired_comparisons(
+                seeds=seeds,
+                predictions_a=predictions_by_variant["sage"],
+                predictions_b=xgb_preds,
+                n_bootstrap=boot_samples
+            )
+            print(f"  [PAIRED] Successfully computed multi-seed paired comparison for 'sage_vs_xgboost'.")
 
     final_report = {
         "is_fixture": args.fixture,
