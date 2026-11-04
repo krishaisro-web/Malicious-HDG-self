@@ -16,18 +16,15 @@ data/processed/real/*
 data/processed/smoke/*
 !data/processed/smoke/.gitkeep
 
-# Production Results and Checkpoints (gitignored)
-results/real/*
-!results/real/.gitkeep
+# Production Results and Checkpoints (Allow real results and checkpoints to be tracked)
+# results/real/ is now tracked
 results/smoke/*
 !results/smoke/.gitkeep
-artifacts/checkpoints/real/*
-!artifacts/checkpoints/real/.gitkeep
+# artifacts/checkpoints/real/ is now tracked
 artifacts/checkpoints/smoke/*
 !artifacts/checkpoints/smoke/.gitkeep
 
-# Large checkpoint weights and archives
-artifacts/checkpoints/**/*.pt
+# Checkpoint temporary files and archives
 artifacts/checkpoints/**/*.tmp
 *.tar.gz
 results_paper_ready.zip
