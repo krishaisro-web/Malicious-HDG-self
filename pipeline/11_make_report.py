@@ -1050,8 +1050,8 @@ def main() -> None:
 
     if stacker_file:
         st_d = load_json_if_exists(stacker_file)
-        b_tpr = st_d.get("tpr_sage_at_01pct_fpr", 0.0)
-        i_tpr = st_d.get("tpr_stacker_at_01pct_fpr", 0.0)
+        b_tpr = st_d.get("base_sage_tpr_at_01pct_fpr") or st_d.get("tpr_sage_at_01pct_fpr") or 0.0
+        i_tpr = st_d.get("intervention_tpr_at_01pct_fpr") or st_d.get("tpr_stacker_at_01pct_fpr") or 0.0
         d_tpr = st_d.get("delta_tpr", 0.0)
         ci = st_d.get("bootstrap_ci_95", (0.0, 0.0))
         st = st_d.get("status", "NEGATIVE_RESULT (PRE-COMMITTED)")
@@ -1061,8 +1061,8 @@ def main() -> None:
 
     if pauc_file:
         p_d = load_json_if_exists(pauc_file)
-        b_tpr = p_d.get("tpr_sage_at_01pct_fpr", 0.0)
-        i_tpr = p_d.get("tpr_pauc_at_01pct_fpr", 0.0)
+        b_tpr = p_d.get("base_sage_tpr_at_01pct_fpr") or p_d.get("tpr_sage_at_01pct_fpr") or 0.0
+        i_tpr = p_d.get("intervention_tpr_at_01pct_fpr") or p_d.get("tpr_pauc_at_01pct_fpr") or 0.0
         d_tpr = p_d.get("delta_tpr", 0.0)
         ci = p_d.get("bootstrap_ci_95", (0.0, 0.0))
         st = p_d.get("status", "NEGATIVE_RESULT (PRE-COMMITTED)")

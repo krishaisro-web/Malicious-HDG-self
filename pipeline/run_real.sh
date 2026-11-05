@@ -197,7 +197,10 @@ ${PYTHON_BIN} -m pipeline.04_train_gnn --config "${CONFIG_FILE}" --split-type ti
 
 log "STAGE 6c: Training & Evaluating HeteroGNN (Group Split - Infrastructure Component Holdout)..."
 ${PYTHON_BIN} -m pipeline.04_train_gnn --config "${CONFIG_FILE}" --split-type group --variant both ${EXTRA_PIPELINE_FLAGS[@]+"${EXTRA_PIPELINE_FLAGS[@]}"}
-success "Stage 6 (HeteroGNN Random, Time, Group Evaluation) PASSED."
+
+log "STAGE 6d: Evaluating Pre-Committed Stop Rules (Post-Hoc Stacker & pAUC Fine-Tuning)..."
+${PYTHON_BIN} -m pipeline.04b_stop_rules --config "${CONFIG_FILE}" ${EXTRA_PIPELINE_FLAGS[@]+"${EXTRA_PIPELINE_FLAGS[@]}"}
+success "Stage 6 (HeteroGNN Random, Time, Group, Stop Rules Evaluation) PASSED."
 
 # Step 7: Topological & Feature Ablation Study (Holm-Bonferroni Corrected)
 log "STAGE 7: Running Systematic Ablation Study (Reduced-Budget Protocol)..."
