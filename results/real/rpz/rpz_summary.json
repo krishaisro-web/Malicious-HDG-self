@@ -1,0 +1,7 @@
+{
+  "status": "BLOCKED_MISSING_CERT_METADATA",
+  "reason": "Checkpoint or split does not contain pre-allocated certification indices ('cert_indices'). Post-hoc fallback is prohibited.",
+  "checkpoint_file": "gnn_attn_time_seed_42.pt",
+  "rules_emitted": 0,
+  "timestamp": "2026-10-31T15:41:16.264738+00:00"
+}

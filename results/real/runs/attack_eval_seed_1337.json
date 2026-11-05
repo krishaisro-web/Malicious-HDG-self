@@ -1,0 +1,122 @@
+{
+  "experiment": "attack_eval",
+  "seed": 1337,
+  "budgets": {
+    "1": {
+      "budget": 1,
+      "clean_sage": {
+        "roc_auc": 0.9322,
+        "f1": 0.8077,
+        "recall": 0.8192,
+        "tpr_at_0.1pct_fpr": 0.1626
+      },
+      "attacked_sage_undefended": {
+        "roc_auc": 0.9388,
+        "f1": 0.8121,
+        "recall": 0.831,
+        "tpr_at_0.1pct_fpr": 0.1205,
+        "evasion_rate": 0.0673,
+        "robustness_delta": 0.0044
+      },
+      "attacked_sage_guard_defended": {
+        "roc_auc": 0.9068,
+        "f1": 0.7217,
+        "recall": 0.6995,
+        "tpr_at_0.1pct_fpr": 0.0638,
+        "evasion_rate": 0.2019,
+        "recovery_score": 20.5455
+      },
+      "clean_sage_guard_defense_cost": {
+        "f1": 0.8032,
+        "f1_cost": -0.0045
+      }
+    },
+    "2": {
+      "budget": 2,
+      "clean_sage": {
+        "roc_auc": 0.9322,
+        "f1": 0.8077,
+        "recall": 0.8192,
+        "tpr_at_0.1pct_fpr": 0.1626
+      },
+      "attacked_sage_undefended": {
+        "roc_auc": 0.9541,
+        "f1": 0.8582,
+        "recall": 0.917,
+        "tpr_at_0.1pct_fpr": 0.1131,
+        "evasion_rate": 0.0159,
+        "robustness_delta": 0.0505
+      },
+      "attacked_sage_guard_defended": {
+        "roc_auc": 0.9154,
+        "f1": 0.76,
+        "recall": 0.7596,
+        "tpr_at_0.1pct_fpr": 0.0405,
+        "evasion_rate": 0.1524,
+        "recovery_score": 1.9446
+      },
+      "clean_sage_guard_defense_cost": {
+        "f1": 0.8032,
+        "f1_cost": -0.0045
+      }
+    },
+    "5": {
+      "budget": 5,
+      "clean_sage": {
+        "roc_auc": 0.9322,
+        "f1": 0.8077,
+        "recall": 0.8192,
+        "tpr_at_0.1pct_fpr": 0.1626
+      },
+      "attacked_sage_undefended": {
+        "roc_auc": 0.9745,
+        "f1": 0.8828,
+        "recall": 0.9743,
+        "tpr_at_0.1pct_fpr": 0.1283,
+        "evasion_rate": 0.0015,
+        "robustness_delta": 0.0751
+      },
+      "attacked_sage_guard_defended": {
+        "roc_auc": 0.9337,
+        "f1": 0.8413,
+        "recall": 0.8984,
+        "tpr_at_0.1pct_fpr": 0.0182,
+        "evasion_rate": 0.0407,
+        "recovery_score": 0.5526
+      },
+      "clean_sage_guard_defense_cost": {
+        "f1": 0.8032,
+        "f1_cost": -0.0045
+      }
+    },
+    "10": {
+      "budget": 10,
+      "clean_sage": {
+        "roc_auc": 0.9322,
+        "f1": 0.8077,
+        "recall": 0.8192,
+        "tpr_at_0.1pct_fpr": 0.1626
+      },
+      "attacked_sage_undefended": {
+        "roc_auc": 0.9842,
+        "f1": 0.8823,
+        "recall": 0.981,
+        "tpr_at_0.1pct_fpr": 0.164,
+        "evasion_rate": 0.0005,
+        "robustness_delta": 0.0746
+      },
+      "attacked_sage_guard_defended": {
+        "roc_auc": 0.9458,
+        "f1": 0.8704,
+        "recall": 0.9535,
+        "tpr_at_0.1pct_fpr": 0.0028,
+        "evasion_rate": 0.0112,
+        "recovery_score": 0.1595
+      },
+      "clean_sage_guard_defense_cost": {
+        "f1": 0.8032,
+        "f1_cost": -0.0045
+      }
+    }
+  }
+}

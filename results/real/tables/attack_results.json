@@ -1,0 +1,50 @@
+{
+  "budget_1": {
+    "budget": 1,
+    "num_seeds": 5,
+    "clean_f1_mean": 0.8025,
+    "clean_f1_std": 0.0061,
+    "attacked_undefended_f1_mean": 0.8033,
+    "attacked_undefended_f1_std": 0.0101,
+    "attacked_guard_f1_mean": 0.7668,
+    "attacked_guard_f1_std": 0.0326,
+    "evasion_rate_mean": 0.0691,
+    "recovery_score_mean": 4.1715
+  },
+  "budget_2": {
+    "budget": 2,
+    "num_seeds": 5,
+    "clean_f1_mean": 0.8025,
+    "clean_f1_std": 0.0061,
+    "attacked_undefended_f1_mean": 0.8499,
+    "attacked_undefended_f1_std": 0.008,
+    "attacked_guard_f1_mean": 0.8104,
+    "attacked_guard_f1_std": 0.0265,
+    "evasion_rate_mean": 0.0163,
+    "recovery_score_mean": 0.8212
+  },
+  "budget_5": {
+    "budget": 5,
+    "num_seeds": 5,
+    "clean_f1_mean": 0.8025,
+    "clean_f1_std": 0.0061,
+    "attacked_undefended_f1_mean": 0.8743,
+    "attacked_undefended_f1_std": 0.0049,
+    "attacked_guard_f1_mean": 0.8587,
+    "attacked_guard_f1_std": 0.0118,
+    "evasion_rate_mean": 0.0012,
+    "recovery_score_mean": 0.2212
+  },
+  "budget_10": {
+    "budget": 10,
+    "num_seeds": 5,
+    "clean_f1_mean": 0.8025,
+    "clean_f1_std": 0.0061,
+    "attacked_undefended_f1_mean": 0.8741,
+    "attacked_undefended_f1_std": 0.0045,
+    "attacked_guard_f1_mean": 0.873,
+    "attacked_guard_f1_std": 0.0028,
+    "evasion_rate_mean": 0.0003,
+    "recovery_score_mean": 0.0137
+  }
+}

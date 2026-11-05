@@ -1,0 +1,63 @@
+{
+  "status": "BLOCKED_INSUFFICIENT_DATA",
+  "reason": "Need at least 2 valid months with both classes for continual learning, but found 1.",
+  "valid_months": [
+    "2023-12"
+  ],
+  "all_months": [
+    "2022-12",
+    "2023-02",
+    "2023-07",
+    "2023-11",
+    "2023-12",
+    "2024-01",
+    "2024-02",
+    "2024-03"
+  ],
+  "month_class_counts": {
+    "2022-12": {
+      "total": 7776,
+      "malware": 0,
+      "benign": 7776
+    },
+    "2023-02": {
+      "total": 7478,
+      "malware": 0,
+      "benign": 7478
+    },
+    "2023-07": {
+      "total": 13539,
+      "malware": 13539,
+      "benign": 0
+    },
+    "2023-11": {
+      "total": 9407,
+      "malware": 9407,
+      "benign": 0
+    },
+    "2023-12": {
+      "total": 53943,
+      "malware": 2448,
+      "benign": 51495
+    },
+    "2024-01": {
+      "total": 38,
+      "malware": 38,
+      "benign": 0
+    },
+    "2024-02": {
+      "total": 713,
+      "malware": 713,
+      "benign": 0
+    },
+    "2024-03": {
+      "total": 7106,
+      "malware": 7106,
+      "benign": 0
+    }
+  },
+  "temporal_column": "t_month",
+  "steps": [],
+  "message": "Streaming evaluation blocked due to lack of multiple consecutive multi-class months.",
+  "experiment_fingerprint": "9efdfeab8213ef7b"
+}

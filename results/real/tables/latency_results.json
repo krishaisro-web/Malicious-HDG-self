@@ -1,0 +1,165 @@
+{
+  "hardware": {
+    "cpu_model": "QEMU Virtual CPU version 2.5+",
+    "core_count": 48,
+    "os": "Linux 6.8.0-71-generic (x86_64)",
+    "torch_version": "2.14.0+cu130",
+    "max_available_threads": 32
+  },
+  "config": {
+    "num_queries": 500,
+    "warmup": 20,
+    "is_fixture": false,
+    "is_smoke": false
+  },
+  "benchmarks": [
+    {
+      "batch_size": 1,
+      "num_queries_measured": 500,
+      "feature_lookup": {
+        "mean_ms": 8.264,
+        "median_ms": 8.342,
+        "p95_ms": 9.222,
+        "p99_ms": 9.897,
+        "min_ms": 6.638,
+        "max_ms": 13.796
+      },
+      "ego_subgraph_build": {
+        "mean_ms": 414.589,
+        "median_ms": 252.857,
+        "p95_ms": 1035.466,
+        "p99_ms": 1075.685,
+        "min_ms": 4.665,
+        "max_ms": 1149.337
+      },
+      "model_forward": {
+        "mean_ms": 126.045,
+        "median_ms": 94.064,
+        "p95_ms": 253.258,
+        "p99_ms": 265.243,
+        "min_ms": 41.596,
+        "max_ms": 283.041
+      },
+      "end_to_end": {
+        "mean_ms": 548.898,
+        "median_ms": 355.718,
+        "p95_ms": 1292.504,
+        "p99_ms": 1333.987,
+        "min_ms": 53.324,
+        "max_ms": 1402.534
+      },
+      "threads": 1
+    },
+    {
+      "batch_size": 32,
+      "num_queries_measured": 500,
+      "feature_lookup": {
+        "mean_ms": 10.237,
+        "median_ms": 10.114,
+        "p95_ms": 11.505,
+        "p99_ms": 12.735,
+        "min_ms": 9.056,
+        "max_ms": 13.548
+      },
+      "ego_subgraph_build": {
+        "mean_ms": 828.54,
+        "median_ms": 823.167,
+        "p95_ms": 941.016,
+        "p99_ms": 962.614,
+        "min_ms": 646.629,
+        "max_ms": 996.358
+      },
+      "model_forward": {
+        "mean_ms": 3755.239,
+        "median_ms": 3705.421,
+        "p95_ms": 4101.524,
+        "p99_ms": 4276.649,
+        "min_ms": 3085.01,
+        "max_ms": 23368.345
+      },
+      "end_to_end": {
+        "mean_ms": 4594.017,
+        "median_ms": 4561.11,
+        "p95_ms": 5003.397,
+        "p99_ms": 5202.102,
+        "min_ms": 3846.314,
+        "max_ms": 24342.165
+      },
+      "threads": 1
+    },
+    {
+      "batch_size": 1,
+      "num_queries_measured": 500,
+      "feature_lookup": {
+        "mean_ms": 8.264,
+        "median_ms": 8.342,
+        "p95_ms": 9.222,
+        "p99_ms": 9.897,
+        "min_ms": 6.638,
+        "max_ms": 13.796
+      },
+      "ego_subgraph_build": {
+        "mean_ms": 414.589,
+        "median_ms": 252.857,
+        "p95_ms": 1035.466,
+        "p99_ms": 1075.685,
+        "min_ms": 4.665,
+        "max_ms": 1149.337
+      },
+      "model_forward": {
+        "mean_ms": 126.045,
+        "median_ms": 94.064,
+        "p95_ms": 253.258,
+        "p99_ms": 265.243,
+        "min_ms": 41.596,
+        "max_ms": 283.041
+      },
+      "end_to_end": {
+        "mean_ms": 548.898,
+        "median_ms": 355.718,
+        "p95_ms": 1292.504,
+        "p99_ms": 1333.987,
+        "min_ms": 53.324,
+        "max_ms": 1402.534
+      },
+      "threads": 32
+    },
+    {
+      "batch_size": 32,
+      "num_queries_measured": 500,
+      "feature_lookup": {
+        "mean_ms": 9.492,
+        "median_ms": 9.46,
+        "p95_ms": 10.334,
+        "p99_ms": 10.706,
+        "min_ms": 8.559,
+        "max_ms": 10.913
+      },
+      "ego_subgraph_build": {
+        "mean_ms": 812.472,
+        "median_ms": 805.209,
+        "p95_ms": 927.561,
+        "p99_ms": 941.449,
+        "min_ms": 637.728,
+        "max_ms": 971.819
+      },
+      "model_forward": {
+        "mean_ms": 511.881,
+        "median_ms": 474.1,
+        "p95_ms": 538.164,
+        "p99_ms": 644.123,
+        "min_ms": 402.253,
+        "max_ms": 15769.639
+      },
+      "end_to_end": {
+        "mean_ms": 1333.846,
+        "median_ms": 1297.42,
+        "p95_ms": 1449.7,
+        "p99_ms": 1515.907,
+        "min_ms": 1061.064,
+        "max_ms": 16609.677
+      },
+      "threads": 32
+    }
+  ]
+}

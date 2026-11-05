@@ -1,0 +1,79 @@
+{
+  "checkpoint_file": "gnn_sage_group_seed_999.pt",
+  "experiment_fingerprint": "af4031ef179c6350",
+  "architecture": "sage",
+  "model_config": {
+    "variant": "sage",
+    "hidden_dim": 64,
+    "out_dim": 32,
+    "num_layers": 2,
+    "num_heads": 4,
+    "dropout": 0.2,
+    "prune_threshold": 0.1,
+    "use_edges": true
+  },
+  "seed": 999,
+  "split_type": "group",
+  "split_metadata": {
+    "joint_grouping": true,
+    "giant_component_fraction": 0.69682,
+    "group_mode": "asn_fallback",
+    "asn_leakage_report": {
+      "ns_leakage_share": 0.59,
+      "reg_leakage_share": 0.6145,
+      "cert_leakage_share": 0.1015,
+      "any_infra_leakage_share": 0.7747,
+      "test_domains_count": 15000
+    }
+  },
+  "threshold": 0.4099999999999999,
+  "best_val_auc": 0.8871,
+  "epochs_trained": 131,
+  "val_count": 15000,
+  "cert_count": 0,
+  "test_count": 15000,
+  "cert_indices": [],
+  "created_at": 1793419124.3739684,
+  "target_fprs": [
+    0.01,
+    0.001
+  ],
+  "operating_points": {
+    "tpr_at_1.0pct_fpr": {
+      "tpr": 0.0009,
+      "threshold": 0.9375,
+      "realised_test_fpr": 0.0,
+      "f1_at_operating_point": 0.0018,
+      "precision_at_operating_point": 1.0,
+      "recall_at_operating_point": 0.0009,
+      "prevalence_adjusted_precision": {
+        "pi_1.0pct": 1.0,
+        "pi_0.1pct": 1.0
+      },
+      "expected_fp": 106,
+      "warning": null
+    },
+    "tpr_at_0.1pct_fpr": {
+      "tpr": 0.0,
+      "threshold": 0.9555,
+      "realised_test_fpr": 0.0,
+      "f1_at_operating_point": 0.0,
+      "precision_at_operating_point": 0.0,
+      "recall_at_operating_point": 0.0,
+      "prevalence_adjusted_precision": {
+        "pi_1.0pct": 0.0,
+        "pi_0.1pct": 0.0
+      },
+      "expected_fp": 11,
+      "warning": null
+    }
+  },
+  "metrics": {
+    "roc_auc": 0.774,
+    "pr_auc": 0.6205,
+    "f1": 0.5616,
+    "accuracy": null,
+    "precision": 0.4551,
+    "recall": 0.7332
+  }
+}

@@ -1,0 +1,170 @@
+{
+  "is_fixture": false,
+  "is_smoke": true,
+  "split_type": "random",
+  "variants": {
+    "sage": {
+      "num_seeds": 1,
+      "split_type": "random",
+      "roc_auc_mean": 0.778,
+      "roc_auc_std": 0.0,
+      "f1_mean": 0.6072,
+      "f1_std": 0.0,
+      "pr_auc_mean": 0.6461,
+      "pr_auc_std": 0.0,
+      "tpr_at_0.1pct_fpr_mean": 0.028,
+      "runs": [
+        {
+          "roc_auc": 0.778,
+          "pr_auc": 0.6461,
+          "f1": 0.6072,
+          "precision": 0.5315,
+          "recall": 0.708,
+          "specificity": 0.6886,
+          "threshold": 0.22,
+          "test_counts": {
+            "total": 751,
+            "positives": 250,
+            "negatives": 501,
+            "sample_prevalence": 0.3329
+          },
+          "confusion_matrix": {
+            "tp": 177,
+            "tn": 345,
+            "fp": 156,
+            "fn": 73
+          },
+          "operating_points": {
+            "tpr_at_1.0pct_fpr": {
+              "tpr": 0.104,
+              "threshold": 0.6763,
+              "realised_test_fpr": 0.015968,
+              "f1_at_operating_point": 0.1831,
+              "precision_at_operating_point": 0.7647,
+              "recall_at_operating_point": 0.104,
+              "prevalence_adjusted_precision": {
+                "pi_1.0pct": 0.0617,
+                "pi_0.1pct": 0.0065
+              },
+              "expected_fp": 5,
+              "warning": "Expected false positives at 1.0% FPR is 5 (< 10). Test sample size (501 negatives) provides limited statistical power at this FPR."
+            },
+            "tpr_at_0.1pct_fpr": {
+              "tpr": 0.028,
+              "threshold": 0.7011,
+              "realised_test_fpr": 0.001996,
+              "f1_at_operating_point": 0.0543,
+              "precision_at_operating_point": 0.875,
+              "recall_at_operating_point": 0.028,
+              "prevalence_adjusted_precision": {
+                "pi_1.0pct": 0.1241,
+                "pi_0.1pct": 0.0138
+              },
+              "expected_fp": 1,
+              "warning": "Expected false positives at 0.1% FPR is 1 (< 10). Test sample size (501 negatives) provides limited statistical power at this FPR."
+            }
+          },
+          "bootstrap_ci": {
+            "roc_auc": {
+              "point": 0.7742,
+              "ci_lower": 0.7456,
+              "ci_upper": 0.8013,
+              "std": 0.0169
+            },
+            "pr_auc": {
+              "point": 0.6443,
+              "ci_lower": 0.5826,
+              "ci_upper": 0.6965,
+              "std": 0.0319
+            },
+            "f1": {
+              "point": 0.604,
+              "ci_lower": 0.5587,
+              "ci_upper": 0.6477,
+              "std": 0.0238
+            }
+          },
+          "breakdowns": {
+            "by_resolution": {
+              "resolved": {
+                "count": 588,
+                "roc_auc": 0.7304,
+                "f1": 0.4848
+              },
+              "no_ip": {
+                "count": 163,
+                "roc_auc": 0.7147,
+                "f1": 0.7668
+              }
+            },
+            "by_source": {
+              "../../virus-total/finished_collections/benign_groundtruth2312.txt": {
+                "count": 399,
+                "accuracy": 0.6967
+              },
+              "Github": {
+                "count": 33,
+                "accuracy": 0.8182
+              },
+              "Steven Black": {
+                "count": 59,
+                "accuracy": 0.678
+              },
+              "The Firebog": {
+                "count": 47,
+                "accuracy": 0.8723
+              },
+              "ThreatFox": {
+                "count": 88,
+                "accuracy": 0.625
+              },
+              "data/alexa.csv": {
+                "count": 58,
+                "accuracy": 0.7069
+              },
+              "data/cisco_umbrella_year_filtered_domains.csv": {
+                "count": 44,
+                "accuracy": 0.5909
+              }
+            },
+            "by_malware_family": {
+              "Astaroth": {
+                "count": 5,
+                "detection_rate_recall": 0.8
+              },
+              "IcedID": {
+                "count": 8,
+                "detection_rate_recall": 1.0
+              },
+              "Prometei": {
+                "count": 6,
+                "detection_rate_recall": 1.0
+              },
+              "QakBot": {
+                "count": 42,
+                "detection_rate_recall": 0.2619
+              },
+              "unknown": {
+                "count": 164,
+                "detection_rate_recall": 0.7561
+              }
+            }
+          },
+          "training_metadata": {
+            "chosen_lr": 0.005,
+            "lr_grid": [
+              0.001,
+              0.003,
+              0.005
+            ],
+            "epochs_trained": 3,
+            "best_val_auc": 0.7577,
+            "use_class_weights": false,
+            "checkpoint_path": "/home/krisha/Malicious-HDG-self/artifacts/checkpoints/real/gnn_sage_random_seed_42.pt"
+          }
+        }
+      ]
+    }
+  },
+  "paired_comparisons": {}
+}

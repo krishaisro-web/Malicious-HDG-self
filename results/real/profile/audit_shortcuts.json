@@ -1,0 +1,57 @@
+{
+  "is_fixture": false,
+  "single_feature_aucs": {
+    "length": 0.6211,
+    "num_labels": 0.6342,
+    "subdomain_flag": 0.5091,
+    "tld": 0.8737,
+    "no_ip_nxdomain": 0.6267,
+    "has_tls": 0.6492,
+    "has_rdap": 0.5168,
+    "source_only": 1.0
+  },
+  "features_with_auc_ge_0_90": [],
+  "verdict_passed": true,
+  "source_by_class_table": {
+    "../../virus-total/finished_collections/benign_groundtruth2312.txt": {
+      "malware_count": 0,
+      "benign_count": 128753
+    },
+    "Github": {
+      "malware_count": 12186,
+      "benign_count": 0
+    },
+    "MISP": {
+      "malware_count": 2418,
+      "benign_count": 0
+    },
+    "Spam404": {
+      "malware_count": 989,
+      "benign_count": 0
+    },
+    "Steven Black": {
+      "malware_count": 16913,
+      "benign_count": 0
+    },
+    "The Firebog": {
+      "malware_count": 15691,
+      "benign_count": 0
+    },
+    "ThreatFox": {
+      "malware_count": 32806,
+      "benign_count": 0
+    },
+    "URLhaus": {
+      "malware_count": 2351,
+      "benign_count": 0
+    },
+    "data/alexa.csv": {
+      "malware_count": 0,
+      "benign_count": 19415
+    },
+    "data/cisco_umbrella_year_filtered_domains.csv": {
+      "malware_count": 0,
+      "benign_count": 18540
+    }
+  }
+}

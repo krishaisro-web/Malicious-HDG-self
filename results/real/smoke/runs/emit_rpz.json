@@ -1,0 +1,29 @@
+{
+  "generated_at": "2026-10-14T05:18:18.303705+00:00",
+  "target_fpr": 0.001,
+  "checkpoint_path": null,
+  "checkpoint_sha256": null,
+  "calibrated_threshold": 0.536074459552765,
+  "realized_val_fpr": 0.001,
+  "total_test_domains": 15001,
+  "rules_emitted": 36,
+  "blocking_rate_pct": 0.24,
+  "top_malware_families": {
+    "unknown": 12,
+    "QakBot": 3,
+    "Cobalt Strike": 2,
+    "IRATA": 2,
+    "Astaroth": 1,
+    "Raspberry Robin": 1
+  },
+  "top_sources": {
+    "../../virus-total/finished_collections/benign_groundtruth2312.txt": 10,
+    "ThreatFox": 9,
+    "The Firebog": 6,
+    "data/cisco_umbrella_year_filtered_domains.csv": 4,
+    "Github": 4,
+    "URLhaus": 1,
+    "data/alexa.csv": 1,
+    "Steven Black": 1
+  }
+}

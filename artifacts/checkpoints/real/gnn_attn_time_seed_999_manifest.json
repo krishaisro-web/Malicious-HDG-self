@@ -1,0 +1,72 @@
+{
+  "checkpoint_file": "gnn_attn_time_seed_999.pt",
+  "experiment_fingerprint": "e8a0df469fe8e9b8",
+  "architecture": "attn",
+  "model_config": {
+    "variant": "attn",
+    "hidden_dim": 64,
+    "out_dim": 32,
+    "num_layers": 2,
+    "num_heads": 4,
+    "dropout": 0.2,
+    "prune_threshold": 0.1,
+    "use_edges": true
+  },
+  "seed": 999,
+  "split_type": "time",
+  "split_metadata": {
+    "temporal_mode": "single_chronological_holdout",
+    "transition": null,
+    "target_month": "2023-12"
+  },
+  "threshold": 0.5499999999999999,
+  "best_val_auc": 0.9803,
+  "epochs_trained": 155,
+  "val_count": 5731,
+  "cert_count": 0,
+  "test_count": 53943,
+  "cert_indices": [],
+  "created_at": 1793412530.0199304,
+  "target_fprs": [
+    0.01,
+    0.001
+  ],
+  "operating_points": {
+    "tpr_at_1.0pct_fpr": {
+      "tpr": 0.0,
+      "threshold": 0.981,
+      "realised_test_fpr": 3.9e-05,
+      "f1_at_operating_point": 0.0,
+      "precision_at_operating_point": 0.0,
+      "recall_at_operating_point": 0.0,
+      "prevalence_adjusted_precision": {
+        "pi_1.0pct": 0.0,
+        "pi_0.1pct": 0.0
+      },
+      "expected_fp": 515,
+      "warning": null
+    },
+    "tpr_at_0.1pct_fpr": {
+      "tpr": 0.0,
+      "threshold": 0.9948,
+      "realised_test_fpr": 0.0,
+      "f1_at_operating_point": 0.0,
+      "precision_at_operating_point": 0.0,
+      "recall_at_operating_point": 0.0,
+      "prevalence_adjusted_precision": {
+        "pi_1.0pct": 0.0,
+        "pi_0.1pct": 0.0
+      },
+      "expected_fp": 51,
+      "warning": null
+    }
+  },
+  "metrics": {
+    "roc_auc": 0.7012,
+    "pr_auc": 0.0972,
+    "f1": 0.1346,
+    "accuracy": null,
+    "precision": 0.074,
+    "recall": 0.7418
+  }
+}

@@ -1,0 +1,234 @@
+{
+  "experiment": "ablation",
+  "name": "graph_only_no_lexical",
+  "seed": 999,
+  "metrics": {
+    "roc_auc": 0.9244,
+    "pr_auc": 0.8555,
+    "f1": 0.7995,
+    "precision": 0.7767,
+    "recall": 0.8236,
+    "specificity": 0.8821,
+    "threshold": 0.45,
+    "test_counts": {
+      "total": 15001,
+      "positives": 4988,
+      "negatives": 10013,
+      "sample_prevalence": 0.3325
+    },
+    "confusion_matrix": {
+      "tp": 4108,
+      "tn": 8832,
+      "fp": 1181,
+      "fn": 880
+    },
+    "operating_points": {
+      "tpr_at_1.0pct_fpr": {
+        "tpr": 0.2737,
+        "threshold": 0.8348,
+        "realised_test_fpr": 0.008289,
+        "f1_at_operating_point": 0.4242,
+        "precision_at_operating_point": 0.9427,
+        "recall_at_operating_point": 0.2737,
+        "prevalence_adjusted_precision": {
+          "pi_1.0pct": 0.2501,
+          "pi_0.1pct": 0.032
+        },
+        "expected_fp": 100,
+        "warning": null
+      },
+      "tpr_at_0.1pct_fpr": {
+        "tpr": 0.1329,
+        "threshold": 0.9209,
+        "realised_test_fpr": 0.0003,
+        "f1_at_operating_point": 0.2345,
+        "precision_at_operating_point": 0.9955,
+        "recall_at_operating_point": 0.1329,
+        "prevalence_adjusted_precision": {
+          "pi_1.0pct": 0.8176,
+          "pi_0.1pct": 0.3075
+        },
+        "expected_fp": 10,
+        "warning": null
+      }
+    },
+    "bootstrap_ci": {
+      "roc_auc": {
+        "point": 0.9244,
+        "ci_lower": 0.9198,
+        "ci_upper": 0.9283,
+        "std": 0.0022
+      },
+      "pr_auc": {
+        "point": 0.8555,
+        "ci_lower": 0.8466,
+        "ci_upper": 0.8641,
+        "std": 0.0045
+      },
+      "f1": {
+        "point": 0.7996,
+        "ci_lower": 0.7912,
+        "ci_upper": 0.8078,
+        "std": 0.0042
+      }
+    },
+    "breakdowns": {
+      "by_resolution": {
+        "resolved": {
+          "count": 11789,
+          "roc_auc": 0.9252,
+          "f1": 0.7586
+        },
+        "no_ip": {
+          "count": 3212,
+          "roc_auc": 0.8312,
+          "f1": 0.8578
+        }
+      },
+      "by_source": {
+        "../../virus-total/finished_collections/benign_groundtruth2312.txt": {
+          "count": 7751,
+          "accuracy": 0.8632
+        },
+        "Github": {
+          "count": 736,
+          "accuracy": 0.7541
+        },
+        "MISP": {
+          "count": 123,
+          "accuracy": 0.813
+        },
+        "Spam404": {
+          "count": 57,
+          "accuracy": 0.7719
+        },
+        "Steven Black": {
+          "count": 1075,
+          "accuracy": 0.8205
+        },
+        "The Firebog": {
+          "count": 929,
+          "accuracy": 0.8816
+        },
+        "ThreatFox": {
+          "count": 1924,
+          "accuracy": 0.8358
+        },
+        "URLhaus": {
+          "count": 144,
+          "accuracy": 0.6944
+        },
+        "data/alexa.csv": {
+          "count": 1202,
+          "accuracy": 0.9784
+        },
+        "data/cisco_umbrella_year_filtered_domains.csv": {
+          "count": 1060,
+          "accuracy": 0.9104
+        }
+      },
+      "by_malware_family": {
+        "Astaroth": {
+          "count": 69,
+          "detection_rate_recall": 0.8841
+        },
+        "BazarBackdoor": {
+          "count": 15,
+          "detection_rate_recall": 1.0
+        },
+        "Choziosi": {
+          "count": 6,
+          "detection_rate_recall": 1.0
+        },
+        "Chrysaor": {
+          "count": 46,
+          "detection_rate_recall": 0.9565
+        },
+        "Cobalt Strike": {
+          "count": 153,
+          "detection_rate_recall": 0.8693
+        },
+        "CryptBot": {
+          "count": 80,
+          "detection_rate_recall": 0.975
+        },
+        "FAKEUPDATES": {
+          "count": 7,
+          "detection_rate_recall": 0.8571
+        },
+        "Gozi": {
+          "count": 6,
+          "detection_rate_recall": 1.0
+        },
+        "Hydra": {
+          "count": 16,
+          "detection_rate_recall": 0.9375
+        },
+        "IRATA": {
+          "count": 5,
+          "detection_rate_recall": 1.0
+        },
+        "ISFB": {
+          "count": 18,
+          "detection_rate_recall": 1.0
+        },
+        "IcedID": {
+          "count": 126,
+          "detection_rate_recall": 0.9921
+        },
+        "IcedID Downloader": {
+          "count": 17,
+          "detection_rate_recall": 0.9412
+        },
+        "Prometei": {
+          "count": 83,
+          "detection_rate_recall": 1.0
+        },
+        "QakBot": {
+          "count": 1056,
+          "detection_rate_recall": 0.7614
+        },
+        "Raspberry Robin": {
+          "count": 12,
+          "detection_rate_recall": 0.8333
+        },
+        "RedLine Stealer": {
+          "count": 7,
+          "detection_rate_recall": 0.8571
+        },
+        "SMSspy": {
+          "count": 12,
+          "detection_rate_recall": 0.9167
+        },
+        "SmokeLoader": {
+          "count": 11,
+          "detection_rate_recall": 0.9091
+        },
+        "Vidar": {
+          "count": 39,
+          "detection_rate_recall": 0.8718
+        },
+        "Zloader": {
+          "count": 7,
+          "detection_rate_recall": 1.0
+        },
+        "magecart": {
+          "count": 14,
+          "detection_rate_recall": 0.9286
+        },
+        "unknown": {
+          "count": 3102,
+          "detection_rate_recall": 0.8172
+        }
+      }
+    },
+    "training_metadata": {
+      "chosen_lr": 0.005,
+      "lr_grid": null,
+      "epochs_trained": 200,
+      "best_val_auc": 0.9271,
+      "use_class_weights": false,
+      "checkpoint_path": null
+    }
+  }
+}

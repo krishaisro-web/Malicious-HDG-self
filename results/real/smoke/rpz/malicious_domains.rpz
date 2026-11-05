@@ -1,0 +1,52 @@
+; ==============================================================================
+; Malicious-HDG Automated Response Policy Zone (BIND RPZ)
+; Generated: 2026-10-14T05:18:18.303705+00:00
+; Architecture: HeteroGNN-SAGE
+; Operating Target FPR: 0.10% (0.001)
+; Calibrated Threshold: 0.5360744596
+; Realized Validation FPR: 0.00100 (0.100%)
+; Total Evaluated Test Domains: 15001
+; Total Emitted Blocking Rules: 36
+; Estimated Blocking Rate: 0.24%
+; Policy Action: CNAME . (NXDOMAIN / Drop)
+; ==============================================================================
+$TTL 300
+@ IN SOA localhost. root.localhost. ( 2026100101 3600 1800 604800 300 )
+  IN NS  localhost.
+
+btb.kg CNAME . ; score=0.5379, threshold=0.5360744596, val_fpr=0.00100
+4yh.eu CNAME . ; score=0.5378, threshold=0.5360744596, val_fpr=0.00100
+uyikjtn.eu CNAME . ; score=0.5372, threshold=0.5360744596, val_fpr=0.00100
+zt5rksfhnlwdme.eu CNAME . ; score=0.5371, threshold=0.5360744596, val_fpr=0.00100
+cdnhwc7.com CNAME . ; score=0.5371, threshold=0.5360744596, val_fpr=0.00100
+clz.kr CNAME . ; score=0.5370, threshold=0.5360744596, val_fpr=0.00100
+sasqld.com CNAME . ; score=0.5370, threshold=0.5360744596, val_fpr=0.00100
+iwacu.rw CNAME . ; score=0.5369, threshold=0.5360744596, val_fpr=0.00100
+yzbgqr.com CNAME . ; score=0.5369, threshold=0.5360744596, val_fpr=0.00100
+lilyspa.ca CNAME . ; score=0.5369, threshold=0.5360744596, val_fpr=0.00100
+lync.cn CNAME . ; score=0.5368, threshold=0.5360744596, val_fpr=0.00100
+cric.one CNAME . ; score=0.5366, threshold=0.5360744596, val_fpr=0.00100
+zayo.us CNAME . ; score=0.5366, threshold=0.5360744596, val_fpr=0.00100
+mzjc.is CNAME . ; score=0.5366, threshold=0.5360744596, val_fpr=0.00100
+tsdb.ga CNAME . ; score=0.5366, threshold=0.5360744596, val_fpr=0.00100
+fghnj.gq CNAME . ; score=0.5365, threshold=0.5360744596, val_fpr=0.00100
+www1.biz CNAME . ; score=0.5365, threshold=0.5360744596, val_fpr=0.00100
+break.ie CNAME . ; score=0.5365, threshold=0.5360744596, val_fpr=0.00100
+zqfc.tr CNAME . ; score=0.5365, threshold=0.5360744596, val_fpr=0.00100
+kzncyz.com CNAME . ; score=0.5365, threshold=0.5360744596, val_fpr=0.00100
+arjun.af CNAME . ; score=0.5364, threshold=0.5360744596, val_fpr=0.00100
+jprs.jp CNAME . ; score=0.5364, threshold=0.5360744596, val_fpr=0.00100
+hldmpro.ru CNAME . ; score=0.5364, threshold=0.5360744596, val_fpr=0.00100
+gxzf.site CNAME . ; score=0.5364, threshold=0.5360744596, val_fpr=0.00100
+wwwcoco.fr CNAME . ; score=0.5364, threshold=0.5360744596, val_fpr=0.00100
+vzsxtr.tr CNAME . ; score=0.5363, threshold=0.5360744596, val_fpr=0.00100
+aimy.pet CNAME . ; score=0.5363, threshold=0.5360744596, val_fpr=0.00100
+bgdgytg.ml CNAME . ; score=0.5363, threshold=0.5360744596, val_fpr=0.00100
+bgdgtrg.ml CNAME . ; score=0.5363, threshold=0.5360744596, val_fpr=0.00100
+adtdp.com CNAME . ; score=0.5363, threshold=0.5360744596, val_fpr=0.00100
+dnhtrust.org CNAME . ; score=0.5363, threshold=0.5360744596, val_fpr=0.00100
+klein.tl CNAME . ; score=0.5362, threshold=0.5360744596, val_fpr=0.00100
+vzdp.org CNAME . ; score=0.5362, threshold=0.5360744596, val_fpr=0.00100
+agxcvxc.ru CNAME . ; score=0.5362, threshold=0.5360744596, val_fpr=0.00100
+upcdn.net CNAME . ; score=0.5362, threshold=0.5360744596, val_fpr=0.00100
+tdp.org.tr CNAME . ; score=0.5361, threshold=0.5360744596, val_fpr=0.00100

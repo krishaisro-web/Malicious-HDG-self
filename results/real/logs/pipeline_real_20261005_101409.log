@@ -1,0 +1,428 @@
+
+[1;34m[2026-10-05 10:14:09] Dynamically probing hardware environment and generating tailored active config...[0m
+/home/krisha/venv/lib/python3.12/site-packages/torch/jit/_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+<frozen runpy>:128: RuntimeWarning: 'src.hdg.config' found in sys.modules after import of package 'src.hdg', but prior to execution of 'src.hdg.config'; this may result in unpredictable behaviour
+==============================================================================
+  MALICIOUS-HDG: DYNAMIC CONFIGURATION GENERATED
+==============================================================================
+  Detected RAM:      245.8 GB (242.2 GB available)
+  Detected CPU:      48 logical cores
+  Detected Swap:     8.0 GB
+  Assigned Profile:  enterprise_server
+  Profile Details:   Enterprise Multi-Core Server (~246 GB RAM Mode, Full Dataset)
+  Active Config:     /home/krisha/Malicious-HDG-self/configs/active_config.yaml
+  Allocated Threads: 32 (OMP/MKL/OpenBLAS synchronized)
+  Graph Max Domains: 100000
+  Parsing Cap:       Full Dataset (Unrestricted)
+  Batch Size:        1024 | Epochs: 200 | Seeds: [42, 1337, 2024, 777, 999]
+==============================================================================
+[DYNAMIC CONFIG] Generated successfully at: /home/krisha/Malicious-HDG-self/configs/active_config.yaml
+
+[1;34m[2026-10-05 10:14:37] ==========================================================================[0m
+
+[1;34m[2026-10-05 10:14:37]  Malicious-HDG: Full Production Pipeline Execution on Real Zenodo Data[0m
+
+[1;34m[2026-10-05 10:14:37]  Log File:         /home/krisha/Malicious-HDG-self/results/real/logs/pipeline_real_20261005_101409.log[0m
+
+[1;34m[2026-10-05 10:14:37]  Active Config:    configs/active_config.yaml[0m
+
+[1;34m[2026-10-05 10:14:37]  Hardware Profile: enterprise_server (Enterprise Multi-Core Server (~246 GB RAM Mode, Full Dataset))[0m
+
+[1;34m[2026-10-05 10:14:37]  Detected RAM:     245.78 GB (System total)[0m
+
+[1;34m[2026-10-05 10:14:37]  CPU Cores:        48 logical cores[0m
+
+[1;34m[2026-10-05 10:14:37]  Allocated Threads: 32 threads (OMP/MKL/OpenBLAS synchronized)[0m
+
+[1;34m[2026-10-05 10:14:37]  Graph Max Domains: 100000 domains[0m
+
+[1;34m[2026-10-05 10:14:37]  Training Config:  Batch Size: 1024 | Epochs: 200[0m
+
+[1;34m[2026-10-05 10:14:37] ==========================================================================[0m
+
+[1;34m[2026-10-05 10:14:37] STAGE 0: Running System & Dataset Preflight Checks...[0m
+/home/krisha/venv/lib/python3.12/site-packages/torch/jit/_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+
+[REAL] ==================================================
+[REAL] MALICIOUS-HDG PREFLIGHT ENVIRONMENT & DATA AUDIT
+[REAL] ==================================================
+
+--- System & Hardware Audit ---
+  OS Platform:        Linux 6.8.0-71-generic (x86_64)
+  Python Version:     3.12.3 (/home/krisha/venv/bin/python3)
+  CPU Cores:          48
+  PyTorch Threads:    32 (set via HDG_THREADS or config)
+  System RAM:         245.8 GB total, 242.2 GB available
+  System Swap:        8.0 GB total, 8.0 GB free
+  Free Workspace Disk: 44.5 GB
+
+  [ENTERPRISE HIGH-MEMORY SERVER DETECTED]
+  - Detected ~245.8 GB RAM and 48 CPU cores.
+  - PyTorch threads: 32 (OMP/MKL parallel pool synchronized).
+  - [PASS] Full Zenodo DomainRadar v2 dataset enabled with maximum capacity.
+
+--- Python Package Dependencies ---
+  [OK]   torch              (v2.14.0+cu130)
+  [OK]   torch_geometric    (v2.8.0.post1)
+  [OK]   xgboost            (v3.4.1)
+  [OK]   sklearn            (v1.9.1)
+  [OK]   statsmodels        (v0.15.0)
+  [OK]   pyarrow            (v25.0.1)
+  [OK]   tldextract         (v5.3.2)
+  [OK]   ijson              (v3.5.1)
+
+--- Raw Dataset Files Check ---
+  [FOUND] malware.json           (1034.3 MB) -> /home/krisha/Malicious-HDG-self/data/raw/zenodo/malware.json
+  [FOUND] benign_umbrella.json   (5794.0 MB) -> /home/krisha/Malicious-HDG-self/data/raw/zenodo/benign_umbrella.json
+  [FOUND] benign_cesnet.json     (6138.8 MB) -> /home/krisha/Malicious-HDG-self/data/raw/zenodo/benign_cesnet.json
+
+--- Processed Artifacts Status ---
+  [STATUS] Processed artifacts not yet built at: /home/krisha/Malicious-HDG-self/data/processed/real
+  -> Next step: run `00_profile_dataset.py`, `01_parse.py`, and `02_build_graph.py`.
+
+[REAL] ==================================================
+[REAL] [PASS] Preflight check completed successfully!
+[REAL] ==================================================
+
+[1;32m[2026-10-05 10:15:04] Stage 0 (Preflight) PASSED.[0m
+
+[1;34m[2026-10-05 10:15:04] STAGE 1: Profiling Dataset & Key Schema Distributions...[0m
+/home/krisha/venv/lib/python3.12/site-packages/torch/jit/_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+[REAL] Starting dataset profiling...
+  Input raw dir: /home/krisha/Malicious-HDG-self/data/raw/zenodo
+  Output dir: /home/krisha/Malicious-HDG-self/results/real/profile
+[REAL] Profiling malware.json...
+[REAL] Profiling benign_umbrella.json...
+[REAL] Profiling benign_cesnet.json...
+
+=== PROFILING COMPLETE ===
+Report JSON: /home/krisha/Malicious-HDG-self/results/real/profile/profile_report.json
+Report Markdown: /home/krisha/Malicious-HDG-self/results/real/profile/profile_report.md
+Time Split Valid: False (Overlapping months: 1)
+Markdown line count: 69 lines (must be <= 200)
+[1;32m[2026-10-05 10:33:01] Stage 1 (Profile) PASSED.[0m
+
+[1;34m[2026-10-05 10:33:01] STAGE 2: Parsing Raw JSON Records & Sampling Time-Matched Benign Cohort...[0m
+/home/krisha/venv/lib/python3.12/site-packages/torch/jit/_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+[REAL] Starting dataset parsing pipeline...
+  Raw data: /home/krisha/Malicious-HDG-self/data/raw/zenodo
+  Processed destination: /home/krisha/Malicious-HDG-self/data/processed/real
+[REAL] Parsing malware records...
+[REAL] Parsing Cisco Umbrella benign records...
+[REAL] Parsing CESNET benign records...
+[REAL] ASN Keys resolved: {'asn': 1889833} (Total: 1889833)
+[REAL] Dropping 212 cross-class domain collisions...
+[REAL] Overlapping months with both classes (1): ['2023-12']
+[REAL] Parsing completed successfully.
+  Primary Parquet:     /home/krisha/Malicious-HDG-self/data/processed/real/domains.parquet (250062 records)
+  Time-matched Parquet: /home/krisha/Malicious-HDG-self/data/processed/real/domains_timematched.parquet (18018 records)
+
+=== PARSING COMPLETE ===
+Total domains kept: 250062 (Malware: 83354, Benign: 166708)
+Time-matched cohort: 18018
+Cross-class collisions dropped: 212
+[1;32m[2026-10-05 10:54:08] Stage 2 (Parse) PASSED.[0m
+
+[1;34m[2026-10-05 10:54:08] STAGE 3: Running Shortcut Audit & Feature Sensitivity Checks...[0m
+/home/krisha/venv/lib/python3.12/site-packages/torch/jit/_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+[REAL] Running shortcut audit on: /home/krisha/Malicious-HDG-self/data/processed/real/domains.parquet...
+
+=== SHORTCUT AUDIT COMPLETE ===
+Report JSON: /home/krisha/Malicious-HDG-self/results/real/profile/audit_shortcuts.json
+Report Markdown: /home/krisha/Malicious-HDG-self/results/real/profile/audit_shortcuts.md
+Single feature AUCs:
+  - length: 0.6211
+  - num_labels: 0.6342
+  - subdomain_flag: 0.5091
+  - tld: 0.8737
+  - no_ip_nxdomain: 0.6267
+  - has_tls: 0.6492
+  - has_rdap: 0.5168
+  - source_only: 1.0000
+[PASS] Verdict: No single domain feature has AUC >= 0.90.
+[1;32m[2026-10-05 10:55:09] Stage 3 (Shortcut Audit) PASSED.[0m
+
+[1;34m[2026-10-05 10:55:09] STAGE 4: Building Unscaled Base HeteroData Graph...[0m
+/home/krisha/venv/lib/python3.12/site-packages/torch/jit/_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+[REAL] Loading /home/krisha/Malicious-HDG-self/data/processed/real/domains.parquet...
+[REAL] Subsampling to 100000 domains...
+[REAL] Building HeteroData base graph (raw features + topology)...
+
+[REAL] === BASE GRAPH CONSTRUCTION COMPLETE ===
+Graph file: /home/krisha/Malicious-HDG-self/data/processed/real/heterodata.pt
+Node types: ['domain', 'ip', 'nameserver', 'registrar', 'asn', 'certificate']
+Edge types: 12 relational edge types
+  - domain: 100000 nodes (dim: 17)
+  - ip: 131084 nodes (dim: 1)
+  - nameserver: 47092 nodes (dim: 1)
+  - registrar: 2797 nodes (dim: 1)
+  - asn: 5263 nodes (dim: 1)
+  - certificate: 62003 nodes (dim: 1)
+[1;32m[2026-10-05 13:23:19] Stage 4 (Build Graph) PASSED.[0m
+
+[1;34m[2026-10-05 13:23:19] STAGE 5: Running Multi-Seed Baselines (TF-IDF, XGBoost, MLP, Single-Feature)...[0m
+/home/krisha/venv/lib/python3.12/site-packages/torch/jit/_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+[REAL] Loading /home/krisha/Malicious-HDG-self/data/processed/real/domains.parquet...
+[REAL] Running baselines across 5 seed(s): [42, 1337, 2024, 777, 999]...
+
+--- Evaluating Seed 42 ---
+  [TF-IDF LogReg] ROC-AUC: 0.8969, F1: 0.7548
+  [XGBoost Tabular] ROC-AUC: 0.8849, F1: 0.7453
+  [XGBoost Tabular+Lexical] ROC-AUC: 0.8978, F1: 0.7590
+  [Single-Feat Length] ROC-AUC: 0.6218, F1: 0.5286
+  [Single-Feat No-IP] ROC-AUC: 0.6264, F1: 0.4991
+  [Isolated Domain MLP] ROC-AUC: 0.8330, F1: 0.6697
+
+--- Evaluating Seed 1337 ---
+  [TF-IDF LogReg] ROC-AUC: 0.8989, F1: 0.7569
+  [XGBoost Tabular] ROC-AUC: 0.8870, F1: 0.7459
+  [XGBoost Tabular+Lexical] ROC-AUC: 0.8976, F1: 0.7542
+  [Single-Feat Length] ROC-AUC: 0.6240, F1: 0.5285
+  [Single-Feat No-IP] ROC-AUC: 0.6259, F1: 0.4991
+  [Isolated Domain MLP] ROC-AUC: 0.8353, F1: 0.6686
+
+--- Evaluating Seed 2024 ---
+  [TF-IDF LogReg] ROC-AUC: 0.9011, F1: 0.7620
+  [XGBoost Tabular] ROC-AUC: 0.8839, F1: 0.7466
+  [XGBoost Tabular+Lexical] ROC-AUC: 0.8958, F1: 0.7559
+  [Single-Feat Length] ROC-AUC: 0.6192, F1: 0.5193
+  [Single-Feat No-IP] ROC-AUC: 0.6262, F1: 0.4991
+  [Isolated Domain MLP] ROC-AUC: 0.8270, F1: 0.6609
+
+--- Evaluating Seed 777 ---
+  [TF-IDF LogReg] ROC-AUC: 0.9010, F1: 0.7629
+  [XGBoost Tabular] ROC-AUC: 0.8817, F1: 0.7423
+  [XGBoost Tabular+Lexical] ROC-AUC: 0.8906, F1: 0.7461
+  [Single-Feat Length] ROC-AUC: 0.6193, F1: 0.5292
+  [Single-Feat No-IP] ROC-AUC: 0.6260, F1: 0.4991
+  [Isolated Domain MLP] ROC-AUC: 0.8174, F1: 0.6530
+
+--- Evaluating Seed 999 ---
+  [TF-IDF LogReg] ROC-AUC: 0.8981, F1: 0.7535
+  [XGBoost Tabular] ROC-AUC: 0.8872, F1: 0.7461
+  [XGBoost Tabular+Lexical] ROC-AUC: 0.8960, F1: 0.7570
+  [Single-Feat Length] ROC-AUC: 0.6192, F1: 0.5263
+  [Single-Feat No-IP] ROC-AUC: 0.6273, F1: 0.4991
+  [Isolated Domain MLP] ROC-AUC: 0.8318, F1: 0.6669
+
+[REAL] === BASELINES COMPLETE ===
+Results JSON: /home/krisha/Malicious-HDG-self/results/real/tables/baselines_results.json
+Results Markdown: /home/krisha/Malicious-HDG-self/results/real/tables/baselines_results.md
+[1;32m[2026-10-05 14:19:41] Stage 5 (Baselines) PASSED.[0m
+
+[1;34m[2026-10-05 14:19:41] STAGE 6: Training & Evaluating HeteroGNN (SAGE & Attn across Random, Time, Group splits)...[0m
+/home/krisha/venv/lib/python3.12/site-packages/torch/jit/_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+[REAL] Loading graph and domain metadata...
+[REAL] Evaluating GNN on split: 'random' across seeds: [42, 1337, 2024, 777, 999]...
+
+================ Running Variant: SAGE ================
+
+--- Seed 42 (sage) [random] ---
+  Test ROC-AUC: 0.9231, PR-AUC: 0.8573, F1: 0.7988
+
+--- Seed 1337 (sage) [random] ---
+  Test ROC-AUC: 0.9310, PR-AUC: 0.8723, F1: 0.8058
+
+--- Seed 2024 (sage) [random] ---
+  Test ROC-AUC: 0.9317, PR-AUC: 0.8763, F1: 0.8085
+
+--- Seed 777 (sage) [random] ---
+  Test ROC-AUC: 0.9244, PR-AUC: 0.8610, F1: 0.7956
+
+--- Seed 999 (sage) [random] ---
+  Test ROC-AUC: 0.9307, PR-AUC: 0.8758, F1: 0.8094
+
+================ Running Variant: ATTN ================
+
+--- Seed 42 (attn) [random] ---
+  Test ROC-AUC: 0.9356, PR-AUC: 0.8845, F1: 0.8139
+
+--- Seed 1337 (attn) [random] ---
+  [EARLY STOPPING] Validation AUC did not improve for 20 epochs. Stopping at epoch 197.
+  Test ROC-AUC: 0.9338, PR-AUC: 0.8831, F1: 0.8108
+
+--- Seed 2024 (attn) [random] ---
+  Test ROC-AUC: 0.9336, PR-AUC: 0.8826, F1: 0.8055
+
+--- Seed 777 (attn) [random] ---
+  Test ROC-AUC: 0.9304, PR-AUC: 0.8799, F1: 0.8061
+
+--- Seed 999 (attn) [random] ---
+  Test ROC-AUC: 0.9326, PR-AUC: 0.8815, F1: 0.8089
+
+[REAL] === GNN EVALUATION COMPLETE ===
+Results JSON: /home/krisha/Malicious-HDG-self/results/real/tables/gnn_evaluation_random.json
+Results Markdown: /home/krisha/Malicious-HDG-self/results/real/tables/gnn_evaluation_random.md
+[1;32m[2026-10-06 17:15:15] Stage 6 (HeteroGNN Evaluation) PASSED.[0m
+
+[1;34m[2026-10-06 17:15:15] STAGE 7: Running Systematic Ablation Study...[0m
+/home/krisha/venv/lib/python3.12/site-packages/torch/jit/_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+[REAL] Loading domain data and base graph...
+
+=== Ablation: full_sage ===
+  Seed 42 -> ROC-AUC: 0.9311, F1: 0.8086
+  Seed 1337 -> ROC-AUC: 0.9322, F1: 0.8077
+  Seed 2024 -> ROC-AUC: 0.9238, F1: 0.7988
+  Seed 777 -> ROC-AUC: 0.9259, F1: 0.7974
+  Seed 999 -> ROC-AUC: 0.9333, F1: 0.8119
+
+=== Ablation: no_certificates ===
+  Seed 42 -> ROC-AUC: 0.9303, F1: 0.8082
+  Seed 1337 -> ROC-AUC: 0.9336, F1: 0.8094
+  Seed 2024 -> ROC-AUC: 0.9323, F1: 0.8101
+  Seed 777 -> ROC-AUC: 0.9264, F1: 0.7989
+  Seed 999 -> ROC-AUC: 0.9289, F1: 0.8055
+
+=== Ablation: cert_coissue_key ===
+  Seed 42 -> ROC-AUC: 0.9279, F1: 0.8031
+  Seed 1337 -> ROC-AUC: 0.9306, F1: 0.8056
+  Seed 2024 -> ROC-AUC: 0.9262, F1: 0.8022
+  Seed 777 -> ROC-AUC: 0.9255, F1: 0.7931
+  Seed 999 -> ROC-AUC: 0.9329, F1: 0.8114
+
+=== Ablation: no_nameservers ===
+  Seed 42 -> ROC-AUC: 0.9176, F1: 0.7874
+  Seed 1337 -> ROC-AUC: 0.9273, F1: 0.8008
+  Seed 2024 -> ROC-AUC: 0.9168, F1: 0.7869
+  Seed 777 -> ROC-AUC: 0.9131, F1: 0.7834
+  Seed 999 -> ROC-AUC: 0.9241, F1: 0.8009
+
+=== Ablation: no_registrars ===
+  Seed 42 -> ROC-AUC: 0.9218, F1: 0.7925
+  Seed 1337 -> ROC-AUC: 0.9252, F1: 0.7947
+  Seed 2024 -> ROC-AUC: 0.9169, F1: 0.7869
+  Seed 777 -> ROC-AUC: 0.9160, F1: 0.7867
+  Seed 999 -> ROC-AUC: 0.9201, F1: 0.7882
+
+=== Ablation: no_asn ===
+  Seed 42 -> ROC-AUC: 0.9298, F1: 0.8070
+  Seed 1337 -> ROC-AUC: 0.9297, F1: 0.8046
+  Seed 2024 -> ROC-AUC: 0.9247, F1: 0.8003
+  Seed 777 -> ROC-AUC: 0.9235, F1: 0.7959
+  Seed 999 -> ROC-AUC: 0.9288, F1: 0.8068
+
+=== Ablation: graph_only_no_lexical ===
+  Seed 42 -> ROC-AUC: 0.9249, F1: 0.8006
+  Seed 1337 -> ROC-AUC: 0.9259, F1: 0.8001
+  Seed 2024 -> ROC-AUC: 0.9231, F1: 0.8001
+  Seed 777 -> ROC-AUC: 0.9215, F1: 0.7977
+  Seed 999 -> ROC-AUC: 0.9244, F1: 0.7995
+
+=== Ablation: degree_mode_train_visible ===
+  Seed 42 -> ROC-AUC: 0.9182, F1: 0.7823
+  Seed 1337 -> ROC-AUC: 0.9178, F1: 0.7754
+  Seed 2024 -> ROC-AUC: 0.9217, F1: 0.7792
+  Seed 777 -> ROC-AUC: 0.9231, F1: 0.7863
+  Seed 999 -> ROC-AUC: 0.9244, F1: 0.7792
+
+=== Ablation: mlp_no_edges ===
+  Seed 42 -> ROC-AUC: 0.8784, F1: 0.7315
+  Seed 1337 -> ROC-AUC: 0.8791, F1: 0.7312
+  Seed 2024 -> ROC-AUC: 0.8754, F1: 0.7265
+  Seed 777 -> ROC-AUC: 0.8725, F1: 0.7259
+  Seed 999 -> ROC-AUC: 0.8753, F1: 0.7280
+
+=== Ablation: attn_variant ===
+  Seed 42 -> ROC-AUC: 0.9351, F1: 0.8124
+  Seed 1337 -> ROC-AUC: 0.9372, F1: 0.8160
+  [EARLY STOPPING] Validation AUC did not improve for 20 epochs. Stopping at epoch 197.
+  Seed 2024 -> ROC-AUC: 0.9277, F1: 0.7969
+  [EARLY STOPPING] Validation AUC did not improve for 20 epochs. Stopping at epoch 192.
+  Seed 777 -> ROC-AUC: 0.9311, F1: 0.8069
+  Seed 999 -> ROC-AUC: 0.9343, F1: 0.8128
+
+=== Ablation: sage_guard_clean ===
+  Seed 42 -> ROC-AUC: 0.9303, F1: 0.8062
+  Seed 1337 -> ROC-AUC: 0.9187, F1: 0.7936
+  Seed 2024 -> ROC-AUC: 0.9294, F1: 0.8069
+  Seed 777 -> ROC-AUC: 0.9275, F1: 0.7973
+  Seed 999 -> ROC-AUC: 0.9308, F1: 0.8085
+
+[REAL] === ABLATION COMPLETE ===
+Results JSON: /home/krisha/Malicious-HDG-self/results/real/tables/ablation_results.json
+Results Markdown: /home/krisha/Malicious-HDG-self/results/real/tables/ablation_results.md
+[1;32m[2026-10-08 15:38:02] Stage 7 (Ablation) PASSED.[0m
+
+[1;34m[2026-10-08 15:38:02] STAGE 8: Evaluating PPT Structural Attack & Relational GNNGuard...[0m
+/home/krisha/venv/lib/python3.12/site-packages/torch/jit/_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+[REAL] Loading domain metadata and base graph...
+[REAL] Evaluating structural attacks across budgets [1, 2, 5, 10] over 5 seed(s)...
+
+--- Seed 42 Attack Evaluation ---
+  Training clean SAGE model (Seed 42)...
+  Training clean SAGE_Guard model (Seed 42)...
+    Evaluating attack budget k = 1...
+    Evaluating attack budget k = 2...
+    Evaluating attack budget k = 5...
+    Evaluating attack budget k = 10...
+
+--- Seed 1337 Attack Evaluation ---
+  Training clean SAGE model (Seed 1337)...
+  Training clean SAGE_Guard model (Seed 1337)...
+    Evaluating attack budget k = 1...
+    Evaluating attack budget k = 2...
+    Evaluating attack budget k = 5...
+    Evaluating attack budget k = 10...
+
+--- Seed 2024 Attack Evaluation ---
+  Training clean SAGE model (Seed 2024)...
+  Training clean SAGE_Guard model (Seed 2024)...
+    Evaluating attack budget k = 1...
+    Evaluating attack budget k = 2...
+    Evaluating attack budget k = 5...
+    Evaluating attack budget k = 10...
+
+--- Seed 777 Attack Evaluation ---
+  Training clean SAGE model (Seed 777)...
+  Training clean SAGE_Guard model (Seed 777)...
+    Evaluating attack budget k = 1...
+    Evaluating attack budget k = 2...
+    Evaluating attack budget k = 5...
+    Evaluating attack budget k = 10...
+
+--- Seed 999 Attack Evaluation ---
+  Training clean SAGE model (Seed 999)...
+  Training clean SAGE_Guard model (Seed 999)...
+    Evaluating attack budget k = 1...
+    Evaluating attack budget k = 2...
+    Evaluating attack budget k = 5...
+    Evaluating attack budget k = 10...
+
+[REAL] === ATTACK EVALUATION COMPLETE ===
+Results JSON: /home/krisha/Malicious-HDG-self/results/real/tables/attack_results.json
+Results Markdown: /home/krisha/Malicious-HDG-self/results/real/tables/attack_results.md
+[1;32m[2026-10-08 21:27:17] Stage 8 (Attack & Robustness) PASSED.[0m
+
+[1;34m[2026-10-08 21:27:17] STAGE 9: Benchmarking CPU Inference Latency...[0m
+/home/krisha/venv/lib/python3.12/site-packages/torch/jit/_script.py:1491: FutureWarning: `torch.jit.script` is deprecated. Please switch to `torch.compile` or `torch.export`.
+  warnings.warn(
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/krisha/Malicious-HDG-self/pipeline/07_latency_eval.py", line 188, in <module>
+    main()
+  File "/home/krisha/Malicious-HDG-self/pipeline/07_latency_eval.py", line 106, in main
+    stats = benchmark_cpu_query_latency(
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/krisha/Malicious-HDG-self/src/hdg/eval/latency.py", line 158, in benchmark_cpu_query_latency
+    ego_data, local_targets = build_ego_subgraph(data, batch_domains, num_hops=2)
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/krisha/Malicious-HDG-self/src/hdg/eval/latency.py", line 86, in build_ego_subgraph
+    sub_data[nt].x = data[nt].x[orig_indices].clone()
+                     ~~~~~~~~~~^^^^^^^^^^^^^^
+IndexError: index 108448 is out of bounds for dimension 0 with size 100000
+[REAL] Loading graph and dataset...
+
+--- Benchmarking with 1 PyTorch Thread(s) ---
+Evaluating Batch Size = 1 (500 queries, 20 warmup)...
+[1;31m[2026-10-08 21:34:39] ERROR: Pipeline aborted prematurely at line 194![0m

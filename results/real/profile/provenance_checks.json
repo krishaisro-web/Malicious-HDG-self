@@ -1,0 +1,45 @@
+{
+  "is_fixture": false,
+  "benign_vs_benign": {
+    "roc_auc": 0.8416,
+    "f1": 0.3068,
+    "test_samples": 13350,
+    "umbrella_ratio": 0.112,
+    "interpretation": "High source divergence (AUC > 0.80)"
+  },
+  "cross_source_transfer": {
+    "status": "Single-class partition in cross-source split"
+  },
+  "feature_group_ablation": {
+    "full_auc": 0.8906,
+    "no_null_rate_auc": 0.8751,
+    "delta": -0.0155,
+    "interpretation": "Robust to missingness features"
+  },
+  "graph_connectivity_audit": {
+    "resolves_to": {
+      "overall_share_degree_ge_2": 0.3312,
+      "malware_share_degree_ge_2": 0.3749,
+      "benign_share_degree_ge_2": 0.3094,
+      "total_shared_infra_nodes": 10157
+    },
+    "uses_ns": {
+      "overall_share_degree_ge_2": 0.7452,
+      "malware_share_degree_ge_2": 0.6606,
+      "benign_share_degree_ge_2": 0.7874,
+      "total_shared_infra_nodes": 15645
+    },
+    "registered_by": {
+      "overall_share_degree_ge_2": 0.9882,
+      "malware_share_degree_ge_2": 0.9893,
+      "benign_share_degree_ge_2": 0.9876,
+      "total_shared_infra_nodes": 1614
+    },
+    "uses_cert": {
+      "overall_share_degree_ge_2": 0.4121,
+      "malware_share_degree_ge_2": 0.5666,
+      "benign_share_degree_ge_2": 0.3351,
+      "total_shared_infra_nodes": 3212
+    }
+  }
+}

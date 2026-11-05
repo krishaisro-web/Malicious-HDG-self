@@ -1,0 +1,13 @@
+{
+  "time_split_valid": false,
+  "min_required_months": 4,
+  "malware_months_count": 6,
+  "benign_months_count": 3,
+  "overlapping_months_count": 1,
+  "overlapping_months": [
+    "2023-12"
+  ],
+  "reasons": [
+    "Benign has 3 distinct sourced_on months (< 4)."
+  ]
+}
