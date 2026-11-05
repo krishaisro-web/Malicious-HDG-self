@@ -283,6 +283,18 @@ def main() -> None:
                 else:
                     split_meta_payload["group_mode"] = "joint_bipartite"
 
+            eval_data = None
+            if is_time_split:
+                eval_data, _ = apply_split_scaling(
+                    base=base_graph,
+                    train_indices=splits.train_indices,
+                    val_indices=splits.val_indices,
+                    test_indices=splits.test_indices,
+                    degree_mode="train_visible",
+                    mask_future_domains=False,
+                    mask_disjoint_groups=False
+                )
+
             # 4. Train & Evaluate
             test_eval, y_test, y_probs, _ = train_eval_gnn(
                 model=model,
@@ -299,7 +311,8 @@ def main() -> None:
                 seed=s,
                 experiment_fingerprint=exp_fp,
                 split_type=args.split_type,
-                split_metadata=split_meta_payload
+                split_metadata=split_meta_payload,
+                eval_data=eval_data
             )
 
             if asn_fallback_meta:

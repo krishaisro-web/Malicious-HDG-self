@@ -28,12 +28,12 @@ Discussions on subreddits including `r/homelab`, `r/sysadmin`, and `r/MLQuestion
 * **The Fix**: Cap thread execution to **2 threads** (`export HDG_THREADS=2`, `OMP_NUM_THREADS=2`, `MKL_NUM_THREADS=2`). This leaves headroom for OS background processes and keeps package temperatures within passive cooling limits.
 
 ### B. Linux Kernel Out-Of-Memory (OOM) Killer
-* **The Problem**: On 4GB–8GB RAM thin clients, loading the complete uncompressed DomainRadar dataset (~930k JSON records) or running GNN forward/backward passes with batch size 1024 causes physical RAM exhaustion. The kernel triggers `Out of memory: Killed process python` (`exit code 137`).
+* **The Problem**: On 4GB–8GB RAM thin clients, loading the complete uncompressed DomainRadar dataset (~930k JSON records) or running full-graph transductive GNN forward/backward passes causes physical RAM exhaustion. The kernel triggers `Out of memory: Killed process python` (`exit code 137`).
 * **The Fix**:
   1. Configure a dedicated **4 GB to 8 GB swapfile** with low swappiness (`vm.swappiness=10`).
   2. Use streaming JSON parsing via `ijson` and cap domain population to **30,000 domains** (`max_domains: 30000`, `max_per_class: 15000`).
   3. Reduce model hidden dimensionality from 64 to 32 (`hidden_dim: 32`, `out_dim: 16`), cutting activation memory by >50%.
-  4. Reduce GNN batch size to **256** and enforce explicit garbage collection (`gc.collect()`) after training iterations.
+  4. Enforce explicit garbage collection (`gc.collect()`) after training iterations. (Note: GNN training is full-batch transductive over the active sub-cohort).
 
 ---
 

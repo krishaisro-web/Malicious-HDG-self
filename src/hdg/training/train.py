@@ -25,6 +25,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.data import HeteroData
 
+from sklearn.metrics import roc_auc_score
 from src.hdg.metrics import (
     compute_bootstrap_cis,
     choose_optimal_threshold,
@@ -55,7 +56,8 @@ def train_eval_gnn(
     resume: bool = True,
     experiment_fingerprint: Optional[str] = None,
     split_type: Optional[str] = None,
-    split_metadata: Optional[Dict[str, Any]] = None
+    split_metadata: Optional[Dict[str, Any]] = None,
+    eval_data: Optional[HeteroData] = None
 ) -> Tuple[Dict[str, Any], np.ndarray, np.ndarray, nn.Module]:
     """
     Trains HeteroGNN with early stopping on validation ROC-AUC and validation-tuned threshold.
@@ -275,7 +277,12 @@ def train_eval_gnn(
         val_probs = F.softmax(final_out[val_idx], dim=-1)[:, 1].cpu().numpy()
         val_true = y_all[val_idx].cpu().numpy()
 
-        test_probs = F.softmax(final_out[test_idx], dim=-1)[:, 1].cpu().numpy()
+        if eval_data is not None:
+            eval_data = eval_data.to(device)
+            test_out = model(eval_data.x_dict, eval_data.edge_index_dict)
+            test_probs = F.softmax(test_out[test_idx], dim=-1)[:, 1].cpu().numpy()
+        else:
+            test_probs = F.softmax(final_out[test_idx], dim=-1)[:, 1].cpu().numpy()
         test_true = y_all[test_idx].cpu().numpy()
 
     # Select threshold on validation set
@@ -433,3 +440,158 @@ def train_eval_gnn(
     gc.collect()
 
     return test_eval, test_true, test_probs, model
+
+
+def cvar_topk_pauc_loss(
+    logits: torch.Tensor,
+    targets: torch.Tensor,
+    k_fraction: float = 0.005,
+    margin: float = 1.0
+) -> torch.Tensor:
+    """
+    Computes CVaR top-k negative surrogate loss for partial AUC optimization at low FPR (Boyd et al., Cortes & Mohri).
+    Penalizes the top k_fraction of hardest (highest scoring) negative samples relative to positive samples.
+    """
+    # Malicious logit score difference: s = logits[:, 1] - logits[:, 0]
+    scores = logits[:, 1] - logits[:, 0]
+
+    pos_mask = (targets == 1)
+    neg_mask = (targets == 0)
+
+    pos_scores = scores[pos_mask]
+    neg_scores = scores[neg_mask]
+
+    if len(pos_scores) == 0 or len(neg_scores) == 0:
+        return torch.tensor(0.0, device=logits.device, requires_grad=True)
+
+    # Top-k hardest negatives
+    k = max(1, int(round(k_fraction * len(neg_scores))))
+    top_k_neg_scores, _ = torch.topk(neg_scores, k=min(k, len(neg_scores)), largest=True)
+
+    # Pairwise margin violation: max(0, margin - (s_pos - s_neg))
+    diff = pos_scores.unsqueeze(1) - top_k_neg_scores.unsqueeze(0)
+    loss = torch.clamp(margin - diff, min=0.0)
+    return loss.mean()
+
+
+def fine_tune_pauc_gnn(
+    model: nn.Module,
+    data: HeteroData,
+    splits: DataSplits,
+    df: pd.DataFrame,
+    checkpoint_path: Optional[Path] = None,
+    epochs: int = 30,
+    lr: float = 0.0005,
+    patience: int = 10,
+    k_fraction: float = 0.005,
+    margin: float = 1.0,
+    lambda_pauc: float = 1.0,
+    max_val_fpr: float = 0.01,
+    seed: int = 42,
+    device: Optional[torch.device] = None
+) -> Tuple[Dict[str, Any], np.ndarray, np.ndarray, nn.Module]:
+    """
+    Fine-tunes an existing GNN checkpoint using CVaR top-k negative surrogate loss.
+    Monitors validation partial AUC (FPR <= max_val_fpr) for early stopping.
+    Returns: (test_eval, test_true, test_probs, trained_model)
+    """
+    if device is None:
+        device = torch.device("cpu")
+
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+
+    model = model.to(device)
+    data = data.to(device)
+
+    # Load starting checkpoint weights if available
+    if checkpoint_path is not None and Path(checkpoint_path).exists():
+        try:
+            ckpt = torch.load(checkpoint_path, map_location=device, weights_only=False)
+            state_dict = ckpt["model_state_dict"] if "model_state_dict" in ckpt else ckpt
+            model.load_state_dict(state_dict)
+            print(f"  [pAUC Fine-Tune] Loaded initial weights from {Path(checkpoint_path).name}")
+        except Exception as e:
+            print(f"  [WARN] Could not load {checkpoint_path}: {e}")
+
+    train_idx = torch.tensor(splits.train_indices, dtype=torch.long, device=device)
+    val_idx = torch.tensor(splits.val_indices, dtype=torch.long, device=device)
+    test_idx = torch.tensor(splits.test_indices, dtype=torch.long, device=device)
+
+    y_all = data["domain"].y
+
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4)
+
+    best_val_pauc = -1.0
+    best_weights = deepcopy(model.state_dict())
+    epochs_no_improve = 0
+
+    for epoch in range(1, epochs + 1):
+        model.train()
+        optimizer.zero_grad()
+
+        out = model(data.x_dict, data.edge_index_dict)
+        ce_loss = F.cross_entropy(out[train_idx], y_all[train_idx])
+        pauc_loss = cvar_topk_pauc_loss(out[train_idx], y_all[train_idx], k_fraction=k_fraction, margin=margin)
+        total_loss = ce_loss + lambda_pauc * pauc_loss
+
+        total_loss.backward()
+        optimizer.step()
+
+        # Validation step: compute partial AUC over FPR <= max_val_fpr
+        model.eval()
+        with torch.no_grad():
+            val_out = model(data.x_dict, data.edge_index_dict)
+            val_probs = F.softmax(val_out[val_idx], dim=-1)[:, 1].cpu().numpy()
+            val_true = y_all[val_idx].cpu().numpy()
+
+            try:
+                val_pauc = float(roc_auc_score(val_true, val_probs, max_fpr=max_val_fpr))
+            except Exception:
+                val_pauc = float(roc_auc_score(val_true, val_probs)) if len(np.unique(val_true)) > 1 else 0.5
+
+        if val_pauc > best_val_pauc:
+            best_val_pauc = val_pauc
+            best_weights = deepcopy(model.state_dict())
+            epochs_no_improve = 0
+        else:
+            epochs_no_improve += 1
+
+        if epochs_no_improve >= patience:
+            print(f"  [pAUC Fine-Tune] Early stopping at epoch {epoch} (best val pAUC: {best_val_pauc:.4f})")
+            break
+
+    # Restore best weights and evaluate on test
+    model.load_state_dict(best_weights)
+    model.eval()
+    with torch.no_grad():
+        final_out = model(data.x_dict, data.edge_index_dict)
+        test_probs = F.softmax(final_out[test_idx], dim=-1)[:, 1].cpu().numpy()
+        test_true = y_all[test_idx].cpu().numpy()
+
+        val_final = F.softmax(final_out[val_idx], dim=-1)[:, 1].cpu().numpy()
+        val_true_final = y_all[val_idx].cpu().numpy()
+
+    optimal_th = choose_optimal_threshold(val_true_final, val_final, criterion="f1")
+    test_eval = evaluate_predictions(
+        y_true=test_true,
+        y_prob=test_probs,
+        threshold=optimal_th,
+        y_val_true=val_true_final,
+        y_val_prob=val_final,
+        target_fprs=[0.01, 0.001],
+        prevalence_pis=[0.01, 0.001]
+    )
+
+    boot_cis = compute_bootstrap_cis(test_true, test_probs, threshold=optimal_th, n_bootstrap=1000, seed=seed)
+    test_eval["bootstrap_ci"] = boot_cis
+    test_eval["fine_tune_metadata"] = {
+        "best_val_pauc": round(best_val_pauc, 4),
+        "lambda_pauc": lambda_pauc,
+        "k_fraction": k_fraction,
+        "margin": margin,
+        "epochs_trained": epoch
+    }
+
+    return test_eval, test_true, test_probs, model
+

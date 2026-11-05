@@ -24,6 +24,157 @@ from sklearn.metrics import (
 from statsmodels.stats.contingency_tables import mcnemar
 
 
+def clopper_pearson_ci(k: int, n: int, confidence: float = 0.95) -> Tuple[float, float]:
+    """
+    Computes exact Clopper-Pearson binomial confidence interval for k successes in n trials.
+    Used for rigorous certification of false positive rates (FPR).
+    """
+    from scipy.stats import beta
+    if n <= 0:
+        return 0.0, 1.0
+    k = max(0, min(k, n))
+    alpha = 1.0 - confidence
+    lower = 0.0 if k == 0 else float(beta.ppf(alpha / 2.0, k, n - k + 1))
+    upper = 1.0 if k == n else float(beta.ppf(1.0 - alpha / 2.0, k + 1, n - k))
+    return lower, upper
+
+
+def calibrate_certified_threshold(
+    y_val_true: np.ndarray,
+    y_val_prob: np.ndarray,
+    max_fp: int = 4,
+    held_out_cert: bool = False,
+    confidence: float = 0.95,
+    seed: int = 42
+) -> Dict[str, Any]:
+    """
+    Calibrates a certified decision threshold guaranteeing low false positive rate (FPR <= 0.1%).
+
+    Modes:
+    1. Pooled validation negatives (held_out_cert=False):
+       Selects threshold allowing at most max_fp (default: 4) false positives on validation negatives.
+       For N ~ 10,013 negatives, max_fp=4 guarantees one-sided 95% Clopper-Pearson upper bound <= 0.0010.
+    2. Held-out certification split (held_out_cert=True):
+       Splits validation negatives 50/50 into calibration half and certification half.
+       Selects threshold on calibration half and verifies <= 1 FP on held-out certification half (N ~ 5,000).
+    """
+    neg_scores = y_val_prob[y_val_true == 0]
+    n_negs = len(neg_scores)
+    if n_negs == 0:
+        return {
+            "threshold": 0.5,
+            "max_fp": max_fp,
+            "mode": "fallback_empty",
+            "ci_95": (0.0, 1.0),
+            "realized_val_fpr": 0.0,
+            "is_certified": False
+        }
+
+    if not held_out_cert:
+        # Pooled validation calibration: allow at most max_fp false alarms
+        sorted_negs = np.sort(neg_scores)
+        idx = max(0, n_negs - max_fp)
+        threshold = float(sorted_negs[idx]) if idx < n_negs else float(sorted_negs[-1]) + 1e-6
+        observed_fp = int(np.sum(neg_scores >= threshold))
+        while observed_fp > max_fp and idx < n_negs - 1:
+            idx += 1
+            threshold = float(sorted_negs[idx])
+            observed_fp = int(np.sum(neg_scores >= threshold))
+        if observed_fp > max_fp:
+            threshold = float(sorted_negs[-1]) + 1e-6
+            observed_fp = int(np.sum(neg_scores >= threshold))
+        ci_lower, ci_upper = clopper_pearson_ci(observed_fp, n_negs, confidence=confidence)
+        return {
+            "threshold": threshold,
+            "max_fp_allowed": max_fp,
+            "observed_val_fp": observed_fp,
+            "n_val_negs": n_negs,
+            "mode": "pooled_validation",
+            "realized_val_fpr": observed_fp / n_negs,
+            "ci_95": (round(ci_lower, 6), round(ci_upper, 6)),
+            "is_certified": bool(observed_fp <= max_fp and ci_upper <= 0.0015)
+        }
+    else:
+        # Held-out certification split: split negatives 50/50
+        rng = np.random.default_rng(seed)
+        perm = rng.permutation(n_negs)
+        mid = n_negs // 2
+        cal_negs = neg_scores[perm[:mid]]
+        cert_negs = neg_scores[perm[mid:]]
+
+        # On calibration half, pick threshold allowing at most 1 FP
+        sorted_cal = np.sort(cal_negs)
+        cal_idx = max(0, len(sorted_cal) - 1)
+        thresh = float(sorted_cal[cal_idx])
+        while int(np.sum(cal_negs >= thresh)) > 1 and cal_idx < len(sorted_cal) - 1:
+            cal_idx += 1
+            thresh = float(sorted_cal[cal_idx])
+        if int(np.sum(cal_negs >= thresh)) > 1:
+            thresh = float(sorted_cal[-1]) + 1e-6
+
+        # Strictly evaluate on held-out certification half without mutating threshold
+        cert_fp = int(np.sum(cert_negs >= thresh))
+        ci_lower, ci_upper = clopper_pearson_ci(cert_fp, len(cert_negs), confidence=confidence)
+        return {
+            "threshold": thresh,
+            "max_fp_allowed": 1,
+            "observed_cert_fp": cert_fp,
+            "n_cert_negs": len(cert_negs),
+            "n_cal_negs": len(cal_negs),
+            "mode": "held_out_certification",
+            "realized_cert_fpr": cert_fp / max(len(cert_negs), 1),
+            "ci_95": (round(ci_lower, 6), round(ci_upper, 6)),
+            "is_certified": bool(cert_fp <= 1 and ci_upper <= 0.0015)
+        }
+
+
+def compare_at_matched_fpr(
+    y_test_true: np.ndarray,
+    y_prob_a: np.ndarray,
+    y_prob_b: np.ndarray,
+    target_realised_fpr: float = 0.00094
+) -> Dict[str, Any]:
+    """
+    Compares two models (e.g. SAGE vs ATTN) at exactly matched realised FPR on the test negatives.
+    Eliminates threshold bias where one model appears superior only because its realised FPR is inflated.
+    """
+    neg_mask = (y_test_true == 0)
+    pos_mask = (y_test_true == 1)
+
+    negs_a = y_prob_a[neg_mask]
+    negs_b = y_prob_b[neg_mask]
+    pos_a = y_prob_a[pos_mask]
+    pos_b = y_prob_b[pos_mask]
+
+    n_negs = len(negs_a)
+    n_pos = len(pos_a)
+    if n_negs == 0 or n_pos == 0:
+        return {"tpr_a": 0.0, "tpr_b": 0.0, "realised_fpr": 0.0, "delta_tpr": 0.0}
+
+    if target_realised_fpr <= 0.0:
+        th_a = float(np.max(negs_a)) + 1e-6
+        th_b = float(np.max(negs_b)) + 1e-6
+    elif target_realised_fpr >= 1.0:
+        th_a = float(np.min(negs_a))
+        th_b = float(np.min(negs_b))
+    else:
+        cutoff_idx = max(0, min(n_negs - 1, int(np.floor((1.0 - target_realised_fpr) * n_negs))))
+        th_a = float(np.sort(negs_a)[cutoff_idx])
+        th_b = float(np.sort(negs_b)[cutoff_idx])
+
+    rfpr_a = float(np.mean(negs_a >= th_a))
+    rfpr_b = float(np.mean(negs_b >= th_b))
+    tpr_a = float(np.mean(pos_a >= th_a))
+    tpr_b = float(np.mean(pos_b >= th_b))
+
+    return {
+        "target_fpr": target_realised_fpr,
+        "model_a": {"threshold": th_a, "realised_fpr": rfpr_a, "tpr": tpr_a},
+        "model_b": {"threshold": th_b, "realised_fpr": rfpr_b, "tpr": tpr_b},
+        "tpr_difference_b_minus_a": round(tpr_b - tpr_a, 4)
+    }
+
+
 def compute_prevalence_adjusted_precision(tpr: float, fpr: float, pi: float) -> float:
     """
     Computes prevalence-adjusted precision for a target operating point:

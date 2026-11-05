@@ -127,6 +127,13 @@ export OPENBLAS_NUM_THREADS="${HDG_THREADS}"
 export VECLIB_MAXIMUM_THREADS="${HDG_THREADS}"
 export NUMEXPR_NUM_THREADS="${HDG_THREADS}"
 
+# Device & Determinism Configuration
+# Default strictly to CPU to prevent silent device switching and inconsistent numerical artifacts.
+export HDG_DEVICE="${HDG_DEVICE:-cpu}"
+export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0}"
+export CUBLAS_WORKSPACE_CONFIG=":4096:8"
+export PYTHONHASHSEED="42"
+
 # Swap check for low-RAM systems
 TOTAL_RAM_KB=$(grep MemTotal /proc/meminfo 2>/dev/null | awk '{print $2}' || echo 0)
 TOTAL_RAM_GB=$(( TOTAL_RAM_KB / 1024 / 1024 ))
@@ -182,49 +189,49 @@ ${PYTHON_BIN} -m pipeline.03_run_baselines --config "${CONFIG_FILE}" ${EXTRA_PIP
 success "Stage 5 (Baselines) PASSED."
 
 # Step 6: Multi-Seed HeteroGNN Training & Evaluation (Random, Time, Group splits)
-log "STAGE 6a: Training & Evaluating HeteroGNN (Random Split)..."
+log "STAGE 6a: Training & Evaluating HeteroGNN (Random Split with Certified Calibration)..."
 ${PYTHON_BIN} -m pipeline.04_train_gnn --config "${CONFIG_FILE}" --split-type random --variant both ${EXTRA_PIPELINE_FLAGS[@]+"${EXTRA_PIPELINE_FLAGS[@]}"}
 
-log "STAGE 6b: Training & Evaluating HeteroGNN (Time Split)..."
+log "STAGE 6b: Training & Evaluating HeteroGNN (Time Split - Inference-Only Temporal)..."
 ${PYTHON_BIN} -m pipeline.04_train_gnn --config "${CONFIG_FILE}" --split-type time --variant both ${EXTRA_PIPELINE_FLAGS[@]+"${EXTRA_PIPELINE_FLAGS[@]}"}
 
-log "STAGE 6c: Training & Evaluating HeteroGNN (Group Split)..."
+log "STAGE 6c: Training & Evaluating HeteroGNN (Group Split - Infrastructure Component Holdout)..."
 ${PYTHON_BIN} -m pipeline.04_train_gnn --config "${CONFIG_FILE}" --split-type group --variant both ${EXTRA_PIPELINE_FLAGS[@]+"${EXTRA_PIPELINE_FLAGS[@]}"}
 success "Stage 6 (HeteroGNN Random, Time, Group Evaluation) PASSED."
 
-# Step 7: Topological & Feature Ablation Study
-log "STAGE 7: Running Systematic Ablation Study..."
+# Step 7: Topological & Feature Ablation Study (Holm-Bonferroni Corrected)
+log "STAGE 7: Running Systematic Ablation Study (Reduced-Budget Protocol)..."
 ${PYTHON_BIN} -m pipeline.05_ablation --config "${CONFIG_FILE}" ${EXTRA_PIPELINE_FLAGS[@]+"${EXTRA_PIPELINE_FLAGS[@]}"}
-success "Stage 7 (Ablation) PASSED."
+success "Stage 7 (Ablation with Holm-Bonferroni Correction) PASSED."
 
-# Step 8: Structural Adversarial Attack & GNNGuard Recovery
-log "STAGE 8: Evaluating PPT Structural Attack & Relational GNNGuard..."
+# Step 8: Structural Adversarial Attack & GNNGuard Recovery (Purity-Ranked & 3 Differences)
+log "STAGE 8: Evaluating Purity-Ranked Structural Attack & Relational GNNGuard..."
 ${PYTHON_BIN} -m pipeline.06_attack_eval --config "${CONFIG_FILE}" ${EXTRA_PIPELINE_FLAGS[@]+"${EXTRA_PIPELINE_FLAGS[@]}"}
-success "Stage 8 (Attack & Robustness) PASSED."
+success "Stage 8 (Attack & Robustness Differences) PASSED."
 
-# Step 9: Operational CPU Latency Benchmark
-log "STAGE 9: Benchmarking CPU Inference Latency..."
+# Step 9: Operational CPU Latency Benchmark & Pareto Frontier
+log "STAGE 9: Benchmarking CPU Inference Latency & Sampling Pareto Frontier..."
 LATENCY_QUERIES=$(${PYTHON_BIN} -c "import yaml; cfg=yaml.safe_load(open('${CONFIG_FILE}')); print(cfg.get('latency', {}).get('num_queries', 500))" 2>/dev/null || echo 500)
 LATENCY_WARMUP=$(${PYTHON_BIN} -c "import yaml; cfg=yaml.safe_load(open('${CONFIG_FILE}')); print(cfg.get('latency', {}).get('warmup', 20))" 2>/dev/null || echo 20)
 ${PYTHON_BIN} -m pipeline.07_latency_eval --config "${CONFIG_FILE}" --num-queries "${LATENCY_QUERIES}" --warmup "${LATENCY_WARMUP}" ${EXTRA_PIPELINE_FLAGS[@]+"${EXTRA_PIPELINE_FLAGS[@]}"}
-success "Stage 9 (Latency Benchmark) PASSED."
+success "Stage 9 (Latency Pareto Benchmark) PASSED."
 
-# Step 10: Dataset Provenance & Shortcut Generalization Checks
-log "STAGE 10: Running Dataset Provenance & Cross-Source Generalization Audits..."
+# Step 10: Dataset Provenance, Cross-Source Transfer & Shortcut Audits
+log "STAGE 10: Running Dataset Provenance, CESNET Audit & Cross-Source Transfer Audits..."
 ${PYTHON_BIN} -m pipeline.08_provenance_checks --config "${CONFIG_FILE}" ${EXTRA_PIPELINE_FLAGS[@]+"${EXTRA_PIPELINE_FLAGS[@]}"}
-success "Stage 10 (Provenance Checks) PASSED."
+success "Stage 10 (Provenance & Cross-Source Transfer Checks) PASSED."
 
 # Step 11: Continual Learning & Streaming Evaluation
 log "STAGE 11: Evaluating Streaming Updates (Retrain vs Fine-Tune vs Replay Buffer)..."
 ${PYTHON_BIN} -m pipeline.09_streaming_eval --config "${CONFIG_FILE}" ${EXTRA_PIPELINE_FLAGS[@]+"${EXTRA_PIPELINE_FLAGS[@]}"}
 success "Stage 11 (Streaming Continual Learning) PASSED."
 
-# Step 12: BIND Response Policy Zone (RPZ) Rule Emission
-log "STAGE 12: Calibrating 0.1% FPR Threshold & Emitting BIND RPZ Zone File..."
+# Step 12: BIND Response Policy Zone (RPZ) Rule Emission with Certified 0.1% FPR
+log "STAGE 12: Calibrating Certified 0.1% FPR Threshold & Emitting BIND RPZ Zone File..."
 ${PYTHON_BIN} -m pipeline.10_emit_rpz --config "${CONFIG_FILE}" --target-fpr 0.001 ${EXTRA_PIPELINE_FLAGS[@]+"${EXTRA_PIPELINE_FLAGS[@]}"}
-success "Stage 12 (RPZ Emission) PASSED."
+success "Stage 12 (Certified RPZ Emission) PASSED."
 
-# Step 13: Compile Comprehensive Report
+# Step 13: Compile Comprehensive Report (O1-O5, Reconciled Metrics, Paired Baselines, Negative Results)
 log "STAGE 13: Compiling Final Comprehensive REPORT.md..."
 ${PYTHON_BIN} -m pipeline.11_make_report --config "${CONFIG_FILE}" ${EXTRA_PIPELINE_FLAGS[@]+"${EXTRA_PIPELINE_FLAGS[@]}"}
 success "Stage 13 (Report Compilation) PASSED."

@@ -86,3 +86,52 @@ def test_sage_guard_forward(minimal_synthetic_heterodata: HeteroData) -> None:
 
     assert out.shape == (data["domain"].num_nodes, 2)
     assert not torch.isnan(out).any()
+
+
+def test_cvar_topk_pauc_loss_and_fine_tune(minimal_synthetic_heterodata: HeteroData, minimal_domains_df) -> None:
+    """Verifies CVaR top-k negative surrogate loss gradient backprop and fine-tuning execution."""
+    from src.hdg.training.train import cvar_topk_pauc_loss, fine_tune_pauc_gnn
+    from src.hdg.data.splits import DataSplits
+    import numpy as np
+
+    # 1. Direct surrogate loss check
+    logits = torch.randn(10, 2, requires_grad=True)
+    targets = torch.tensor([0, 1, 0, 1, 0, 1, 0, 1, 0, 1])
+    loss = cvar_topk_pauc_loss(logits, targets, k_fraction=0.5, margin=1.0)
+    assert loss.item() >= 0.0
+    loss.backward()
+    assert logits.grad is not None
+
+    # 2. Fine-tuning loop on minimal data
+    data = minimal_synthetic_heterodata
+    df = minimal_domains_df
+    in_channels = {nt: data[nt].x.shape[1] for nt in data.node_types}
+    model = HeteroGNN(
+        metadata=data.metadata(),
+        in_channels_dict=in_channels,
+        variant="sage",
+        hidden_dim=32,
+        out_dim=16,
+        num_layers=2
+    )
+    splits = DataSplits(
+        train_indices=np.array([0, 1, 2, 3, 4, 5]),
+        val_indices=np.array([6, 7]),
+        test_indices=np.array([8, 9]),
+        split_type="test"
+    )
+
+    test_eval, y_t, y_p, ft_model = fine_tune_pauc_gnn(
+        model=model,
+        data=data,
+        splits=splits,
+        df=df,
+        epochs=2,
+        lr=0.001,
+        patience=2,
+        seed=42
+    )
+    assert "roc_auc" in test_eval
+    assert "fine_tune_metadata" in test_eval
+    assert len(y_p) == 2
+

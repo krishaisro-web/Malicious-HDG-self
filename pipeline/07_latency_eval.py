@@ -44,6 +44,7 @@ def main() -> None:
     parser.add_argument("--num-queries", type=int, default=None, help="Number of test queries to measure (default: 500, smoke: 50)")
     parser.add_argument("--warmup", type=int, default=None, help="Number of warmup iterations (default: 20, smoke: 5)")
     parser.add_argument("--checkpoint", type=str, default=None, help="Path to trained model checkpoint .pt")
+    parser.add_argument("--out-dir", type=str, default=None, help="Directory to save output tables")
     parser.add_argument("--force", action="store_true", help="Force rerun even if results exist")
     args = parser.parse_args()
 
@@ -55,7 +56,10 @@ def main() -> None:
         print(f"[{run_name}] Run already completed. Skipping (use --force to rerun).")
         return
 
-    out_dir = paths.results_dir / "tables"
+    if args.out_dir:
+        out_dir = Path(args.out_dir)
+    else:
+        out_dir = paths.results_dir / "tables"
     paths.check_write_path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -216,8 +220,15 @@ def main() -> None:
         thread_modes.append(max_threads)
 
     batch_sizes = [1, 32]
+    neighbor_grid = [
+        [5, 2],
+        [5, 5],
+        [10, 5],
+        [15, 10],
+        [30, 20],
+        None  # Unconstrained
+    ]
     all_results = []
-
     original_threads = torch.get_num_threads()
 
     try:
@@ -225,20 +236,24 @@ def main() -> None:
             torch.set_num_threads(t_count)
             print(f"\n--- Benchmarking with {t_count} PyTorch Thread(s) ---")
             for bs in batch_sizes:
-                print(f"Evaluating Batch Size = {bs} ({num_queries} queries, {warmup} warmup)...")
-                stats = benchmark_cpu_query_latency(
-                    model=model,
-                    data=scaled_data,
-                    df=df,
-                    batch_size=bs,
-                    num_queries=num_queries,
-                    warmup=warmup,
-                    seed=cfg.get("eval_seeds", [42])[0]
-                )
-                stats["threads"] = t_count
-                all_results.append(stats)
-                e2e = stats["end_to_end"]
-                print(f"  BS={bs}, Threads={t_count} -> E2E Mean: {e2e['mean_ms']:.2f}ms, P95: {e2e['p95_ms']:.2f}ms, P99: {e2e['p99_ms']:.2f}ms")
+                for nbrs in neighbor_grid:
+                    s_label = f"[{nbrs[0]},{nbrs[1]}]" if nbrs else "unconstrained"
+                    print(f"Evaluating BS={bs}, Sampling={s_label}, Threads={t_count} ({num_queries} queries, {warmup} warmup)...")
+                    stats = benchmark_cpu_query_latency(
+                        model=model,
+                        data=scaled_data,
+                        df=df,
+                        batch_size=bs,
+                        num_queries=num_queries,
+                        warmup=warmup,
+                        seed=cfg.get("eval_seeds", [42])[0],
+                        max_neighbors=nbrs,
+                        use_hub_cache=(nbrs is not None),
+                        threads=t_count
+                    )
+                    all_results.append(stats)
+                    e2e = stats["end_to_end"]
+                    print(f"  BS={bs}, Sampling={s_label}, Threads={t_count} -> E2E Mean: {e2e['mean_ms']:.2f}ms, P95: {e2e['p95_ms']:.2f}ms")
     finally:
         torch.set_num_threads(original_threads)
 
@@ -279,19 +294,20 @@ def main() -> None:
         f"- **Queries Measured**: `{num_queries}` (Warmup: `{warmup}`)",
         "",
         "## Benchmark Results (ms per query)",
-        "| Batch Size | Threads | Feature Lookup Mean (P95) | 2-Hop Ego Build Mean (P95) | Model Forward Mean (P95) | End-to-End Mean | Median | P95 | P99 |",
-        "|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|",
+        "| Batch Size | Threads | Sampling Budget | Feature Lookup Mean (P95) | 2-Hop Ego Build Mean (P95) | Model Forward Mean (P95) | End-to-End Mean | Median | P95 | P99 |",
+        "|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|",
     ]
 
     for b in all_results:
         bs = b["batch_size"]
         th = b["threads"]
+        samp = b.get("sampling", "unconstrained")
         feat = f"{b['feature_lookup']['mean_ms']:.2f} ({b['feature_lookup']['p95_ms']:.2f})"
         ego = f"{b['ego_subgraph_build']['mean_ms']:.2f} ({b['ego_subgraph_build']['p95_ms']:.2f})"
         fwd = f"{b['model_forward']['mean_ms']:.2f} ({b['model_forward']['p95_ms']:.2f})"
         e2e = b["end_to_end"]
         md_lines.append(
-            f"| {bs} | {th} | {feat} | {ego} | {fwd} | **{e2e['mean_ms']:.2f}** | {e2e['median_ms']:.2f} | {e2e['p95_ms']:.2f} | {e2e['p99_ms']:.2f} |"
+            f"| {bs} | {th} | `{samp}` | {feat} | {ego} | {fwd} | **{e2e['mean_ms']:.2f}** | {e2e['median_ms']:.2f} | {e2e['p95_ms']:.2f} | {e2e['p99_ms']:.2f} |"
         )
 
     md_lines.append("")

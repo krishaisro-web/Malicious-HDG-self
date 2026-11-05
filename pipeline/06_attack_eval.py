@@ -47,6 +47,7 @@ def main() -> None:
     parser.add_argument("--single-seed", type=int, default=None, help="Run single seed")
     parser.add_argument("--epochs", type=int, default=None, help="Training epochs")
     parser.add_argument("--max-domains", type=int, default=None, help="Cap total domains")
+    parser.add_argument("--out-dir", type=str, default=None, help="Directory to save output tables")
     parser.add_argument("--force", action="store_true", help="Overwrite existing cached runs")
     args = parser.parse_args()
 
@@ -54,7 +55,10 @@ def main() -> None:
     cfg = load_config(args.config)
     paths = get_resolved_paths(cfg, is_fixture=args.fixture, is_smoke=args.smoke, root_dir=REPO_ROOT)
 
-    out_dir = paths.results_dir / "tables"
+    if args.out_dir:
+        out_dir = Path(args.out_dir)
+    else:
+        out_dir = paths.results_dir / "tables"
     paths.check_write_path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -185,13 +189,15 @@ def main() -> None:
                     "roc_auc": eval_sage_clean["roc_auc"],
                     "f1": a_f1,
                     "recall": eval_sage_clean["recall"],
-                    "tpr_at_0.1pct_fpr": eval_sage_clean.get("operating_points", {}).get("tpr_at_0.1pct_fpr", {}).get("tpr", 0.0)
+                    "tpr_at_0.1pct_fpr": eval_sage_clean.get("operating_points", {}).get("tpr_at_0.1pct_fpr", {}).get("tpr", 0.0),
+                    "realised_fpr_0.1pct": eval_sage_clean.get("operating_points", {}).get("tpr_at_0.1pct_fpr", {}).get("realised_test_fpr", 0.0)
                 },
                 "attacked_sage_undefended": {
                     "roc_auc": res_b["roc_auc"],
                     "f1": b_f1,
                     "recall": res_b["recall"],
                     "tpr_at_0.1pct_fpr": res_b["tpr_at_0.1pct_fpr"],
+                    "realised_fpr_0.1pct": res_b.get("realised_fpr_0.1pct", 0.0),
                     "evasion_rate": res_b["evasion_rate"],
                     "robustness_delta": round(robustness_delta, 4)
                 },
@@ -200,6 +206,7 @@ def main() -> None:
                     "f1": c_f1,
                     "recall": res_c["recall"],
                     "tpr_at_0.1pct_fpr": res_c["tpr_at_0.1pct_fpr"],
+                    "realised_fpr_0.1pct": res_c.get("realised_fpr_0.1pct", 0.0),
                     "evasion_rate": res_c["evasion_rate"],
                     "recovery_score": round(recovery, 4)
                 },
@@ -214,6 +221,8 @@ def main() -> None:
         save_run_result(paths.results_dir, run_name, {"experiment": "attack_eval", "seed": s, "budgets": seed_budget_results})
 
     # Aggregate over seeds
+    from src.hdg.eval.attack import compute_attack_robustness_differences
+
     aggregated_attack: Dict[str, Any] = {}
     for k, runs in results_by_budget.items():
         if not runs:
@@ -221,20 +230,29 @@ def main() -> None:
         clean_f1 = [r["clean_sage"]["f1"] for r in runs]
         atk_f1 = [r["attacked_sage_undefended"]["f1"] for r in runs]
         guard_f1 = [r["attacked_sage_guard_defended"]["f1"] for r in runs]
+        clean_fpr = [r["clean_sage"].get("realised_fpr_0.1pct", 0.0) for r in runs]
+        atk_fpr = [r["attacked_sage_undefended"].get("realised_fpr_0.1pct", 0.0) for r in runs]
+        guard_fpr = [r["attacked_sage_guard_defended"].get("realised_fpr_0.1pct", 0.0) for r in runs]
         evasion_rates = [r["attacked_sage_undefended"]["evasion_rate"] for r in runs]
         recoveries = [r["attacked_sage_guard_defended"]["recovery_score"] for r in runs]
+
+        diffs = compute_attack_robustness_differences(clean_f1, atk_f1, guard_f1, n_bootstrap=1000)
 
         aggregated_attack[f"budget_{k}"] = {
             "budget": k,
             "num_seeds": len(runs),
             "clean_f1_mean": round(float(np.mean(clean_f1)), 4),
             "clean_f1_std": round(float(np.std(clean_f1)), 4),
+            "clean_fpr_mean": round(float(np.mean(clean_fpr)), 6),
             "attacked_undefended_f1_mean": round(float(np.mean(atk_f1)), 4),
             "attacked_undefended_f1_std": round(float(np.std(atk_f1)), 4),
+            "attacked_undefended_fpr_mean": round(float(np.mean(atk_fpr)), 6),
             "attacked_guard_f1_mean": round(float(np.mean(guard_f1)), 4),
             "attacked_guard_f1_std": round(float(np.std(guard_f1)), 4),
+            "attacked_guard_fpr_mean": round(float(np.mean(guard_fpr)), 6),
             "evasion_rate_mean": round(float(np.mean(evasion_rates)), 4),
-            "recovery_score_mean": round(float(np.mean(recoveries)), 4)
+            "recovery_score_mean": round(float(np.mean(recoveries)), 4),
+            "robustness_differences": diffs
         }
 
     # Save JSON
@@ -246,18 +264,35 @@ def main() -> None:
     pfx_t = "[FIXTURE - meaningless] " if args.fixture else ""
     md_lines = [
         f"# {pfx_t}Adversarial Structural Attack & GNNGuard Recovery",
-        "*Multi-instance PPT threat model: Attacker injects fake edges to top benign infrastructure*",
-        f"*Evaluated across {len(seeds)} seeded runs (mean ± std)*",
+        "*Multi-instance PPT threat model: Attacker injects fake edges to top benign infrastructure (ranked by degree * train-benign purity >= 99%)*",
+        f"*Evaluated across {len(seeds)} seeded runs (mean ± std) with paired bootstrap 95% CIs*",
         "",
-        "| Budget (k) | (A) Clean SAGE F1 | (B) Attacked Undefended F1 | (C) Attacked + GNNGuard F1 | Evasion Rate | GNNGuard Recovery |",
-        "|---|---|---|---|---|---|"
+        "| Budget (k) | Clean SAGE F1 (FPR) | Attacked Undefended F1 (FPR) | Attacked + GNNGuard F1 (FPR) | Δ_att [95% CI] | Residual Gap [95% CI] | Defended Gain [95% CI] | Recovery Score |",
+        "|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|"
     ]
     for b_key, stat in aggregated_attack.items():
         k_val = stat["budget"]
+        diffs = stat.get("robustness_differences", {})
+        d_att = diffs.get("delta_att", {})
+        r_gap = diffs.get("residual_gap", {})
+        d_gain = diffs.get("defended_gain", {})
+
+        d_att_str = f"{d_att.get('mean', 0.0):+.4f} [{d_att.get('ci_95', (0,0))[0]:+.4f}, {d_att.get('ci_95', (0,0))[1]:+.4f}]" if d_att else "N/A"
+        r_gap_str = f"{r_gap.get('mean', 0.0):+.4f} [{r_gap.get('ci_95', (0,0))[0]:+.4f}, {r_gap.get('ci_95', (0,0))[1]:+.4f}]" if r_gap else "N/A"
+        d_gain_str = f"{d_gain.get('mean', 0.0):+.4f} [{d_gain.get('ci_95', (0,0))[0]:+.4f}, {d_gain.get('ci_95', (0,0))[1]:+.4f}]" if d_gain else "N/A"
+
+        c_str = f"{stat['clean_f1_mean']:.4f} ({stat['clean_fpr_mean']*100:.3f}%)"
+        u_str = f"{stat['attacked_undefended_f1_mean']:.4f} ({stat['attacked_undefended_fpr_mean']*100:.3f}%)"
+        g_str = f"{stat['attacked_guard_f1_mean']:.4f} ({stat['attacked_guard_fpr_mean']*100:.3f}%)"
+
         md_lines.append(
-            f"| k = {k_val} | {stat['clean_f1_mean']:.4f} ± {stat['clean_f1_std']:.4f} | {stat['attacked_undefended_f1_mean']:.4f} ± {stat['attacked_undefended_f1_std']:.4f} | {stat['attacked_guard_f1_mean']:.4f} ± {stat['attacked_guard_f1_std']:.4f} | {stat['evasion_rate_mean']*100:.1f}% | {stat['recovery_score_mean']*100:.1f}% |"
+            f"| k = {k_val} | {c_str} | {u_str} | {g_str} | {d_att_str} | {r_gap_str} | {d_gain_str} | {stat['recovery_score_mean']*100:.1f}% |"
         )
     md_lines.append("")
+    md_lines.append("> **Metric O5 Definitions**:")
+    md_lines.append("> 1. **Δ_att (Attack Impact)**: Clean F1 - Attacked Undefended F1")
+    md_lines.append("> 2. **Residual Gap**: Clean F1 - Attacked Defended F1")
+    md_lines.append("> 3. **Defended Gain**: Attacked Defended F1 - Attacked Undefended F1")
     md_lines.append("> **Metric O5 (Robustness)**: Recovery is computed as (C - B) / (A - B). Values >= 100% indicate full mitigation of injected adversarial edges.")
 
     md_path = out_dir / "attack_results.md"

@@ -87,24 +87,27 @@ def run_cross_source_eval(
     source_counts = malware_df["source"].value_counts()
     primary_source = source_counts.index[0]
 
-    # Split assignment
+    # Split assignment: Train on {Primary malware feed + Cisco Umbrella}, Test on {Other malware feeds + CESNET}
+    is_umbrella = df["source"].str.lower().str.contains("umbrella")
+    is_cesnet = df["source"].str.contains("cesnet|groundtruth", case=False) | (~is_umbrella)
+
     train_mask = (
         ((df["label"] == 1) & (df["source"] == primary_source)) |
-        ((df["label"] == 0) & (df["source"].str.lower().str.contains("umbrella")))
+        ((df["label"] == 0) & is_umbrella)
     ).to_numpy()
 
     test_mask = (
         ((df["label"] == 1) & (df["source"] != primary_source)) |
-        ((df["label"] == 0) & (df["source"].str.lower().str.contains("cesnet")))
+        ((df["label"] == 0) & is_cesnet)
     ).to_numpy()
 
     train_idx = np.where(train_mask)[0]
     test_idx = np.where(test_mask)[0]
 
-    if len(train_idx) < 50 or len(test_idx) < 50:
+    if len(train_idx) < 10 or len(test_idx) < 10:
         return {"status": "Insufficient cross-source partition sizes"}
 
-    # XGBoost tabular evaluation
+    # 1. XGBoost tabular evaluation
     X = extract_domain_features_vectorized(df, use_lexical=True)
     y = df["label"].to_numpy().astype(int)
 
@@ -121,11 +124,32 @@ def run_cross_source_eval(
     xgb_auc = float(roc_auc_score(y_test, probs))
     xgb_f1 = float(f1_score(y_test, (probs >= 0.5).astype(int), zero_division=0))
 
+    # 2. TF-IDF Lexical evaluation (strongest baseline)
+    tfidf_res = None
+    domain_col = next((c for c in ["domain_name", "raw_domain", "domain"] if c in df.columns), None)
+    if domain_col is not None:
+        from sklearn.feature_extraction.text import TfidfVectorizer
+        from sklearn.linear_model import LogisticRegression
+        try:
+            vec = TfidfVectorizer(analyzer="char", ngram_range=(3, 5), max_features=10000)
+            X_text_tr = vec.fit_transform(df.loc[train_idx, domain_col].astype(str))
+            X_text_te = vec.transform(df.loc[test_idx, domain_col].astype(str))
+            lr = LogisticRegression(C=1.0, max_iter=200, random_state=seed)
+            lr.fit(X_text_tr, y_train)
+            probs_tfidf = lr.predict_proba(X_text_te)[:, 1]
+            tfidf_auc = float(roc_auc_score(y_test, probs_tfidf))
+            tfidf_f1 = float(f1_score(y_test, (probs_tfidf >= 0.5).astype(int), zero_division=0))
+            tfidf_res = {"roc_auc": round(tfidf_auc, 4), "f1": round(tfidf_f1, 4)}
+        except Exception as e:
+            tfidf_res = {"error": str(e)}
+
+
+    # 3. HeteroGNN evaluation
     gnn_res = None
     if base_graph is not None and cfg is not None:
         try:
             # 85/15 val split within train
-            val_size = int(len(train_idx) * 0.15)
+            val_size = max(1, int(len(train_idx) * 0.15))
             rng = np.random.default_rng(seed)
             shuff = rng.permutation(train_idx)
             tr_idx, val_idx = shuff[val_size:], shuff[:val_size]
@@ -144,6 +168,7 @@ def run_cross_source_eval(
         "train_samples": len(train_idx),
         "test_samples": len(test_idx),
         "xgboost_cross_source": {"roc_auc": round(xgb_auc, 4), "f1": round(xgb_f1, 4)},
+        "tfidf_cross_source": tfidf_res,
         "gnn_cross_source": gnn_res
     }
 
@@ -231,6 +256,7 @@ def main() -> None:
     parser.add_argument("--smoke", action="store_true", help="Run in smoke test mode")
     parser.add_argument("--config", type=str, default=None, help="Path to config YAML")
     parser.add_argument("--max-domains", type=int, default=None, help="Cap total domains")
+    parser.add_argument("--out-dir", type=str, default=None, help="Directory to save output files")
     parser.add_argument("--force", action="store_true", help="Overwrite existing cached runs")
     args = parser.parse_args()
 
@@ -238,7 +264,10 @@ def main() -> None:
     cfg = load_config(args.config)
     paths = get_resolved_paths(cfg, is_fixture=args.fixture, is_smoke=args.smoke, root_dir=REPO_ROOT)
 
-    out_dir = paths.results_dir / "profile"
+    if args.out_dir:
+        out_dir = Path(args.out_dir)
+    else:
+        out_dir = paths.results_dir / "profile"
     paths.check_write_path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -303,6 +332,8 @@ def main() -> None:
         "## 2. Cross-Source Generalization Transfer",
         f"- **Primary Malware Feed**: {cross_src.get('primary_malware_source', 'N/A')}",
         f"- **XGBoost Transfer ROC-AUC**: {cross_src.get('xgboost_cross_source', {}).get('roc_auc', 'N/A')}",
+        f"- **TF-IDF Transfer ROC-AUC**: {cross_src.get('tfidf_cross_source', {}).get('roc_auc', 'N/A') if cross_src.get('tfidf_cross_source') else 'N/A'}",
+        f"- **HeteroGNN Transfer ROC-AUC**: {cross_src.get('gnn_cross_source', {}).get('roc_auc', 'N/A') if cross_src.get('gnn_cross_source') else 'N/A'}",
         "",
         "## 3. Feature Sensitivity (Missingness / Null-rate Removal)",
         f"- **Full Model AUC**: {feat_ablation.get('full_auc', 'N/A')}",

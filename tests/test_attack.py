@@ -88,3 +88,20 @@ def test_attack_targets_strictly_from_train_benign(minimal_synthetic_heterodata:
 
     # The targets must overlap with valid train benign infrastructure
     assert len(connected_target_ips.intersection(valid_target_ips)) > 0
+
+
+def test_compute_attack_robustness_differences() -> None:
+    from src.hdg.eval.attack import compute_attack_robustness_differences
+    clean = [0.80, 0.81, 0.82, 0.79, 0.80]
+    attacked_undefended = [0.65, 0.64, 0.67, 0.63, 0.66]
+    attacked_defended = [0.77, 0.78, 0.79, 0.76, 0.77]
+
+    diffs = compute_attack_robustness_differences(clean, attacked_undefended, attacked_defended, n_bootstrap=100)
+    assert "delta_att" in diffs
+    assert "residual_gap" in diffs
+    assert "defended_gain" in diffs
+
+    assert diffs["delta_att"]["mean"] > 0.10
+    assert diffs["defended_gain"]["mean"] > 0.10
+    assert diffs["residual_gap"]["mean"] < 0.05
+

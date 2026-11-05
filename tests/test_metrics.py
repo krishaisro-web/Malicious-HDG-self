@@ -135,3 +135,65 @@ def test_realised_fpr_matches_count() -> None:
     assert fp_count == 2
     assert realised_fpr == expected_fpr == 0.025
 
+
+def test_clopper_pearson_ci() -> None:
+    from src.hdg.metrics import clopper_pearson_ci
+    low, high = clopper_pearson_ci(4, 10013, confidence=0.95)
+    assert 0.0 <= low <= high <= 1.0
+    assert high < 0.0015  # Certified upper bound must bound 0.1% FPR tightly
+    
+    # Boundary checks
+    low_0, high_0 = clopper_pearson_ci(0, 100)
+    assert low_0 == 0.0
+    assert high_0 > 0.0
+
+
+def test_calibrate_certified_threshold_pooled_and_heldout() -> None:
+    from src.hdg.metrics import calibrate_certified_threshold
+    rng = np.random.default_rng(42)
+    y_val_true = np.array([0] * 10000 + [1] * 5000)
+    # Negatives have lower scores, positives higher
+    y_val_prob = np.concatenate([
+        rng.uniform(0.01, 0.40, size=10000),
+        rng.uniform(0.40, 0.99, size=5000)
+    ])
+    
+    # 1. Pooled mode: <= 4 FPs
+    res_pooled = calibrate_certified_threshold(y_val_true, y_val_prob, max_fp=4, held_out_cert=False)
+    assert res_pooled["mode"] == "pooled_validation"
+    assert res_pooled["observed_val_fp"] <= 4
+    assert res_pooled["is_certified"] is True
+    
+    # 2. Held-out certification mode: <= 1 FP on cert half
+    res_heldout = calibrate_certified_threshold(y_val_true, y_val_prob, held_out_cert=True, seed=42)
+    assert res_heldout["mode"] == "held_out_certification"
+    assert res_heldout["observed_cert_fp"] <= 1
+    assert res_heldout["is_certified"] is True
+
+    # 3. Guard against duplicate / tied negative scores
+    y_val_tied = np.array([0.2] * 10000 + [0.8] * 5000)
+    res_tied = calibrate_certified_threshold(y_val_true, y_val_tied, max_fp=4, held_out_cert=False)
+    assert res_tied["observed_val_fp"] <= 4
+
+
+def test_compare_at_matched_fpr() -> None:
+    from src.hdg.metrics import compare_at_matched_fpr
+    rng = np.random.default_rng(42)
+    y_true = np.array([0] * 2000 + [1] * 1000)
+    # Model A: SAGE-like
+    prob_a = np.concatenate([rng.uniform(0.0, 0.5, 2000), rng.uniform(0.6, 0.95, 1000)])
+    # Model B: ATTN-like
+    prob_b = np.concatenate([rng.uniform(0.0, 0.55, 2000), rng.uniform(0.55, 0.98, 1000)])
+    
+    res = compare_at_matched_fpr(y_true, prob_a, prob_b, target_realised_fpr=0.001)
+    assert abs(res["model_a"]["realised_fpr"] - 0.001) < 0.001
+    assert abs(res["model_b"]["realised_fpr"] - 0.001) < 0.001
+    assert "tpr_difference_b_minus_a" in res
+
+    # Edge cases: 0.0 target FPR
+    res_0 = compare_at_matched_fpr(y_true, prob_a, prob_b, target_realised_fpr=0.0)
+    assert res_0["model_a"]["realised_fpr"] == 0.0
+    assert res_0["model_b"]["realised_fpr"] == 0.0
+
+
+

@@ -52,21 +52,46 @@ def generate_structural_attack(
     n_controlled = max(1, int(round(rho * len(mal_test_idx))))
     controlled_domains = rng.choice(mal_test_idx, size=n_controlled, replace=False).tolist()
 
-    # Identify candidate target nodes strictly from TRAIN benign domains
+    # Identify candidate target nodes strictly from TRAIN benign domains with purity ranking
     train_benign = [idx for idx in splits.train_indices if clean_data["domain"].y[idx].item() == 0]
+    train_malicious = [idx for idx in splits.train_indices if clean_data["domain"].y[idx].item() == 1]
 
-    def get_top_train_benign_targets(edge_type: Tuple[str, str, str]) -> List[int]:
+    def get_top_train_benign_targets(edge_type: Tuple[str, str, str], min_purity: float = 0.99) -> List[int]:
         if edge_type not in clean_data.edge_types:
             return []
         e_arr = clean_data[edge_type].edge_index.cpu().numpy()
         if e_arr.shape[1] == 0:
             return []
-        mask = np.isin(e_arr[0], train_benign)
-        targets = e_arr[1][mask]
-        if len(targets) == 0:
+
+        benign_mask = np.isin(e_arr[0], train_benign)
+        mal_mask = np.isin(e_arr[0], train_malicious)
+
+        benign_targets = e_arr[1][benign_mask]
+        mal_targets = e_arr[1][mal_mask]
+
+        if len(benign_targets) == 0:
             return []
-        counts = np.bincount(targets)
-        return np.argsort(counts)[::-1][:20].tolist()
+
+        num_targets = int(np.max(e_arr[1])) + 1
+        benign_counts = np.bincount(benign_targets, minlength=num_targets)
+        mal_counts = np.bincount(mal_targets, minlength=num_targets)
+        total_counts = benign_counts + mal_counts
+
+        # Train-benign purity: benign_degree / total_train_degree
+        with np.errstate(divide="ignore", invalid="ignore"):
+            purity = np.where(total_counts > 0, benign_counts / total_counts, 0.0)
+
+        # Select targets satisfying purity >= min_purity (or fallback if none meet threshold)
+        pure_mask = (purity >= min_purity) & (benign_counts > 0)
+        if not np.any(pure_mask):
+            pure_mask = (benign_counts > 0)
+
+        scores = benign_counts * purity
+        scores[~pure_mask] = -1.0
+
+        ranked = np.argsort(scores)[::-1]
+        valid = [int(idx) for idx in ranked if scores[idx] > 0][:20]
+        return valid
 
     top_ips = get_top_train_benign_targets(("domain", "resolves_to", "ip"))
     top_ns = get_top_train_benign_targets(("domain", "uses_ns", "nameserver"))
@@ -172,3 +197,56 @@ def evaluate_attacked_model(
         "evasion_rate": round(evasion_rate, 4),
         "y_prob": probs
     }
+
+
+def compute_attack_robustness_differences(
+    clean_metrics: List[float],
+    attacked_undefended_metrics: List[float],
+    attacked_defended_metrics: List[float],
+    n_bootstrap: int = 1000,
+    seed: int = 42
+) -> Dict[str, Any]:
+    """
+    Computes 3 paired robustness differences with 95% bootstrap confidence intervals:
+    1. Delta_att: clean - attacked_undefended (attack degradation)
+    2. Residual_gap: clean - attacked_defended (residual gap under defense)
+    3. Defended_gain: attacked_defended - attacked_undefended (recovery gain from defense)
+    """
+    c = np.array(clean_metrics, dtype=float)
+    u = np.array(attacked_undefended_metrics, dtype=float)
+    d = np.array(attacked_defended_metrics, dtype=float)
+    n = len(c)
+
+    delta_att = float(np.mean(c - u))
+    residual_gap = float(np.mean(c - d))
+    defended_gain = float(np.mean(d - u))
+
+    rng = np.random.default_rng(seed)
+    boot_delta_att = []
+    boot_residual_gap = []
+    boot_defended_gain = []
+
+    for _ in range(n_bootstrap):
+        idx = rng.choice(n, size=n, replace=True)
+        boot_delta_att.append(np.mean(c[idx] - u[idx]))
+        boot_residual_gap.append(np.mean(c[idx] - d[idx]))
+        boot_defended_gain.append(np.mean(d[idx] - u[idx]))
+
+    def get_ci(arr):
+        return (round(float(np.percentile(arr, 2.5)), 4), round(float(np.percentile(arr, 97.5)), 4))
+
+    return {
+        "delta_att": {
+            "mean": round(delta_att, 4),
+            "ci_95": get_ci(boot_delta_att)
+        },
+        "residual_gap": {
+            "mean": round(residual_gap, 4),
+            "ci_95": get_ci(boot_residual_gap)
+        },
+        "defended_gain": {
+            "mean": round(defended_gain, 4),
+            "ci_95": get_ci(boot_defended_gain)
+        }
+    }
+

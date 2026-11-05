@@ -5,6 +5,7 @@ strictly identical (within 1e-5) to slicing predictions from a full-graph forwar
 """
 
 import numpy as np
+import pandas as pd
 import pytest
 import torch
 import torch.nn.functional as F
@@ -89,3 +90,44 @@ def test_ego_subgraph_batch_equivalence(minimal_synthetic_heterodata: HeteroData
         ego_pred = sub_probs[loc_idx]
         full_pred = full_probs[orig_idx]
         assert np.isclose(ego_pred, full_pred, atol=1e-5)
+
+
+def test_bounded_neighbor_sampling_and_pareto(minimal_synthetic_heterodata: HeteroData, minimal_domains_df: pd.DataFrame) -> None:
+    """Verifies that bounded neighbor sampling restricts node explosion and Pareto frontier executes."""
+    from src.hdg.eval.latency import generate_latency_pareto_frontier
+    data = minimal_synthetic_heterodata
+    df = minimal_domains_df
+    torch.manual_seed(42)
+
+    in_channels = {nt: data[nt].x.shape[1] for nt in data.node_types}
+    model = HeteroGNN(
+        metadata=data.metadata(),
+        in_channels_dict=in_channels,
+        variant="sage",
+        hidden_dim=32,
+        out_dim=16,
+        num_layers=2
+    )
+
+    # 1. Bounded ego subgraph should build without errors
+    ego_bounded, loc = build_ego_subgraph(data, [0], num_hops=2, max_neighbors=[2, 1], use_hub_cache=True)
+    assert len(loc) == 1
+    assert ego_bounded["domain"].num_nodes >= 1
+
+    # 2. Pareto frontier run
+    pareto_res = generate_latency_pareto_frontier(
+        model=model,
+        data=data,
+        df=df,
+        batch_sizes=[1],
+        thread_counts=[1],
+        neighbor_grid=[[2, 1], None],
+        num_queries=5,
+        warmup=1
+    )
+    assert "benchmarks" in pareto_res
+    assert len(pareto_res["benchmarks"]) == 2
+    for b in pareto_res["benchmarks"]:
+        assert "end_to_end" in b
+        assert "prediction_fidelity" in b
+
