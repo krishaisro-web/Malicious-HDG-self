@@ -284,20 +284,33 @@ def main() -> None:
                                 prob_b = float(torch.softmax(out_b[loc_b], dim=-1)[0, 1].item())
                                 bounded_preds.append(prob_b)
 
+                        from scipy.stats import spearmanr
+
                         b_arr = np.array(bounded_preds)
                         mad = float(np.mean(np.abs(b_arr - ref_arr)))
                         denom = (np.linalg.norm(b_arr) * np.linalg.norm(ref_arr))
                         cos_sim = float(np.dot(b_arr, ref_arr) / denom) if denom > 0 else 1.0
+                        spearman_rho, _ = spearmanr(ref_arr, b_arr)
+
+                        top_ref = set(np.argsort(ref_arr)[-10:]) if len(ref_arr) >= 10 else set(range(len(ref_arr)))
+                        top_b = set(np.argsort(b_arr)[-10:]) if len(b_arr) >= 10 else set(range(len(b_arr)))
+                        top_overlap = float(len(top_ref.intersection(top_b)) / max(1, len(top_ref)))
 
                         fidelity_dict = {
                             "mean_absolute_difference": round(mad, 5),
-                            "cosine_similarity": round(cos_sim, 5)
+                            "cosine_similarity": round(cos_sim, 5),
+                            "spearman_rank_correlation": round(float(spearman_rho), 5),
+                            "top_tail_overlap": round(top_overlap, 4)
                         }
                         if "label" in df.columns:
-                            probe_y = df["label"].iloc[probe_indices].to_numpy()
+                            probe_y = df["label"].iloc[probe_indices].to_numpy().astype(int)
                             if len(np.unique(probe_y)) > 1:
                                 try:
-                                    fidelity_dict["roc_auc"] = round(float(roc_auc_score(probe_y, b_arr)), 4)
+                                    ref_auc_val = float(roc_auc_score(probe_y, ref_arr))
+                                    b_auc_val = float(roc_auc_score(probe_y, b_arr))
+                                    fidelity_dict["reference_probe_auc"] = round(ref_auc_val, 4)
+                                    fidelity_dict["roc_auc"] = round(b_auc_val, 4)
+                                    fidelity_dict["auc_difference"] = round(b_auc_val - ref_auc_val, 4)
                                 except Exception:
                                     pass
                         stats["prediction_fidelity"] = fidelity_dict

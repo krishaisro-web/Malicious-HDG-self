@@ -101,7 +101,14 @@ def test_compute_attack_robustness_differences() -> None:
     assert "residual_gap" in diffs
     assert "defended_gain" in diffs
 
-    assert diffs["delta_att"]["mean"] > 0.10
+    # Under unified reviewer convention: m_B - m_A (attack damage < 0), m_C - m_A (residual gap < 0), m_C - m_B (defended gain > 0)
+    assert diffs["delta_att"]["mean"] < -0.10
     assert diffs["defended_gain"]["mean"] > 0.10
-    assert diffs["residual_gap"]["mean"] < 0.05
+    assert diffs["residual_gap"]["mean"] < 0.0
+    # Algebraic consistency: residual_gap == delta_att + defended_gain
+    np.testing.assert_almost_equal(
+        diffs["residual_gap"]["mean"],
+        diffs["delta_att"]["mean"] + diffs["defended_gain"]["mean"],
+        decimal=4
+    )
 

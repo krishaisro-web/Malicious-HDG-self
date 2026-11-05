@@ -16,7 +16,7 @@ Following formal reviewer review, the GPU adaptation for Malicious-HDG is approv
 
 | # | Domain | Constraint & Specification | Implementation & Safeguard |
 |:---:|:---|:---|:---|
-| **1** | **Software Stack** | **No Downgrade**: Maintain existing PyTorch and PyG versions. Do not downgrade to older wheels. | Probe host environment first via `tools/check_system.sh` (`torch.__version__`, `torch.version.cuda`, `nvidia-smi`). |
+| **1** | **Software Stack & Protocol Duality** | **Explicit Environment Duality**: The CPU reference benchmark was trained on the ISRO 48-core server under **PyTorch 2.14.0+cu130 and PyG 2.8.0.post1**. The remote A100 GPU node hosts **PyTorch 2.5.1 + CUDA 12.1 and PyG 2.7.0**. Because environments differ, GPU runs are designated as an independent execution protocol (`results/real_gpu/`). Phase 2a must verify Seed 42 parity within $\pm 0.002$ AUC before launching full multi-seed runs. | Probe host environment via `tools/check_system.sh` (`torch.__version__`, `torch.version.cuda`, `nvidia-smi`). |
 | **2** | **Default Device** | **Default Strictly to `cpu`**: Never default to `auto` or silently switch device. | CLI defaults to `--device cpu`. GPU execution requires explicit `--device cuda` or `HDG_DEVICE=cuda`. Run JSONs must record `device`, `torch_version`, `cuda_version`, `git_commit`, and `hostname`. |
 | **3** | **Precision (No BF16/AMP)** | **Strict FP32 / Disable TF32**: `torch.backends.cuda.matmul.allow_tf32 = False` and `torch.backends.cudnn.allow_tf32 = False`. | The 100k heterogeneous graph fits in ~3.5 GB VRAM. BF16's 8-bit mantissa creates logit ties near critical classification thresholds ($\sim 2.6$), collapses tail metrics at $\text{FPR} \le 0.1\%$, breaks GNNGuard cosine pruning ($\varepsilon = 10^{-8}$), and invalidates partial AUC ranking margins. |
 | **4** | **Run Isolation (No Run Mixing)** | **Dedicated Result Directory**: Separate GPU runs from CPU runs. Never allow `should_skip_run` to reuse CPU artifacts on GPU. | All GPU runs output to `results/real_gpu/` or affix `_gpu` to run file identifiers. CPU and GPU evaluations must never be mixed within paired statistical tests. |
@@ -121,12 +121,15 @@ Verification checks executed:
 - [x] **100% Dynamic Report**: `pipeline/11_make_report.py` completely refactored to read from JSON artifacts or compute dynamically with zero static mock tables.
 
 ### Phase 2: One GPU Protocol (Ready to Launch)
-1. **Hyperparameter Selection on Validation Only**: Tune learning rate, weight decay, dropout on Seed 42 validation split only using partial AUC ($\text{FPR} \le 1\%$) as the selection metric.
-2. **Multi-Seed Execution on GPU**:
-   - Re-run HeteroGNN (SAGE & ATTN) on all 5 seeds on GPU (`--device cuda`).
-   - Re-run tabular and lexical baselines under identical protocol.
-   - Save strictly to `results/real_gpu/`.
-3. **Reference Comparison**: Keep `results/real/` (CPU) as reference; compare device runtimes and confirm metric equivalence within numerical scatter tolerance.
+1. **Phase 2a: Environment & Device Parity Verification**:
+   - Probe A100 environment versions (`torch.__version__`, `torch.version.cuda`, `nvidia-smi`) and log to `results/real_gpu/env_manifest.json`.
+   - Run device-parity benchmark on Seed 42 (CPU vs GPU in same environment); verify test ROC-AUC agreement within $\pm 0.002$.
+   - Measure 1-epoch training time and peak VRAM.
+2. **Phase 2b: Protocol Tuning & Co-Primary Hyperparameter Selection**:
+   - Selection metric: **Co-primary evaluation on in-distribution validation pAUC ($\text{FPR} \le 1\%$) AND cross-source transfer AUC (Variant 1 / LOMSO)** on Seed 42. Selecting exclusively on in-distribution validation is strictly prohibited to prevent selecting models that exploit collection-source artifacts.
+   - Early stopping & epoch floor: Enforce a **minimum 50-epoch floor** and expand patience to **60 epochs** to eliminate the premature stopping failure diagnosed on Seed 777.
+   - Multi-Seed Execution: Re-run HeteroGNN (SAGE & ATTN) across all 5 seeds on GPU (`--device cuda`), and re-run baselines under identical protocol.
+   - Save strictly to `results/real_gpu/`; keep `results/real/` (CPU) as reference.
 
 ### Phase 3: Scale-Up Study (Full Zenodo Corpus)
 - Run parsed corpus without cohort capping (`max_domains: null`, ~250k domains).

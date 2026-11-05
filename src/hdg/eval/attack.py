@@ -217,8 +217,8 @@ def compute_attack_robustness_differences(
     d = np.array(attacked_defended_metrics, dtype=float)
     n = len(c)
 
-    delta_att = float(np.mean(c - u))
-    residual_gap = float(np.mean(c - d))
+    delta_att = float(np.mean(u - c))
+    residual_gap = float(np.mean(d - c))
     defended_gain = float(np.mean(d - u))
 
     rng = np.random.default_rng(seed)
@@ -228,8 +228,8 @@ def compute_attack_robustness_differences(
 
     for _ in range(n_bootstrap):
         idx = rng.choice(n, size=n, replace=True)
-        boot_delta_att.append(np.mean(c[idx] - u[idx]))
-        boot_residual_gap.append(np.mean(c[idx] - d[idx]))
+        boot_delta_att.append(np.mean(u[idx] - c[idx]))
+        boot_residual_gap.append(np.mean(d[idx] - c[idx]))
         boot_defended_gain.append(np.mean(d[idx] - u[idx]))
 
     def get_ci(arr):

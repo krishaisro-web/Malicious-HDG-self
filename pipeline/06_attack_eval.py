@@ -290,11 +290,11 @@ def main() -> None:
             f"| k = {k_val} | {c_str} | {u_str} | {g_str} | {d_att_str} | {r_gap_str} | {d_gain_str} | {stat['recovery_score_mean']*100:.1f}% |"
         )
     md_lines.append("")
-    md_lines.append("> **Metric O5 Definitions**:")
-    md_lines.append("> 1. **Δ_att (Attack Impact)**: Clean F1 - Attacked Undefended F1")
-    md_lines.append("> 2. **Residual Gap**: Clean F1 - Attacked Defended F1")
-    md_lines.append("> 3. **Defended Gain**: Attacked Defended F1 - Attacked Undefended F1")
-    md_lines.append("> **Metric O5 (Robustness)**: Recovery is computed as (C - B) / (A - B). Values >= 100% indicate full mitigation of injected adversarial edges.")
+    md_lines.append("> **Metric O5 Definitions (Unified Reviewer Sign Convention: m_B - m_A, m_C - m_A, m_C - m_B)**:")
+    md_lines.append("> 1. **Δ_att (Attack Impact)**: m_B - m_A (Attacked Undefended F1 - Clean F1; negative indicates evasion degradation)")
+    md_lines.append("> 2. **Residual Gap**: m_C - m_A (Attacked Defended F1 - Clean F1; negative indicates gap relative to clean baseline)")
+    md_lines.append("> 3. **Defended Gain**: m_C - m_B (Attacked Defended F1 - Attacked Undefended F1; positive indicates defense recovery)")
+    md_lines.append("> Algebraic identity: Residual Gap = Attack Impact + Defended Gain.")
 
     md_path = out_dir / "attack_results.md"
     with open(md_path, "w", encoding="utf-8") as f:
