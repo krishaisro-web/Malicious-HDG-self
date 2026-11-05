@@ -22,6 +22,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+import numpy as np
 import pandas as pd
 import torch
 
@@ -231,6 +232,25 @@ def main() -> None:
     all_results = []
     original_threads = torch.get_num_threads()
 
+    # Pre-compute reference unconstrained predictions on a probe cohort for logit agreement check
+    from src.hdg.eval.latency import build_ego_subgraph
+    from sklearn.metrics import roc_auc_score
+
+    eval_seed = cfg.get("eval_seeds", [42])[0]
+    rng = np.random.default_rng(eval_seed)
+    probe_size = min(len(df), 50)
+    probe_indices = rng.choice(len(df), size=probe_size, replace=False).tolist()
+
+    model.eval()
+    ref_preds: List[float] = []
+    with torch.no_grad():
+        for d_idx in probe_indices:
+            ego_ref, loc = build_ego_subgraph(scaled_data, [d_idx], num_hops=2, max_neighbors=None, use_hub_cache=False)
+            out_ref = model(ego_ref.x_dict, ego_ref.edge_index_dict)
+            prob_ref = float(torch.softmax(out_ref[loc], dim=-1)[0, 1].item())
+            ref_preds.append(prob_ref)
+    ref_arr = np.array(ref_preds)
+
     try:
         for t_count in thread_modes:
             torch.set_num_threads(t_count)
@@ -246,11 +266,42 @@ def main() -> None:
                         batch_size=bs,
                         num_queries=num_queries,
                         warmup=warmup,
-                        seed=cfg.get("eval_seeds", [42])[0],
+                        seed=eval_seed,
                         max_neighbors=nbrs,
                         use_hub_cache=(nbrs is not None),
                         threads=t_count
                     )
+
+                    # Compute prediction fidelity vs unconstrained reference for single-query CPU deployment
+                    if bs == 1 and t_count == 1:
+                        bounded_preds: List[float] = []
+                        with torch.no_grad():
+                            for d_idx in probe_indices:
+                                ego_b, loc_b = build_ego_subgraph(
+                                    scaled_data, [d_idx], num_hops=2, max_neighbors=nbrs, use_hub_cache=(nbrs is not None)
+                                )
+                                out_b = model(ego_b.x_dict, ego_b.edge_index_dict)
+                                prob_b = float(torch.softmax(out_b[loc_b], dim=-1)[0, 1].item())
+                                bounded_preds.append(prob_b)
+
+                        b_arr = np.array(bounded_preds)
+                        mad = float(np.mean(np.abs(b_arr - ref_arr)))
+                        denom = (np.linalg.norm(b_arr) * np.linalg.norm(ref_arr))
+                        cos_sim = float(np.dot(b_arr, ref_arr) / denom) if denom > 0 else 1.0
+
+                        fidelity_dict = {
+                            "mean_absolute_difference": round(mad, 5),
+                            "cosine_similarity": round(cos_sim, 5)
+                        }
+                        if "label" in df.columns:
+                            probe_y = df["label"].iloc[probe_indices].to_numpy()
+                            if len(np.unique(probe_y)) > 1:
+                                try:
+                                    fidelity_dict["roc_auc"] = round(float(roc_auc_score(probe_y, b_arr)), 4)
+                                except Exception:
+                                    pass
+                        stats["prediction_fidelity"] = fidelity_dict
+
                     all_results.append(stats)
                     e2e = stats["end_to_end"]
                     print(f"  BS={bs}, Sampling={s_label}, Threads={t_count} -> E2E Mean: {e2e['mean_ms']:.2f}ms, P95: {e2e['p95_ms']:.2f}ms")
@@ -317,8 +368,15 @@ def main() -> None:
     with open(md_path, "w", encoding="utf-8") as f:
         f.write("\n".join(md_lines) + "\n")
 
+    # Save Pareto frontier JSON for reporting and plotting
+    pareto_path = out_dir / "latency_pareto.json"
+    pareto_runs = [b for b in all_results if b.get("batch_size") == 1 and b.get("threads") == 1]
+    with open(pareto_path, "w", encoding="utf-8") as f:
+        json.dump({"pareto_frontier": pareto_runs}, f, indent=2)
+
     # Resumability record
-    save_run_result(paths, run_name, payload)
+    save_dir = out_dir.parent if (args.out_dir and out_dir.name == "tables") else (Path(args.out_dir) if args.out_dir else paths.results_dir)
+    save_run_result(save_dir, run_name, payload)
 
     print(f"\n{pfx}=== LATENCY BENCHMARK COMPLETE ===")
     print(f"Results JSON: {json_path}")

@@ -218,7 +218,8 @@ def main() -> None:
             results_by_budget[k].append(b_stat)
             seed_budget_results[str(k)] = b_stat
 
-        save_run_result(paths.results_dir, run_name, {"experiment": "attack_eval", "seed": s, "budgets": seed_budget_results})
+        save_dir = out_dir.parent if (args.out_dir and out_dir.name == "tables") else (Path(args.out_dir) if args.out_dir else paths.results_dir)
+        save_run_result(save_dir, run_name, {"experiment": "attack_eval", "seed": s, "budgets": seed_budget_results})
 
     # Aggregate over seeds
     from src.hdg.eval.attack import compute_attack_robustness_differences
