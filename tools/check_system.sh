@@ -84,6 +84,14 @@ else
     echo "  [NOTE] nvidia-smi not found (host running on CPU / Apple Silicon Mac)."
 fi
 
+# Determine target manifest directory:
+# On CUDA-enabled GPU clusters (e.g. ISRO A100), write to results/real_gpu
+# On local development (e.g. Mac / non-CUDA), write to results/mac to prevent local files from being pushed to Git
+TARGET_MANIFEST_DIR="results/mac"
+if [[ "$CUDA_AVAILABLE" == "True" ]] || [[ "$NVIDIA_SMI_PRESENT" == "True" ]]; then
+    TARGET_MANIFEST_DIR="results/real_gpu"
+fi
+
 # Generate env_manifest.json and master_system_audit.json for Phase 2a compliance
 if command -v $PY_BIN >/dev/null 2>&1; then
     $PY_BIN -c "
@@ -92,8 +100,9 @@ sys.path.insert(0, '.')
 try:
     from src.hdg.device import get_execution_provenance
     prov = get_execution_provenance()
-    os.makedirs('results/real_gpu', exist_ok=True)
-    manifest_path = 'results/real_gpu/env_manifest.json'
+    target_dir = os.environ.get('HDG_MANIFEST_DIR', '$TARGET_MANIFEST_DIR')
+    os.makedirs(target_dir, exist_ok=True)
+    manifest_path = os.path.join(target_dir, 'env_manifest.json')
     with open(manifest_path, 'w') as f:
         json.dump(prov, f, indent=2)
     print(f'  [MANIFEST] Hardware provenance emitted to {manifest_path}')
@@ -103,7 +112,7 @@ except Exception as e:
 
     if [ -f "tools/probe_hardware.py" ]; then
         echo ""
-        $PY_BIN tools/probe_hardware.py --json results/real_gpu/master_system_audit.json
+        $PY_BIN tools/probe_hardware.py --json "$TARGET_MANIFEST_DIR/master_system_audit.json"
     fi
 fi
 
