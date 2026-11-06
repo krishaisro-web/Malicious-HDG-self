@@ -112,3 +112,32 @@ def test_compute_attack_robustness_differences() -> None:
         decimal=4
     )
 
+
+def test_attack_preserves_device_across_budgets(minimal_synthetic_heterodata: HeteroData) -> None:
+    """Verifies that multi-budget loops preserve clean_data device without in-place mutation."""
+    device = torch.device("mps") if (hasattr(torch.backends, "mps") and torch.backends.mps.is_available()) else torch.device("cpu")
+    clean_data = deepcopy(minimal_synthetic_heterodata).to(device)
+    orig_device = clean_data["domain"].y.device
+
+    splits = DataSplits(
+        train_indices=np.array([0, 1, 2, 3]),
+        val_indices=np.array([4, 5]),
+        test_indices=np.array([6, 7, 8, 9]),
+        split_type="test"
+    )
+
+    for b in [1, 2, 5]:
+        attacked = generate_structural_attack(
+            clean_data=clean_data,
+            splits=splits,
+            budget=b,
+            rho=1.0,
+            surfaces=["ip"],
+            manipulate_features=True,
+            seed=42
+        )
+        assert clean_data["domain"].y.device == orig_device
+        assert clean_data["domain"].x.device == orig_device
+        assert attacked["domain"].y.device == orig_device
+        assert attacked["domain"].x.device == orig_device
+
