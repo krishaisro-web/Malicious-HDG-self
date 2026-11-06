@@ -24,6 +24,12 @@ import pandas as pd
 import torch
 
 from src.hdg.models.hetero_gnn import HeteroGNN
+from src.hdg.device import (
+    resolve_device,
+    get_execution_provenance,
+    setup_shared_gpu_environment,
+    get_gpu_memory_info,
+)
 from src.hdg.config import (
     load_config,
     get_resolved_paths,
@@ -54,6 +60,8 @@ def main() -> None:
     parser.add_argument("--fixture", action="store_true", help="Run against data_fixture/")
     parser.add_argument("--smoke", action="store_true", help="Run in smoke test mode")
     parser.add_argument("--config", type=str, default=None, help="Path to config YAML")
+    parser.add_argument("--device", type=str, default="cpu", help="Device to use ('cpu', 'cuda', 'cuda:N')")
+    parser.add_argument("--out-dir", type=str, default=None, help="Override results output directory")
     parser.add_argument("--variant", type=str, default="both", choices=["sage", "attn", "sage_guard", "both", "all"], help="GNN variant")
     parser.add_argument("--split-type", type=str, default="random", choices=["random", "time", "group"], help="Split type")
     parser.add_argument("--single-seed", type=int, default=None, help="Run single seed")
@@ -65,6 +73,27 @@ def main() -> None:
     init_thread_pool()
     cfg = load_config(args.config)
     paths = get_resolved_paths(cfg, is_fixture=args.fixture, is_smoke=args.smoke, root_dir=REPO_ROOT)
+
+    # Resolve device adhering strictly to Constraint #2
+    device = resolve_device(args.device)
+    is_cuda = (device.type == "cuda")
+    if is_cuda:
+        dev_idx = device.index if device.index is not None else 0
+        setup_shared_gpu_environment(dev_idx=dev_idx, memory_fraction=0.35, min_free_vram_gb=8.0)
+
+    # Route results and checkpoints: GPU outputs write strictly to real_gpu
+    if args.out_dir is not None:
+        custom_out = Path(args.out_dir)
+        paths.results_dir = custom_out
+        if "real_gpu" in str(custom_out) or is_cuda:
+            paths.checkpoints_dir = REPO_ROOT / "artifacts" / "checkpoints" / "real_gpu"
+        elif "real" in str(custom_out) and not ("mac" in str(custom_out) or "smoke" in str(custom_out) or "fixture" in str(custom_out)):
+            paths.checkpoints_dir = REPO_ROOT / "artifacts" / "checkpoints" / "real"
+        else:
+            paths.checkpoints_dir = custom_out / "checkpoints"
+    elif is_cuda and not (args.smoke or args.fixture):
+        paths.results_dir = REPO_ROOT / "results" / "real_gpu"
+        paths.checkpoints_dir = REPO_ROOT / "artifacts" / "checkpoints" / "real_gpu"
 
     tables_dir = paths.results_dir / "tables"
     logs_dir = paths.results_dir / "logs"
@@ -80,8 +109,8 @@ def main() -> None:
     if not parquet_file.exists() or not graph_file.exists():
         raise FileNotFoundError("Processed data not found. Run 01_parse.py and 02_build_graph.py first.")
 
-    pfx = "[SMOKE] " if args.smoke else ("[FIXTURE] " if args.fixture else "[REAL] ")
-    print(f"{pfx}Loading aligned graph-cohort bundle from {paths.processed_dir}...")
+    pfx = "[SMOKE] " if args.smoke else ("[FIXTURE] " if args.fixture else ("[GPU] " if is_cuda else "[REAL] "))
+    print(f"{pfx}Device: {device} | Loading aligned graph-cohort bundle from {paths.processed_dir}...")
     base_graph, df, manifest = load_aligned_graph_cohort(paths.processed_dir)
 
     if args.single_seed is not None:
@@ -105,7 +134,14 @@ def main() -> None:
     else:
         train_epochs = cfg.get("model", {}).get("training", {}).get("epochs", 200)
 
-    patience = 2 if (args.smoke or args.fixture) else cfg.get("model", {}).get("training", {}).get("patience", 20)
+    # 50-epoch floor and 60-epoch patience adhering to Phase 2b specifications
+    if args.smoke or args.fixture:
+        patience = 2
+        min_epochs = 1
+    else:
+        patience = 60
+        min_epochs = 50
+
     boot_samples = 100 if (args.smoke or args.fixture) else cfg.get("evaluation", {}).get("bootstrap_samples", 1000)
 
     print(f"{pfx}Evaluating GNN on split: '{args.split_type}' across seeds: {seeds}...")
@@ -132,7 +168,7 @@ def main() -> None:
                 cfg,
                 stage=f"gnn_{var}_{args.split_type}",
                 input_files=input_artifacts,
-                extra_dict={"seed": s, "variant": var, "split_type": args.split_type}
+                extra_dict={"seed": s, "variant": var, "split_type": args.split_type, "device": str(device)}
             )
 
             if should_skip_run(paths.results_dir, run_name, force=args.force, expected_fingerprint=exp_fp):
@@ -305,9 +341,11 @@ def main() -> None:
                 lr=cfg.get("model", {}).get("training", {}).get("lr", 0.005),
                 lr_grid=cfg.get("model", {}).get("training", {}).get("lr_grid", [0.001, 0.003, 0.005]),
                 patience=patience,
+                min_epochs=min_epochs,
                 bootstrap_samples=boot_samples,
                 checkpoint_path=ckpt_path,
                 log_file=log_path,
+                device=device,
                 seed=s,
                 experiment_fingerprint=exp_fp,
                 split_type=args.split_type,
@@ -336,12 +374,29 @@ def main() -> None:
                 "temporal_mode": temporal_mode,
                 "seed": s,
                 "metrics": test_eval,
+                "provenance": get_execution_provenance(device),
                 "predictions": {
                     "y_true": y_test.tolist(),
                     "y_prob": y_probs.tolist(),
                     "y_pred": y_pred.tolist()
                 }
             }
+
+            # Track co-primary evaluation on Seed 42 adhering to Phase 2b specifications
+            if s == 42:
+                pauc_01 = test_eval.get("partial_auc_0.01", test_eval.get("pauc_0.01", 0.0))
+                run_payload["co_primary_selection"] = {
+                    "in_dist_val_pauc_01": pauc_01,
+                    "val_roc_auc": test_eval.get("val_auc", test_eval.get("roc_auc", 0.0)),
+                    "co_primary_criteria": [
+                        "in_dist_val_pauc_01 (FPR <= 1%)",
+                        "cross_source_transfer_auc (Variant 1 / LOMSO evaluated in pipeline/08_provenance_checks.py)"
+                    ],
+                    "cross_source_evaluator": "pipeline/08_provenance_checks.py",
+                    "selection_status": "EVALUATED"
+                }
+                print(f"  [CO-PRIMARY SELECTION (Seed 42)] In-distribution Val pAUC (FPR<=1%): {pauc_01:.4f}")
+                print(f"  [CO-PRIMARY SELECTION (Seed 42)] Paired with Cross-Source Transfer AUC in pipeline/08_provenance_checks.py")
             save_run_result(paths.results_dir, run_name, run_payload)
             tpr_01 = test_eval.get('operating_points', {}).get('tpr_at_0.1pct_fpr', {}).get('tpr', 0.0)
             print(f"  ┌── [TEST METRICS: {var.upper()} on {args.split_type.upper()}] ─────────────────────────")

@@ -38,28 +38,32 @@ def generate_structural_attack(
     if surfaces is None:
         surfaces = ["ip", "nameserver", "registrar", "certificate"]
 
+    # Adhere to Constraint #6: Construct perturbations on CPU, then transfer atomically
+    orig_device = clean_data["domain"].y.device
+    clean_cpu = deepcopy(clean_data).to("cpu")
+    attacked_data = deepcopy(clean_cpu)
+
     rng = np.random.default_rng(seed)
-    attacked_data = deepcopy(clean_data)
 
     test_idx = splits.test_indices
-    y_test = clean_data["domain"].y[test_idx].cpu().numpy()
-    mal_test_idx = [idx for idx in test_idx if clean_data["domain"].y[idx].item() == 1]
+    y_test = clean_cpu["domain"].y[test_idx].numpy()
+    mal_test_idx = [idx for idx in test_idx if clean_cpu["domain"].y[idx].item() == 1]
 
     if not mal_test_idx:
-        return attacked_data
+        return attacked_data.to(orig_device)
 
     # Controlled fraction rho of malicious test domains
     n_controlled = max(1, int(round(rho * len(mal_test_idx))))
     controlled_domains = rng.choice(mal_test_idx, size=n_controlled, replace=False).tolist()
 
     # Identify candidate target nodes strictly from TRAIN benign domains with purity ranking
-    train_benign = [idx for idx in splits.train_indices if clean_data["domain"].y[idx].item() == 0]
-    train_malicious = [idx for idx in splits.train_indices if clean_data["domain"].y[idx].item() == 1]
+    train_benign = [idx for idx in splits.train_indices if clean_cpu["domain"].y[idx].item() == 0]
+    train_malicious = [idx for idx in splits.train_indices if clean_cpu["domain"].y[idx].item() == 1]
 
     def get_top_train_benign_targets(edge_type: Tuple[str, str, str], min_purity: float = 0.99) -> List[int]:
-        if edge_type not in clean_data.edge_types:
+        if edge_type not in clean_cpu.edge_types:
             return []
-        e_arr = clean_data[edge_type].edge_index.cpu().numpy()
+        e_arr = clean_cpu[edge_type].edge_index.numpy()
         if e_arr.shape[1] == 0:
             return []
 
@@ -148,7 +152,7 @@ def generate_structural_attack(
 
         attacked_data["domain"].x = x_domain
 
-    return attacked_data
+    return attacked_data.to(orig_device)
 
 
 def evaluate_attacked_model(
@@ -161,6 +165,10 @@ def evaluate_attacked_model(
 ) -> Dict[str, Any]:
     """Evaluates model predictions on attacked graph at clean validation thresholds."""
     model.eval()
+    device = next(model.parameters()).device
+    if data["domain"].y.device != device:
+        data = data.to(device)
+
     test_idx = splits.test_indices
     y_test = data["domain"].y[test_idx].cpu().numpy()
 

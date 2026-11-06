@@ -20,6 +20,9 @@ data/processed/smoke/*
 # results/real/ is now tracked
 results/smoke/*
 !results/smoke/.gitkeep
+results/mac
+.agents/
+
 # artifacts/checkpoints/real/ is now tracked
 artifacts/checkpoints/smoke/*
 !artifacts/checkpoints/smoke/.gitkeep

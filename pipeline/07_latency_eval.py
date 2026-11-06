@@ -45,9 +45,18 @@ def main() -> None:
     parser.add_argument("--num-queries", type=int, default=None, help="Number of test queries to measure (default: 500, smoke: 50)")
     parser.add_argument("--warmup", type=int, default=None, help="Number of warmup iterations (default: 20, smoke: 5)")
     parser.add_argument("--checkpoint", type=str, default=None, help="Path to trained model checkpoint .pt")
+    parser.add_argument("--device", type=str, default="cpu", help="Device (strictly cpu only for production DNS latency claims)")
     parser.add_argument("--out-dir", type=str, default=None, help="Directory to save output tables")
     parser.add_argument("--force", action="store_true", help="Force rerun even if results exist")
     args = parser.parse_args()
+
+    # Enforce Constraint #7: Latency claims are strictly CPU-only
+    if args.device.strip().lower() != "cpu":
+        raise ValueError(
+            f"[LATENCY ISOLATION SAFEGUARD] Latency evaluation (Claim O4) is strictly a CPU-only "
+            f"benchmark reflecting commodity recursive DNS server deployment without GPUs. "
+            f"Requested device '{args.device}' is forbidden. Run strictly with --device cpu."
+        )
 
     cfg = load_config(args.config)
     paths = get_resolved_paths(cfg, is_fixture=args.fixture, is_smoke=args.smoke, root_dir=REPO_ROOT)

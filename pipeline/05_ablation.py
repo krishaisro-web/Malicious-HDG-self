@@ -33,6 +33,11 @@ import pandas as pd
 import torch
 
 from src.hdg.models.hetero_gnn import HeteroGNN
+from src.hdg.device import (
+    resolve_device,
+    get_execution_provenance,
+    setup_shared_gpu_environment,
+)
 from src.hdg.config import (
     load_config,
     get_resolved_paths,
@@ -50,6 +55,8 @@ def main() -> None:
     parser.add_argument("--fixture", action="store_true", help="Run against data_fixture/")
     parser.add_argument("--smoke", action="store_true", help="Run in smoke test mode")
     parser.add_argument("--config", type=str, default=None, help="Path to config YAML")
+    parser.add_argument("--device", type=str, default="cpu", help="Device to use ('cpu', 'cuda', 'cuda:N')")
+    parser.add_argument("--out-dir", type=str, default=None, help="Override results directory")
     parser.add_argument("--single-seed", type=int, default=None, help="Run single seed")
     parser.add_argument("--epochs", type=int, default=None, help="Override training epochs")
     parser.add_argument("--max-domains", type=int, default=None, help="Cap total domains")
@@ -59,6 +66,18 @@ def main() -> None:
     init_thread_pool()
     cfg = load_config(args.config)
     paths = get_resolved_paths(cfg, is_fixture=args.fixture, is_smoke=args.smoke, root_dir=REPO_ROOT)
+
+    device = resolve_device(args.device)
+    is_cuda = (device.type == "cuda")
+    if is_cuda:
+        dev_idx = device.index if device.index is not None else 0
+        setup_shared_gpu_environment(dev_idx=dev_idx, memory_fraction=0.35, min_free_vram_gb=8.0)
+
+    if args.out_dir is not None:
+        custom_out = Path(args.out_dir)
+        paths.results_dir = custom_out
+    elif is_cuda and not (args.smoke or args.fixture):
+        paths.results_dir = REPO_ROOT / "results" / "real_gpu"
 
     out_dir = paths.results_dir / "tables"
     paths.check_write_path(out_dir)
@@ -99,9 +118,15 @@ def main() -> None:
     elif args.smoke or args.fixture:
         train_epochs = 3
     else:
-        train_epochs = cfg.get("model", {}).get("training", {}).get("epochs", 30)
+        train_epochs = cfg.get("model", {}).get("training", {}).get("epochs", 200)
 
-    patience = 2 if (args.smoke or args.fixture) else cfg.get("model", {}).get("training", {}).get("patience", 10)
+    # 50-epoch floor and 60-epoch patience adhering to Phase 2b specifications
+    if args.smoke or args.fixture:
+        patience = 2
+        min_epochs = 1
+    else:
+        patience = 60
+        min_epochs = 50
 
     # Ablation matrix definitions
     ablation_specs = {
@@ -193,6 +218,7 @@ def main() -> None:
                 use_edges=a_spec["use_edges"]
             )
 
+            min_epochs = 1 if (args.smoke or args.fixture) else 50
             test_eval, _, _, _ = train_eval_gnn(
                 model=model,
                 data=scaled_data,
@@ -200,10 +226,19 @@ def main() -> None:
                 df=df,
                 epochs=train_epochs,
                 patience=patience,
+                min_epochs=min_epochs,
+                device=device,
                 seed=s
             )
 
-            save_run_result(paths.results_dir, run_name, {"experiment": "ablation", "name": name, "seed": s, "metrics": test_eval})
+            run_payload = {
+                "experiment": "ablation",
+                "name": name,
+                "seed": s,
+                "metrics": test_eval,
+                "provenance": get_execution_provenance(device)
+            }
+            save_run_result(paths.results_dir, run_name, run_payload)
             results[name].append(test_eval)
             print(f"  Seed {s} -> ROC-AUC: {test_eval['roc_auc']:.4f}, F1: {test_eval['f1']:.4f}")
 

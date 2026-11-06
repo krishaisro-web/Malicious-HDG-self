@@ -60,6 +60,7 @@ def main() -> None:
                         help="Deployment split protocol to use for evaluation and certification (default: 'time')")
     parser.add_argument("--checkpoint", type=str, default=None, help="Path to trained model checkpoint .pt")
     parser.add_argument("--target-fpr", type=float, default=0.001, help="Operating target FPR (default: 0.001 = 0.1%%)")
+    parser.add_argument("--out-dir", type=str, default=None, help="Directory to save output files and RPZ")
     parser.add_argument("--force", action="store_true", help="Force rerun even if results exist")
     args = parser.parse_args()
 
@@ -69,6 +70,9 @@ def main() -> None:
 
     cfg = load_config(args.config)
     paths = get_resolved_paths(cfg, is_fixture=args.fixture, is_smoke=args.smoke, root_dir=REPO_ROOT)
+
+    if args.out_dir is not None:
+        paths.results_dir = Path(args.out_dir)
 
     run_name = "emit_rpz"
     # Safe cache check: do not skip if forced, if RPZ zone file is missing,

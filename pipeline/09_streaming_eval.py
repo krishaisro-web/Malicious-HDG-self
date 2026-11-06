@@ -42,11 +42,15 @@ def main() -> None:
     parser.add_argument("--config", type=str, default=None, help="Path to config YAML")
     parser.add_argument("--max-months", type=int, default=None, help="Maximum number of chronological months to evaluate")
     parser.add_argument("--reservoir-size", type=int, default=1000, help="Replay buffer capacity (default: 1000)")
+    parser.add_argument("--out-dir", type=str, default=None, help="Directory to save output tables")
     parser.add_argument("--force", action="store_true", help="Force rerun even if results exist")
     args = parser.parse_args()
 
     cfg = load_config(args.config)
     paths = get_resolved_paths(cfg, is_fixture=args.fixture, is_smoke=args.smoke, root_dir=REPO_ROOT)
+
+    if args.out_dir is not None:
+        paths.results_dir = Path(args.out_dir)
 
     from src.hdg.data.graph import load_aligned_graph_cohort
     from src.hdg.cache import compute_experiment_fingerprint

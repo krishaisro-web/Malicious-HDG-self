@@ -43,7 +43,8 @@ def train_eval_gnn(
     lr: float = 0.005,
     lr_grid: Optional[List[float]] = None,
     weight_decay: float = 0.0001,
-    patience: int = 20,
+    patience: int = 60,
+    min_epochs: int = 50,
     target_fprs: List[float] = [0.01, 0.001],
     prevalence_pis: List[float] = [0.01, 0.001],
     bootstrap_samples: int = 1000,
@@ -255,8 +256,12 @@ def train_eval_gnn(
                 "experiment_fingerprint": experiment_fingerprint
             }, state_ckpt_path)
 
-        if epochs_no_improve >= patience:
-            print(f"  [EARLY STOPPING] Validation AUC did not improve for {patience} epochs. Stopping at epoch {epoch}.")
+        effective_min_epochs = min(min_epochs, epochs)
+        if epoch >= effective_min_epochs and epochs_no_improve >= patience:
+            print(
+                f"  [EARLY STOPPING] Validation AUC did not improve for {patience} epochs "
+                f"(minimum {effective_min_epochs}-epoch floor satisfied). Stopping at epoch {epoch}."
+            )
             break
 
     # Persist training logs if path provided

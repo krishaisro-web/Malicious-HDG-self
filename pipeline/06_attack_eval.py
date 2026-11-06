@@ -26,6 +26,11 @@ import pandas as pd
 import torch
 
 from src.hdg.models.hetero_gnn import HeteroGNN
+from src.hdg.device import (
+    resolve_device,
+    get_execution_provenance,
+    setup_shared_gpu_environment,
+)
 from src.hdg.eval.attack import generate_structural_attack, evaluate_attacked_model
 from src.hdg.config import (
     load_config,
@@ -44,6 +49,7 @@ def main() -> None:
     parser.add_argument("--fixture", action="store_true", help="Run against data_fixture/")
     parser.add_argument("--smoke", action="store_true", help="Run in smoke test mode")
     parser.add_argument("--config", type=str, default=None, help="Path to config YAML")
+    parser.add_argument("--device", type=str, default="cpu", help="Device to use ('cpu', 'cuda', 'cuda:N')")
     parser.add_argument("--single-seed", type=int, default=None, help="Run single seed")
     parser.add_argument("--epochs", type=int, default=None, help="Training epochs")
     parser.add_argument("--max-domains", type=int, default=None, help="Cap total domains")
@@ -55,8 +61,16 @@ def main() -> None:
     cfg = load_config(args.config)
     paths = get_resolved_paths(cfg, is_fixture=args.fixture, is_smoke=args.smoke, root_dir=REPO_ROOT)
 
+    device = resolve_device(args.device)
+    is_cuda = (device.type == "cuda")
+    if is_cuda:
+        dev_idx = device.index if device.index is not None else 0
+        setup_shared_gpu_environment(dev_idx=dev_idx, memory_fraction=0.35, min_free_vram_gb=8.0)
+
     if args.out_dir:
         out_dir = Path(args.out_dir)
+    elif is_cuda and not (args.smoke or args.fixture):
+        out_dir = REPO_ROOT / "results" / "real_gpu" / "tables"
     else:
         out_dir = paths.results_dir / "tables"
     paths.check_write_path(out_dir)
@@ -120,7 +134,7 @@ def main() -> None:
         random.seed(s)
         model_sage = HeteroGNN(metadata=clean_scaled.metadata(), in_channels_dict=in_channels, variant="sage")
         eval_sage_clean, y_test, p_sage_clean, trained_sage = train_eval_gnn(
-            model=model_sage, data=clean_scaled, splits=splits, df=df, epochs=train_epochs, patience=patience, seed=s
+            model=model_sage, data=clean_scaled, splits=splits, df=df, epochs=train_epochs, patience=patience, device=device, seed=s
         )
 
         # Model D: SAGE_Guard (defense)
@@ -130,7 +144,7 @@ def main() -> None:
         random.seed(s)
         model_guard = HeteroGNN(metadata=clean_scaled.metadata(), in_channels_dict=in_channels, variant="sage_guard")
         eval_guard_clean, _, p_guard_clean, trained_guard = train_eval_gnn(
-            model=model_guard, data=clean_scaled, splits=splits, df=df, epochs=train_epochs, patience=patience, seed=s
+            model=model_guard, data=clean_scaled, splits=splits, df=df, epochs=train_epochs, patience=patience, device=device, seed=s
         )
 
         th_sage = eval_sage_clean["threshold"]

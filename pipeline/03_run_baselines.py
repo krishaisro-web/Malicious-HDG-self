@@ -53,12 +53,16 @@ def main() -> None:
     parser.add_argument("--config", type=str, default=None, help="Path to config YAML")
     parser.add_argument("--single-seed", type=int, default=None, help="Run single seed only")
     parser.add_argument("--max-domains", type=int, default=None, help="Cap total domains")
+    parser.add_argument("--out-dir", type=str, default=None, help="Directory to save output tables and runs")
     parser.add_argument("--force", action="store_true", help="Overwrite existing cached runs")
     args = parser.parse_args()
 
     init_thread_pool()
     cfg = load_config(args.config)
     paths = get_resolved_paths(cfg, is_fixture=args.fixture, is_smoke=args.smoke, root_dir=REPO_ROOT)
+
+    if args.out_dir is not None:
+        paths.results_dir = Path(args.out_dir)
 
     out_dir = paths.results_dir / "tables"
     paths.check_write_path(out_dir)
