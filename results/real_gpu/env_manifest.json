@@ -1,0 +1,14 @@
+{
+  "device": "cpu",
+  "device_type": "cpu",
+  "torch_version": "2.14.1",
+  "cuda_available": false,
+  "cuda_version": null,
+  "git_commit": "1ee63c561a753cd40eed82ebcbb465fa2ee20be4",
+  "hostname": "Urvas-MacBook-Air.local",
+  "platform": "macOS-27.2-arm64-arm-64bit",
+  "precision": "FP32",
+  "tf32_matmul_enabled": false,
+  "tf32_cudnn_enabled": true,
+  "device_name": "arm"
+}

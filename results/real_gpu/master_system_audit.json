@@ -1,0 +1,433 @@
+{
+  "title": "Malicious-HDG Master System, Hardware & GPU Environment Audit",
+  "system": {
+    "platform": "macOS-27.2-arm64-arm-64bit",
+    "system": "Darwin",
+    "release": "27.2.0",
+    "architecture": "arm64",
+    "hostname": "Urvas-MacBook-Air.local",
+    "python_version": "3.12.15",
+    "python_executable": "/Users/urvagandhi/Developer/Personal/Krisha/Malicious-HDG-self/.venv/bin/python3"
+  },
+  "cpu": {
+    "model_brand": "Apple M5",
+    "logical_cores": 10
+  },
+  "memory": {
+    "ram_total_gb": 16.0,
+    "ram_available_gb": 5.87,
+    "ram_used_gb": 7.23,
+    "swap_total_gb": 1.0,
+    "swap_free_gb": 0.8
+  },
+  "disk": {
+    "workspace_root": "/Users/urvagandhi/Developer/Personal/Krisha/Malicious-HDG-self",
+    "total_gb": 460.38,
+    "free_gb": 313.39,
+    "used_gb": 146.99,
+    "write_accessible": true
+  },
+  "gpu": {
+    "cuda_available": false,
+    "cuda_version": null,
+    "cudnn_version": null,
+    "device_count": 0,
+    "devices": [],
+    "nvidia_smi_detected": false,
+    "nvidia_smi_output": null,
+    "precision_safeguards": {
+      "tf32_matmul_enabled": false,
+      "tf32_cudnn_enabled": false,
+      "strict_fp32_enforced": true,
+      "deterministic_algorithms": false
+    }
+  },
+  "libraries": {
+    "torch": {
+      "description": "Core PyTorch deep learning runtime",
+      "installed": true,
+      "version": "2.14.1"
+    },
+    "torch_geometric": {
+      "description": "PyG heterogeneous graph neural network framework",
+      "installed": true,
+      "version": "2.8.1"
+    },
+    "torch_scatter": {
+      "description": "PyG GPU-accelerated scatter aggregation (optional C++ kernel)",
+      "installed": false,
+      "version": null
+    },
+    "torch_sparse": {
+      "description": "PyG sparse matrix operations (optional C++ kernel)",
+      "installed": false,
+      "version": null
+    },
+    "numpy": {
+      "description": "Numerical vector and matrix computing",
+      "installed": true,
+      "version": "2.5.4"
+    },
+    "scipy": {
+      "description": "Scientific computing, statistical tests & bootstrapping",
+      "installed": true,
+      "version": "1.18.1"
+    },
+    "pandas": {
+      "description": "Dataframe ingestion, tabular processing & dataset alignment",
+      "installed": true,
+      "version": "3.1.0"
+    },
+    "sklearn": {
+      "description": "Machine learning baselines, ROC-AUC, threshold metrics",
+      "installed": true,
+      "version": "1.9.1"
+    },
+    "xgboost": {
+      "description": "Gradient boosted decision tree baseline",
+      "installed": true,
+      "version": "3.4.1"
+    },
+    "yaml": {
+      "description": "YAML configuration parser (PyYAML)",
+      "installed": true,
+      "version": "6.0.3"
+    },
+    "pyarrow": {
+      "description": "Fast columnar Parquet dataset read/write",
+      "installed": true,
+      "version": "26.0.0"
+    },
+    "psutil": {
+      "description": "Hardware, RAM, Swap and process monitoring",
+      "installed": true,
+      "version": "7.2.2"
+    },
+    "pytest": {
+      "description": "Automated test suite execution",
+      "installed": true,
+      "version": "9.1.1"
+    }
+  },
+  "datasets": {
+    "raw_datasets": {
+      "malware.json": {
+        "present": true,
+        "file_name": "malware.json",
+        "file_path": "/Users/urvagandhi/Developer/Personal/Krisha/Malicious-HDG-self/data/raw/zenodo/malware.json",
+        "size_bytes": 565449,
+        "size_mb": 0.539,
+        "num_records": 50,
+        "detected_schema_keys": [
+          "_id",
+          "domain_name",
+          "category",
+          "dns",
+          "evaluated_on",
+          "ip_data",
+          "label",
+          "rdap",
+          "remarks",
+          "source",
+          "sourced_on",
+          "tls",
+          "url",
+          "malware_type"
+        ],
+        "sample_domains": [
+          "irradiateher.com",
+          "eloquentcs.com",
+          "www.neutralsystemsolution.space",
+          "www.drshiwanijainpainclinic.com",
+          "mkt9136.com",
+          "www.ninjacondoms.com",
+          "gabbyloans.com",
+          "www.poczta-polska.e-kei.pl",
+          "xinchaocfcddl.org",
+          "siwakuposo.com"
+        ]
+      },
+      "benign_umbrella.json": {
+        "present": true,
+        "file_name": "benign_umbrella.json",
+        "file_path": "/Users/urvagandhi/Developer/Personal/Krisha/Malicious-HDG-self/data/raw/zenodo/benign_umbrella.json",
+        "size_bytes": 431686,
+        "size_mb": 0.412,
+        "num_records": 25,
+        "detected_schema_keys": [
+          "_id",
+          "domain_name",
+          "dns",
+          "evaluated_on",
+          "ip_data",
+          "label",
+          "rdap",
+          "remarks",
+          "sourced_on",
+          "tls",
+          "category",
+          "source"
+        ],
+        "sample_domains": [
+          "stepstone.at",
+          "m.ladies.de",
+          "www.4digitalsignage.com",
+          "hme-live-nitro-feedback-service.hmecloud.com",
+          "www.douyin.com.bytedns1.com",
+          "booking.almasriaairlines.com",
+          "hr.hit.gemius.pl",
+          "essex.ac.uk",
+          "megamailservers.com",
+          "autohero.com"
+        ]
+      },
+      "benign_cesnet.json": {
+        "present": true,
+        "file_name": "benign_cesnet.json",
+        "file_path": "/Users/urvagandhi/Developer/Personal/Krisha/Malicious-HDG-self/data/raw/zenodo/benign_cesnet.json",
+        "size_bytes": 183183,
+        "size_mb": 0.175,
+        "num_records": 25,
+        "detected_schema_keys": [
+          "_id",
+          "domain_name",
+          "category",
+          "dns",
+          "evaluated_on",
+          "ip_data",
+          "label",
+          "rdap",
+          "remarks",
+          "source",
+          "sourced_on",
+          "tls",
+          "url"
+        ],
+        "sample_domains": [
+          "000000.pn01.edugroup.at",
+          "000000.tpn01.edugroup.at",
+          "00000.cz",
+          "00000fs3085d.han2.savba.sk",
+          "0000100b00e9.han2.savba.sk",
+          "0000100b01bd.han2.savba.sk",
+          "0000100m0030.han2.savba.sk",
+          "0000100q012c.han2.savba.sk",
+          "0000100q0296.han2.savba.sk",
+          "0000101m0051.han2.savba.sk"
+        ]
+      }
+    },
+    "processed_cohort": {
+      "present": true,
+      "directory": "/Users/urvagandhi/Developer/Personal/Krisha/Malicious-HDG-self/data/processed/real",
+      "parquet_cohort": {
+        "present": true,
+        "file_path": "/Users/urvagandhi/Developer/Personal/Krisha/Malicious-HDG-self/data/processed/real/domains.parquet",
+        "size_mb": 0.042,
+        "num_rows": 78,
+        "num_columns": 37,
+        "column_names": [
+          "domain",
+          "raw_domain",
+          "e2LD",
+          "has_subdomain",
+          "label",
+          "source",
+          "family",
+          "t",
+          "t_month",
+          "t_source",
+          "t_eval",
+          "t_reg",
+          "no_ip",
+          "no_rdap",
+          "no_tls",
+          "mx_count",
+          "has_spf",
+          "has_dmarc",
+          "has_dkim",
+          "dnssec",
+          "ttl_a",
+          "ttl_ns",
+          "nameservers",
+          "registrar",
+          "tls_protocol",
+          "tls_cipher",
+          "tls_cert_count",
+          "leaf_cert_key",
+          "leaf_cert_key_cn",
+          "leaf_cert_key_coissue",
+          "cert_valid_len",
+          "primary_asn",
+          "asns",
+          "resolved_ips",
+          "ip_records",
+          "ns_ip_pairs",
+          "in_time_matched"
+        ],
+        "label_distribution": {
+          "1": 50,
+          "0": 28
+        },
+        "distinct_sources": [
+          "Github",
+          "Steven Black",
+          "MISP",
+          "ThreatFox",
+          "The Firebog",
+          "Spam404",
+          "URLhaus",
+          "data/alexa.csv",
+          "data/cisco_umbrella_year_filtered_domains.csv",
+          "../../virus-total/finished_collections/benign_groundtruth2312.txt"
+        ]
+      },
+      "hetero_graph": {
+        "present": true,
+        "file_path": "/Users/urvagandhi/Developer/Personal/Krisha/Malicious-HDG-self/data/processed/real/heterodata.pt",
+        "size_mb": 0.064,
+        "total_nodes": 647,
+        "total_edges": 1432,
+        "node_types": [
+          "domain",
+          "ip",
+          "nameserver",
+          "registrar",
+          "asn",
+          "certificate"
+        ],
+        "node_counts": {
+          "domain": 78,
+          "ip": 295,
+          "nameserver": 155,
+          "registrar": 32,
+          "asn": 40,
+          "certificate": 47
+        },
+        "edge_types": [
+          [
+            "domain",
+            "resolves_to",
+            "ip"
+          ],
+          [
+            "ip",
+            "rev_resolves_to",
+            "domain"
+          ],
+          [
+            "nameserver",
+            "ns_ip",
+            "ip"
+          ],
+          [
+            "ip",
+            "rev_ns_ip",
+            "nameserver"
+          ],
+          [
+            "domain",
+            "uses_ns",
+            "nameserver"
+          ],
+          [
+            "nameserver",
+            "rev_uses_ns",
+            "domain"
+          ],
+          [
+            "domain",
+            "registered_by",
+            "registrar"
+          ],
+          [
+            "registrar",
+            "rev_registered_by",
+            "domain"
+          ],
+          [
+            "ip",
+            "belongs_to_asn",
+            "asn"
+          ],
+          [
+            "asn",
+            "rev_belongs_to_asn",
+            "ip"
+          ],
+          [
+            "domain",
+            "uses_cert",
+            "certificate"
+          ],
+          [
+            "certificate",
+            "rev_uses_cert",
+            "domain"
+          ]
+        ],
+        "edge_counts": {
+          "domain__resolves_to__ip": 94,
+          "ip__rev_resolves_to__domain": 94,
+          "nameserver__ns_ip__ip": 199,
+          "ip__rev_ns_ip__nameserver": 199,
+          "domain__uses_ns__nameserver": 168,
+          "nameserver__rev_uses_ns__domain": 168,
+          "domain__registered_by__registrar": 78,
+          "registrar__rev_registered_by__domain": 78,
+          "ip__belongs_to_asn__asn": 99,
+          "asn__rev_belongs_to_asn__ip": 99,
+          "domain__uses_cert__certificate": 78,
+          "certificate__rev_uses_cert__domain": 78
+        },
+        "domain_feature_tensor_shape": [
+          78,
+          17
+        ]
+      },
+      "manifest": {
+        "present": true,
+        "file_path": "/Users/urvagandhi/Developer/Personal/Krisha/Malicious-HDG-self/data/processed/real/graph_manifest.json",
+        "size_kb": 1.07,
+        "payload": {
+          "schema_version": "2.1.0",
+          "domain_count": 78,
+          "domain_names_sha256": "ab47f27d53ac553de9390d19b83e7b1790e327a4e453586857dcf43f983ed645",
+          "labels_sha256": "73daafd3aff95dbd0e25c0613d27e4307f1d0814df5927af62cb81334094309d",
+          "node_counts": {
+            "domain": 78,
+            "ip": 295,
+            "nameserver": 155,
+            "registrar": 32,
+            "asn": 40,
+            "certificate": 47
+          },
+          "edge_counts": {
+            "domain__resolves_to__ip": 94,
+            "ip__rev_resolves_to__domain": 94,
+            "nameserver__ns_ip__ip": 199,
+            "ip__rev_ns_ip__nameserver": 199,
+            "domain__uses_ns__nameserver": 168,
+            "nameserver__rev_uses_ns__domain": 168,
+            "domain__registered_by__registrar": 78,
+            "registrar__rev_registered_by__domain": 78,
+            "ip__belongs_to_asn__asn": 99,
+            "asn__rev_belongs_to_asn__ip": 99,
+            "domain__uses_cert__certificate": 78,
+            "certificate__rev_uses_cert__domain": 78
+          },
+          "feature_dim": 17,
+          "config_hash": "7444f8fda71f3d15",
+          "created_at": "2026-10-23T18:29:21.743997+00:00",
+          "extra_metadata": {
+            "is_smoke": false,
+            "is_fixture": false
+          },
+          "manifest_id": "143d3f1d63f30b23"
+        }
+      }
+    },
+    "all_raw_present": true,
+    "processed_ready": true
+  }
+}

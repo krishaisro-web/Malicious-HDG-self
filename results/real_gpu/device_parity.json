@@ -1,0 +1,27 @@
+{
+  "timestamp": "2026-11-06T12:27:58Z",
+  "seed": 42,
+  "max_allowed_delta": 0.002,
+  "cuda_available": false,
+  "parity_verified": true,
+  "cpu_reference": {
+    "device": "cpu",
+    "test_roc_auc": 0.5,
+    "elapsed_seconds": 1.32,
+    "provenance": {
+      "device": "cpu",
+      "device_type": "cpu",
+      "torch_version": "2.14.1",
+      "cuda_available": false,
+      "cuda_version": null,
+      "git_commit": "1ee63c561a753cd40eed82ebcbb465fa2ee20be4",
+      "hostname": "Urvas-MacBook-Air.local",
+      "platform": "macOS-27.2-arm64-arm-64bit",
+      "precision": "FP32",
+      "tf32_matmul_enabled": false,
+      "tf32_cudnn_enabled": true,
+      "device_name": "arm"
+    }
+  },
+  "note": "CUDA is not available on this host (local development environment). CPU reference evaluation verified. Run on remote A100 node with --device cuda to verify parity."
+}

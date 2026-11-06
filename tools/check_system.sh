@@ -60,11 +60,51 @@ df -h . | awk 'NR==1 || NR==2'
 # 5. Python & PyTorch Environment
 echo ""
 echo "[5] PYTHON & PYTORCH ENVIRONMENT:"
-if command -v python3 >/dev/null 2>&1; then
-    python3 --version
-    python3 -c "import torch; print(f'PyTorch {torch.__version__}, CPU Threads: {torch.get_num_threads()}, CUDA Available: {torch.cuda.is_available()}')" 2>/dev/null || echo "PyTorch not yet installed in current environment."
+PY_BIN="python3"
+if [ -x "./.venv/bin/python3" ]; then
+    PY_BIN="./.venv/bin/python3"
+fi
+if command -v $PY_BIN >/dev/null 2>&1; then
+    $PY_BIN --version
+    $PY_BIN -c "import torch; print(f'PyTorch {torch.__version__}, CPU Threads: {torch.get_num_threads()}, CUDA Available: {torch.cuda.is_available()}')" 2>/dev/null || echo "PyTorch not yet installed in current environment."
 else
     echo "python3 not found in PATH."
+fi
+
+# 5b. NVIDIA GPU & CUDA Accelerator Check
+echo ""
+echo "[5b] NVIDIA GPU & ACCELERATOR ENVIRONMENT:"
+if command -v nvidia-smi >/dev/null 2>&1; then
+    echo "  [FOUND] nvidia-smi detected:"
+    nvidia-smi --query-gpu=name,driver_version,memory.total,memory.free --format=csv,noheader 2>/dev/null || nvidia-smi
+    if command -v nvcc >/dev/null 2>&1; then
+        echo "  [FOUND] nvcc compiler: $(nvcc --version | grep release | awk '{print $5,$6}')"
+    fi
+else
+    echo "  [NOTE] nvidia-smi not found (host running on CPU / Apple Silicon Mac)."
+fi
+
+# Generate env_manifest.json and master_system_audit.json for Phase 2a compliance
+if command -v $PY_BIN >/dev/null 2>&1; then
+    $PY_BIN -c "
+import json, os, sys
+sys.path.insert(0, '.')
+try:
+    from src.hdg.device import get_execution_provenance
+    prov = get_execution_provenance()
+    os.makedirs('results/real_gpu', exist_ok=True)
+    manifest_path = 'results/real_gpu/env_manifest.json'
+    with open(manifest_path, 'w') as f:
+        json.dump(prov, f, indent=2)
+    print(f'  [MANIFEST] Hardware provenance emitted to {manifest_path}')
+except Exception as e:
+    pass
+" 2>/dev/null || true
+
+    if [ -f "tools/probe_hardware.py" ]; then
+        echo ""
+        $PY_BIN tools/probe_hardware.py --json results/real_gpu/master_system_audit.json
+    fi
 fi
 
 # 6. Raw Data Directory Check
@@ -77,6 +117,7 @@ for f in malware.json benign_umbrella.json benign_cesnet.json; do
     else
         echo "  [MISSING] data/raw/zenodo/$f"
     fi
+done
 # 7. Dynamic Threading & RAM Rationale Calculation
 REC_THREADS=2
 THREAD_REASON="Default safe threading"

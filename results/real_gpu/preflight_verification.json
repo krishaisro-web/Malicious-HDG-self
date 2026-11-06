@@ -1,0 +1,63 @@
+{
+  "timestamp": "2026-11-06T12:27:51Z",
+  "requested_device": "cpu",
+  "checks": {
+    "device_resolution": {
+      "status": "PASS",
+      "resolved_device": "cpu",
+      "device_type": "cpu"
+    },
+    "shared_gpu_safeguards": {
+      "status": "SKIP",
+      "message": "Running on CPU; CUDA memory fraction check skipped."
+    },
+    "strict_fp32": {
+      "status": "PASS",
+      "message": "Running on CPU; TF32/BF16 not active. Strict FP32 adhered to."
+    },
+    "synthetic_gnn_execution": {
+      "status": "PASS",
+      "tested_variants": [
+        "sage",
+        "attn",
+        "sage_guard"
+      ],
+      "gnnguard_cosine_pruning_verified": true,
+      "gradient_backpropagation_verified": true
+    },
+    "real_graph_profiling": {
+      "status": "PASS",
+      "file_path": "data/processed/real/heterodata.pt",
+      "load_time_seconds": 0.001,
+      "total_nodes": 647,
+      "total_edges": 1432,
+      "node_counts": {
+        "domain": 78,
+        "ip": 295,
+        "nameserver": 155,
+        "registrar": 32,
+        "asn": 40,
+        "certificate": 47
+      },
+      "domain_features_shape": [
+        78,
+        17
+      ]
+    }
+  },
+  "passed_all": true,
+  "provenance": {
+    "device": "cpu",
+    "device_type": "cpu",
+    "torch_version": "2.14.1",
+    "cuda_available": false,
+    "cuda_version": null,
+    "git_commit": "1ee63c561a753cd40eed82ebcbb465fa2ee20be4",
+    "hostname": "Urvas-MacBook-Air.local",
+    "platform": "macOS-27.2-arm64-arm-64bit",
+    "precision": "FP32",
+    "tf32_matmul_enabled": false,
+    "tf32_cudnn_enabled": true,
+    "device_name": "arm"
+  }
+}
