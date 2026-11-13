@@ -20,6 +20,9 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${REPO_ROOT}"
 
+# Default to GPU 0 (NVIDIA A100-80GB) and protect secondary cards (e.g. NVIDIA T400-4GB)
+export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0}"
+
 GPU_DEVICE="cuda"
 CONFIG_OVERRIDE=""
 FORCE_RERUN=false
