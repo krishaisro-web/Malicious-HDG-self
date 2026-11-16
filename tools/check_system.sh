@@ -61,7 +61,9 @@ df -h . | awk 'NR==1 || NR==2'
 echo ""
 echo "[5] PYTHON & PYTORCH ENVIRONMENT:"
 PY_BIN="python3"
-if [ -x "./.venv/bin/python3" ]; then
+if [ -n "${CONDA_PREFIX:-}" ] && [ -x "${CONDA_PREFIX}/bin/python" ]; then
+    PY_BIN="${CONDA_PREFIX}/bin/python"
+elif [ -x "./.venv/bin/python3" ]; then
     PY_BIN="./.venv/bin/python3"
 fi
 if command -v $PY_BIN >/dev/null 2>&1; then

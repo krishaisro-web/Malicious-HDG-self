@@ -82,11 +82,16 @@ error_exit() {
 
 trap 'error_exit "Pipeline aborted prematurely at line $LINENO!"' ERR
 
-# Python binary detection
+# Python binary detection: prefer active Conda environment, then repo .venv, then system python3
 PYTHON_BIN="python3"
-if [ -x "${REPO_ROOT}/.venv/bin/python3" ]; then
+if [ -n "${CONDA_PREFIX:-}" ] && [ -x "${CONDA_PREFIX}/bin/python" ]; then
+    PYTHON_BIN="${CONDA_PREFIX}/bin/python"
+elif [ -x "${REPO_ROOT}/.venv/bin/python3" ]; then
     PYTHON_BIN="${REPO_ROOT}/.venv/bin/python3"
 fi
+
+MEM_FRACTION="${MEM_FRACTION:-0.35}"
+MIN_FREE_VRAM="${MIN_FREE_VRAM:-6.0}"
 
 # Configuration selection
 if [[ -n "${CONFIG_OVERRIDE}" ]]; then
@@ -111,6 +116,25 @@ log " Reference Base:    results/real/ (Read-Only Immutable Reference)"
 log "=========================================================================="
 
 # ------------------------------------------------------------------------------
+# Dependency Verification Gate
+# ------------------------------------------------------------------------------
+log "Verifying required Python packages (torch, torch_geometric, pyarrow, xgboost)..."
+MISSING_PKGS=()
+for pkg in torch torch_geometric pyarrow xgboost; do
+    if ! "${PYTHON_BIN}" -c "import ${pkg}" 2>/dev/null; then
+        MISSING_PKGS+=("${pkg}")
+    fi
+done
+
+if [ ${#MISSING_PKGS[@]} -gt 0 ]; then
+    echo -e "\n\033[1;31m[ERROR] Missing required Python package(s): ${MISSING_PKGS[*]}\033[0m"
+    echo -e "Please install missing packages in your active environment:\n"
+    echo -e "    ${PYTHON_BIN} -m pip install ${MISSING_PKGS[*]}\n"
+    exit 1
+fi
+success "All required runtime dependencies verified."
+
+# ------------------------------------------------------------------------------
 # STAGE 0: Pre-Flight Hardware Probing & Safeguard Verification
 # ------------------------------------------------------------------------------
 if [ "${SKIP_PREFLIGHT}" = false ]; then
@@ -118,7 +142,7 @@ if [ "${SKIP_PREFLIGHT}" = false ]; then
     bash tools/check_system.sh
 
     log "STAGE 0b: Verifying Pre-Flight GPU Graph Constraints & Shared Memory Cap..."
-    ${PYTHON_BIN} tools/verify_gpu_graph.py --device "${GPU_DEVICE}" --out-dir "${OUT_DIR}" --mem-fraction 0.35 --min-free-vram 8.0
+    ${PYTHON_BIN} tools/verify_gpu_graph.py --device "${GPU_DEVICE}" --out-dir "${OUT_DIR}" --mem-fraction "${MEM_FRACTION}" --min-free-vram "${MIN_FREE_VRAM}"
 
     log "STAGE 0c: Verifying Seed 42 Device Parity Tolerance (|AUC_gpu - AUC_cpu| <= 0.002)..."
     ${PYTHON_BIN} tools/verify_device_parity.py --config "${CONFIG_FILE}" --device "${GPU_DEVICE}" --out-dir "${OUT_DIR}" --max-delta 0.002

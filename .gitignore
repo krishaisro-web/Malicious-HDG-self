@@ -9,10 +9,9 @@ __pycache__/
 venv*/
 env*/
 
-# Production Raw and Processed Datasets (gitignored)
+# Production Raw and Processed Datasets
 data/raw/
-data/processed/real/*
-!data/processed/real/.gitkeep
+# data/processed/real/ is tracked for cluster reproducibility and parity
 data/processed/smoke/*
 !data/processed/smoke/.gitkeep
 
