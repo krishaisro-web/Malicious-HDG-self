@@ -377,10 +377,29 @@ def single_chronological_holdout_split(
         train_mask_sub = ~np.isin(hist_indices, val_indices)
         train_indices = hist_indices[train_mask_sub]
 
+    # Pre-allocate 50% of validation negatives into an independent certification holdout
+    val_labels = df.iloc[val_indices]["label"].to_numpy().astype(int)
+    val_neg_indices = val_indices[val_labels == 0]
+    val_pos_indices = val_indices[val_labels == 1]
+
+    if len(val_neg_indices) >= 2:
+        rng = np.random.RandomState(seed)
+        shuffled_negs = rng.permutation(val_neg_indices)
+        half = len(val_neg_indices) // 2
+        calib_negs = shuffled_negs[:half]
+        cert_negs = shuffled_negs[half:]
+        model_val_indices = np.concatenate([val_pos_indices, calib_negs])
+        model_val_indices.sort()
+        cert_indices = cert_negs
+        cert_indices.sort()
+    else:
+        model_val_indices = val_indices
+        cert_indices = np.array([], dtype=int)
+
     split_name = f"history_to_{target_month}"
     splits = DataSplits(
         train_indices=train_indices,
-        val_indices=val_indices,
+        val_indices=model_val_indices,
         test_indices=test_indices,
         split_type="single_chronological_holdout",
         metadata={
@@ -388,14 +407,16 @@ def single_chronological_holdout_split(
             "target_month": target_month,
             "historical_months": sorted(df.iloc[hist_indices][month_col].dropna().unique().tolist()),
             "train_size": len(train_indices),
-            "val_size": len(val_indices),
+            "val_size": len(model_val_indices),
             "test_size": len(test_indices),
+            "cert_size": len(cert_indices),
             "test_malware": test_pos,
             "test_benign": test_neg,
             "history_malware": hist_pos,
             "history_benign": hist_neg,
             "seed": seed
-        }
+        },
+        cert_indices=cert_indices
     )
     splits.split_name = split_name
     splits.assert_disjoint()

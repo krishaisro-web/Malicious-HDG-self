@@ -68,6 +68,8 @@ def main() -> None:
 
     if args.out_dir:
         out_dir = Path(args.out_dir)
+        if "real_gpu" in str(out_dir):
+            paths.checkpoints_dir = REPO_ROOT / "artifacts" / "checkpoints" / "real_gpu"
     else:
         out_dir = paths.results_dir / "tables"
     paths.check_write_path(out_dir)
@@ -122,17 +124,28 @@ def main() -> None:
         if cand.exists():
             candidates.append(cand)
     else:
-        preferred = [
-            ckpt_dir / "gnn_sage_random_seed_42.pt",
-            ckpt_dir / "gnn_attn_random_seed_42.pt",
-            ckpt_dir / "gnn_sage_guard_random_seed_42.pt",
-            ckpt_dir / "gnn_sage_time_seed_42.pt",
-        ]
-        for p in preferred:
-            if p.exists() and p not in candidates:
-                candidates.append(p)
-        if ckpt_dir.exists():
-            for p in sorted(ckpt_dir.glob("*.pt")):
+        # Search multiple checkpoint directories in priority order:
+        ckpt_search_dirs = []
+        gpu_ckpt = REPO_ROOT / "artifacts" / "checkpoints" / "real_gpu"
+        if gpu_ckpt.exists():
+            ckpt_search_dirs.append(gpu_ckpt)
+        if ckpt_dir not in ckpt_search_dirs and ckpt_dir.exists():
+            ckpt_search_dirs.append(ckpt_dir)
+        real_ckpt = REPO_ROOT / "artifacts" / "checkpoints" / "real"
+        if real_ckpt.exists() and real_ckpt not in ckpt_search_dirs:
+            ckpt_search_dirs.append(real_ckpt)
+
+        for c_dir in ckpt_search_dirs:
+            preferred = [
+                c_dir / "gnn_sage_random_seed_42.pt",
+                c_dir / "gnn_attn_random_seed_42.pt",
+                c_dir / "gnn_sage_guard_random_seed_42.pt",
+                c_dir / "gnn_sage_time_seed_42.pt",
+            ]
+            for p in preferred:
+                if p.exists() and p not in candidates:
+                    candidates.append(p)
+            for p in sorted(c_dir.glob("*.pt")):
                 if not p.name.endswith("_train_state.pt") and p not in candidates:
                     candidates.append(p)
 

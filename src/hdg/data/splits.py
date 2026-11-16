@@ -505,9 +505,28 @@ def group_split_bipartite(
         seed=seed
     )
 
+    # Pre-allocate 50% of validation negatives into an independent certification holdout
+    val_labels = labels[val_idx]
+    val_neg_indices = val_idx[val_labels == 0]
+    val_pos_indices = val_idx[val_labels == 1]
+
+    if len(val_neg_indices) >= 2:
+        rng = np.random.RandomState(seed)
+        shuffled_negs = rng.permutation(val_neg_indices)
+        half = len(val_neg_indices) // 2
+        calib_negs = shuffled_negs[:half]
+        cert_negs = shuffled_negs[half:]
+        model_val_indices = np.concatenate([val_pos_indices, calib_negs])
+        model_val_indices.sort()
+        cert_indices = cert_negs
+        cert_indices.sort()
+    else:
+        model_val_indices = val_idx
+        cert_indices = np.array([], dtype=int)
+
     splits = DataSplits(
         train_indices=train_idx,
-        val_indices=val_idx,
+        val_indices=model_val_indices,
         test_indices=test_idx,
         split_type="group_joint" if joint_grouping else "group_bipartite",
         metadata={
@@ -517,8 +536,10 @@ def group_split_bipartite(
             "hubs_removed": int(np.sum(infra_degrees > effective_cutoff)),
             "effective_cutoff": float(effective_cutoff),
             "joint_grouping": joint_grouping,
-            "stratification_stats": stat
-        }
+            "stratification_stats": stat,
+            "cert_size": len(cert_indices),
+        },
+        cert_indices=cert_indices
     )
     splits.assert_disjoint()
 
