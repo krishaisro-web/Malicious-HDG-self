@@ -20,7 +20,11 @@ data/processed/smoke/*
 # results/real/ is now tracked
 results/smoke/*
 !results/smoke/.gitkeep
-results/mac
+# Local Mac Isolation (100% gitignored - local tests/samples never pollute Git or server)
+results/mac/
+data/processed/mac/
+data/mac/
+artifacts/checkpoints/mac/
 .agents/
 
 # artifacts/checkpoints/real/ is now tracked

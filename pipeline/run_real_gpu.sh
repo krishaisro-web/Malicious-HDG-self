@@ -255,3 +255,10 @@ BUNDLE_FILE="${REPO_ROOT}/results_real_gpu_bundle_$(date +%Y%m%d).tar.gz"
 log "Packaging GPU results into: ${BUNDLE_FILE}"
 tar -czf "${BUNDLE_FILE}" -C "${REPO_ROOT}" results/real_gpu/
 success "GPU Bundle created: ${BUNDLE_FILE}"
+
+log "=========================================================================="
+log " NEXT STEP: Commit and push GPU benchmark results back to GitHub:"
+log "    git add results/real_gpu/ artifacts/checkpoints/real_gpu/"
+log "    git commit -m \"chore(gpu): save official ISRO A100 GPU benchmark run outputs\""
+log "    git push origin main"
+log "=========================================================================="
