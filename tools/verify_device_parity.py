@@ -26,7 +26,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from src.hdg.device import resolve_device, get_execution_provenance
 from src.hdg.config import load_config, get_resolved_paths
 from src.hdg.data.splits import random_stratified_split
-from src.hdg.data.graph import apply_split_scaling
+from src.hdg.data.graph import apply_split_scaling, load_aligned_graph_cohort
 from src.hdg.models.hetero_gnn import HeteroGNN
 from src.hdg.training.train import train_eval_gnn
 
@@ -54,16 +54,14 @@ def run_device_parity_check(
     cfg = load_config(config_path) if Path(config_path).exists() else load_config("configs/default.yaml")
     paths = get_resolved_paths(cfg)
 
-    domains_file = paths.processed_dir / "domains.parquet"
     graph_file = paths.processed_dir / "heterodata.pt"
-    if not (domains_file.exists() and graph_file.exists()):
+    if not graph_file.exists():
         raise FileNotFoundError(
-            f"Processed data not found at '{paths.processed_dir}'. "
+            f"Processed graph not found at '{paths.processed_dir}'. "
             "Run pipeline data preprocessing before running parity check."
         )
 
-    df = pd.read_parquet(domains_file)
-    base_graph = torch.load(graph_file, map_location="cpu", weights_only=False)
+    base_graph, df, manifest = load_aligned_graph_cohort(paths.processed_dir)
 
     splits = random_stratified_split(df["label"].to_numpy(), seed=seed)
     scaled_data, _ = apply_split_scaling(

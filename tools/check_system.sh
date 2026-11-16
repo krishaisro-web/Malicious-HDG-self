@@ -76,7 +76,9 @@ fi
 # 5b. NVIDIA GPU & CUDA Accelerator Check
 echo ""
 echo "[5b] NVIDIA GPU & ACCELERATOR ENVIRONMENT:"
+NVIDIA_SMI_PRESENT="False"
 if command -v nvidia-smi >/dev/null 2>&1; then
+    NVIDIA_SMI_PRESENT="True"
     echo "  [FOUND] nvidia-smi detected:"
     nvidia-smi --query-gpu=name,driver_version,memory.total,memory.free --format=csv,noheader 2>/dev/null || nvidia-smi
     if command -v nvcc >/dev/null 2>&1; then
@@ -90,6 +92,7 @@ fi
 # On CUDA-enabled GPU clusters (e.g. ISRO A100), write to results/real_gpu
 # On local development (e.g. Mac / non-CUDA), write to results/mac to prevent local files from being pushed to Git
 TARGET_MANIFEST_DIR="results/mac"
+CUDA_AVAILABLE=$($PY_BIN -c "import torch; print(torch.cuda.is_available())" 2>/dev/null || echo "False")
 if [[ "$CUDA_AVAILABLE" == "True" ]] || [[ "$NVIDIA_SMI_PRESENT" == "True" ]]; then
     TARGET_MANIFEST_DIR="results/real_gpu"
 fi
