@@ -91,7 +91,8 @@ elif [ -x "${REPO_ROOT}/.venv/bin/python3" ]; then
 fi
 
 MEM_FRACTION="${MEM_FRACTION:-0.35}"
-MIN_FREE_VRAM="${MIN_FREE_VRAM:-6.0}"
+MIN_FREE_VRAM="${MIN_FREE_VRAM:-8.0}"
+export CUBLAS_WORKSPACE_CONFIG="${CUBLAS_WORKSPACE_CONFIG:-:4096:8}"
 
 # Configuration selection
 if [[ -n "${CONFIG_OVERRIDE}" ]]; then
