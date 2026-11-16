@@ -144,6 +144,22 @@ if [ "${SKIP_PREFLIGHT}" = false ]; then
     log "STAGE 0b: Verifying Pre-Flight GPU Graph Constraints & Shared Memory Cap..."
     ${PYTHON_BIN} tools/verify_gpu_graph.py --device "${GPU_DEVICE}" --out-dir "${OUT_DIR}" --mem-fraction "${MEM_FRACTION}" --min-free-vram "${MIN_FREE_VRAM}"
 
+    # Verify processed data readiness before running Seed 42 parity verification
+    PROCESSED_GRAPH="data/processed/real/heterodata.pt"
+    PROCESSED_DOMAINS="data/processed/real/domains.parquet"
+    if [ ! -f "${PROCESSED_GRAPH}" ] || [ ! -f "${PROCESSED_DOMAINS}" ]; then
+        log "Processed real cohort not yet found in data/processed/real/."
+        RAW_MALWARE="data/raw/zenodo/malware.json"
+        if [ -f "${RAW_MALWARE}" ]; then
+            log "Raw Zenodo dataset detected in data/raw/zenodo/. Building 100k cohort and HeteroData graph..."
+            ${PYTHON_BIN} -m pipeline.01_parse --config "${CONFIG_FILE}"
+            ${PYTHON_BIN} -m pipeline.02_build_graph --config "${CONFIG_FILE}"
+            success "Processed 100k graph built successfully."
+        else
+            error_exit "Processed graph not found and raw Zenodo dataset missing in data/raw/zenodo/.\nTo prepare the full 100k (1L) dataset on this node, please run:\n    ${PYTHON_BIN} tools/download_dataset.py\n    ${PYTHON_BIN} -m pipeline.01_parse --config ${CONFIG_FILE}\n    ${PYTHON_BIN} -m pipeline.02_build_graph --config ${CONFIG_FILE}"
+        fi
+    fi
+
     log "STAGE 0c: Verifying Seed 42 Device Parity Tolerance (|AUC_gpu - AUC_cpu| <= 0.002)..."
     ${PYTHON_BIN} tools/verify_device_parity.py --config "${CONFIG_FILE}" --device "${GPU_DEVICE}" --out-dir "${OUT_DIR}" --max-delta 0.002
     success "Pre-flight environment and hardware checks PASSED."
