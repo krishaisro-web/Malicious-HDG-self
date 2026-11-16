@@ -35,6 +35,7 @@ def main() -> None:
     parser.add_argument("--smoke", action="store_true", help="Run in smoke test mode")
     parser.add_argument("--config", type=str, default=None, help="Path to config YAML")
     parser.add_argument("--out-dir", type=str, default=None, help="Directory to save output tables")
+    parser.add_argument("--force", action="store_true", help="Force rerun even if results exist")
     args = parser.parse_args()
 
     init_thread_pool()
