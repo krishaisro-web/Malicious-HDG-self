@@ -245,6 +245,8 @@ def main() -> None:
             del model, scaled_data
             import gc
             gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
 
     # Aggregate statistics
     aggregated_ablation: Dict[str, Any] = {}

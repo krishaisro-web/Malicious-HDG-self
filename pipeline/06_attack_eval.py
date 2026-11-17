@@ -235,6 +235,12 @@ def main() -> None:
         save_dir = out_dir.parent if (args.out_dir and out_dir.name == "tables") else (Path(args.out_dir) if args.out_dir else paths.results_dir)
         save_run_result(save_dir, run_name, {"experiment": "attack_eval", "seed": s, "budgets": seed_budget_results})
 
+        del model_sage, model_guard, trained_sage, trained_guard, clean_scaled
+        import gc
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
     # Aggregate over seeds
     from src.hdg.eval.attack import compute_attack_robustness_differences
 

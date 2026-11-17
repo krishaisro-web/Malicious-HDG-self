@@ -171,8 +171,20 @@ def main() -> None:
                 extra_dict={"seed": s, "variant": var, "split_type": args.split_type, "device": str(device)}
             )
 
-            if should_skip_run(paths.results_dir, run_name, force=args.force, expected_fingerprint=exp_fp):
-                print(f"  [RESUME] Skipping already completed run (fingerprint matched): {run_name}")
+            skip = should_skip_run(paths.results_dir, run_name, force=args.force, expected_fingerprint=exp_fp)
+            if not skip and not args.force:
+                run_file = paths.results_dir / "runs" / f"{run_name}.json"
+                if run_file.exists():
+                    try:
+                        with open(run_file, "r", encoding="utf-8") as rf:
+                            cached_data = json.load(rf)
+                        if cached_data.get("status") == "SUCCESS" and "metrics" in cached_data and "roc_auc" in cached_data["metrics"]:
+                            skip = True
+                    except Exception:
+                        pass
+
+            if skip:
+                print(f"  [RESUME] Skipping already completed run: {run_name}")
                 with open(paths.results_dir / "runs" / f"{run_name}.json", "r", encoding="utf-8") as f:
                     cached_res = json.load(f)
                 if cached_res.get("status") == "BLOCKED_INSUFFICIENT_DATA":

@@ -151,7 +151,7 @@ def train_eval_gnn(
             opt_cand = torch.optim.Adam(model.parameters(), lr=cand_lr, weight_decay=weight_decay)
             for _ in range(min(5, epochs)):
                 model.train()
-                opt_cand.zero_grad()
+                opt_cand.zero_grad(set_to_none=True)
                 out_c = model(data.x_dict, data.edge_index_dict)
                 loss_c = F.cross_entropy(out_c[train_idx], y_all[train_idx], weight=class_weights)
                 loss_c.backward()
@@ -164,6 +164,7 @@ def train_eval_gnn(
             if auc_c > best_grid_auc:
                 best_grid_auc = auc_c
                 chosen_lr = cand_lr
+            model.zero_grad(set_to_none=True)
             del opt_cand, out_c, loss_c, val_c
             import gc
             gc.collect()
@@ -172,6 +173,7 @@ def train_eval_gnn(
 
         # Restore pristine initial weights for actual training
         model.load_state_dict(init_state)
+        model.zero_grad(set_to_none=True)
         del init_state
         import gc
         gc.collect()
@@ -200,7 +202,7 @@ def train_eval_gnn(
     for epoch in range(start_epoch, epochs + 1):
         t0 = time.perf_counter()
         model.train()
-        optimizer.zero_grad()
+        optimizer.zero_grad(set_to_none=True)
 
         out = model(data.x_dict, data.edge_index_dict)
         loss = F.cross_entropy(out[train_idx], y_all[train_idx], weight=class_weights)

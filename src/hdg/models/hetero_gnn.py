@@ -13,7 +13,6 @@ from typing import Any, Dict, List, Optional, Tuple
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.checkpoint import checkpoint
 from torch_geometric.nn import HeteroConv, SAGEConv, HGTConv
 from torch_geometric.utils import scatter
 
@@ -236,9 +235,6 @@ class HeteroGNN(nn.Module):
         for i, conv in enumerate(self.convs):
             if self.variant == "sage_guard":
                 h_new, prev_weights_dict = conv(h_dict, edge_index_dict, prev_weights_dict)
-            elif self.variant == "attn" and self.training and torch.is_grad_enabled():
-                # Activation checkpointing for HGTConv to bound peak VRAM on shared GPU
-                h_new = checkpoint(conv, h_dict, edge_index_dict, use_reentrant=False)
             else:
                 h_new = conv(h_dict, edge_index_dict)
 
