@@ -281,30 +281,26 @@ def main() -> None:
     ckpt_seed = int(ckpt_manifest.get("seed", 42))
 
     print(f"[RPZ] Aligning evaluation split with checkpoint split protocol: type='{ckpt_split_type}', seed={ckpt_seed}")
-    # Verify checkpoint split alignment: align requested split if default or checkpoint supplied
+    # Verify checkpoint split alignment: never substitute or cross-evaluate splits
     if args.split_type != ckpt_split_type:
-        if args.checkpoint or args.split_type == "time":
-            print(f"[RPZ] Automatically aligning evaluation split protocol to checkpoint: '{ckpt_split_type}' (was '{args.split_type}')")
-            args.split_type = ckpt_split_type
-        else:
-            print(f"[BLOCKED_SPLIT_MISMATCH] RPZ rule generation blocked: Requested split '{args.split_type}' does not match checkpoint split '{ckpt_split_type}'.")
-            print("          Refusing split substitution to guarantee leak-free evaluation protocol.")
-            blocked_summary = {
-                "status": "BLOCKED_SPLIT_MISMATCH",
-                "reason": f"Requested split '{args.split_type}' does not match checkpoint training split '{ckpt_split_type}'. Refusing split substitution.",
-                "checkpoint_file": resolved_ckpt_path.name if resolved_ckpt_path else None,
-                "requested_split": args.split_type,
-                "checkpoint_split": ckpt_split_type,
-                "rules_emitted": 0,
-                "timestamp": datetime.now(timezone.utc).isoformat()
-            }
-            rpz_file = rpz_dir / "malicious_domains.rpz"
-            if rpz_file.exists():
-                rpz_file.unlink()
-            with open(rpz_dir / "rpz_summary.json", "w", encoding="utf-8") as f:
-                json.dump(blocked_summary, f, indent=2)
-            save_run_result(paths, run_name, blocked_summary)
-            return
+        print(f"[BLOCKED_SPLIT_MISMATCH] RPZ rule generation blocked: Requested split '{args.split_type}' does not match checkpoint split '{ckpt_split_type}'.")
+        print("          Refusing split substitution to guarantee leak-free evaluation protocol.")
+        blocked_summary = {
+            "status": "BLOCKED_SPLIT_MISMATCH",
+            "reason": f"Requested split '{args.split_type}' does not match checkpoint training split '{ckpt_split_type}'. Refusing split substitution.",
+            "checkpoint_file": resolved_ckpt_path.name if resolved_ckpt_path else None,
+            "requested_split": args.split_type,
+            "checkpoint_split": ckpt_split_type,
+            "rules_emitted": 0,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        rpz_file = rpz_dir / "malicious_domains.rpz"
+        if rpz_file.exists():
+            rpz_file.unlink()
+        with open(rpz_dir / "rpz_summary.json", "w", encoding="utf-8") as f:
+            json.dump(blocked_summary, f, indent=2)
+        save_run_result(paths, run_name, blocked_summary)
+        return
 
     splits = None
     if ckpt_split_type == "time":
@@ -402,31 +398,44 @@ def main() -> None:
     )
 
     # Retrieve pre-allocated certification holdout negatives (reserved prior to model selection / early stopping)
+    # Fail-closed: missing cert_indices must strictly block emission without ad-hoc post-hoc partitioning
     ckpt_cert_idx = ckpt_obj.get("cert_indices") if isinstance(ckpt_obj, dict) else None
     if ckpt_cert_idx is not None and len(ckpt_cert_idx) > 0:
         cert_idx = np.array(ckpt_cert_idx, dtype=int)
         num_domain_nodes = int(data["domain"].num_nodes)
         if np.any(cert_idx < 0) or np.any(cert_idx >= num_domain_nodes):
-            print("[WARN] 'cert_indices' in checkpoint contains out-of-bounds indices; recalculating from validation negatives.")
-            ckpt_cert_idx = None
-
-    if ckpt_cert_idx is None or len(ckpt_cert_idx) == 0:
-        if getattr(splits, "cert_indices", None) is not None and len(splits.cert_indices) > 0:
-            cert_idx = np.array(splits.cert_indices, dtype=int)
-            print(f"[RPZ] Using pre-allocated certification holdout negatives from data split: {len(cert_idx)} domains.")
-        else:
-            val_labels = data["domain"].y[splits.val_indices].cpu().numpy()
-            val_neg_indices = splits.val_indices[val_labels == 0]
-            if len(val_neg_indices) >= 2:
-                rng = np.random.RandomState(ckpt_seed)
-                shuffled_negs = rng.permutation(val_neg_indices)
-                half = len(val_neg_indices) // 2
-                cert_idx = shuffled_negs[half:]
-                cert_idx.sort()
-                print(f"[RPZ] Partitioned 50% of validation negatives into certification holdout: {len(cert_idx)} domains (leak-free).")
-            else:
-                cert_idx = val_neg_indices
-                print(f"[RPZ] Warning: Low validation negatives ({len(val_neg_indices)}); using all validation negatives for certification.")
+            print("[BLOCKED_INVALID_CERT_METADATA] RPZ rule generation blocked: 'cert_indices' contains out-of-bounds node indices.")
+            blocked_summary = {
+                "status": "BLOCKED_INVALID_CERT_METADATA",
+                "reason": f"Checkpoint 'cert_indices' contains values outside valid domain node range [0, {num_domain_nodes - 1}].",
+                "checkpoint_file": resolved_ckpt_path.name if resolved_ckpt_path else None,
+                "rules_emitted": 0,
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
+            rpz_file = rpz_dir / "malicious_domains.rpz"
+            if rpz_file.exists():
+                rpz_file.unlink()
+            with open(rpz_dir / "rpz_summary.json", "w", encoding="utf-8") as f:
+                json.dump(blocked_summary, f, indent=2)
+            save_run_result(paths, run_name, blocked_summary)
+            return
+    else:
+        print("[BLOCKED_MISSING_CERT_METADATA] RPZ rule generation blocked: Missing pre-allocated certification metadata ('cert_indices').")
+        print("          Refusing post-hoc validation partitioning to guarantee zero data leakage during certification.")
+        blocked_summary = {
+            "status": "BLOCKED_MISSING_CERT_METADATA",
+            "reason": "Checkpoint or split does not contain pre-allocated certification indices ('cert_indices'). Post-hoc fallback is prohibited.",
+            "checkpoint_file": resolved_ckpt_path.name if resolved_ckpt_path else None,
+            "rules_emitted": 0,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        rpz_file = rpz_dir / "malicious_domains.rpz"
+        if rpz_file.exists():
+            rpz_file.unlink()
+        with open(rpz_dir / "rpz_summary.json", "w", encoding="utf-8") as f:
+            json.dump(blocked_summary, f, indent=2)
+        save_run_result(paths, run_name, blocked_summary)
+        return
 
 
     model.eval()

@@ -162,9 +162,14 @@ def train_eval_gnn(
             if auc_c > best_grid_auc:
                 best_grid_auc = auc_c
                 chosen_lr = cand_lr
-            del m_copy, opt_cand
+            del m_copy, opt_cand, out_c, loss_c, val_c
             import gc
             gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
     optimizer = torch.optim.Adam(model.parameters(), lr=chosen_lr, weight_decay=weight_decay)
 
@@ -443,6 +448,8 @@ def train_eval_gnn(
     del best_weights, optimizer, scheduler
     import gc
     gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
 
     return test_eval, test_true, test_probs, model
 

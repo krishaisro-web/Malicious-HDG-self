@@ -410,8 +410,12 @@ def main() -> None:
             del model, scaled_data
             import gc
             gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
 
     # Aggregate statistics
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
     aggregated_gnn: Dict[str, Any] = {}
     for var, runs in results_by_variant.items():
         if not runs:
