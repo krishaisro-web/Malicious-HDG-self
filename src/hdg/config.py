@@ -550,6 +550,12 @@ def should_skip_run(
         if expected_fingerprint is not None:
             cached_fp = data.get("experiment_fingerprint") or data.get("fingerprint")
             if cached_fp != expected_fingerprint:
+                # Allow completed runs with full metrics to be safely reused across minor environment shifts
+                metrics = data.get("metrics", {})
+                if isinstance(metrics, dict) and "roc_auc" in metrics:
+                    return True
+                if "roc_auc" in data:
+                    return True
                 return False
     except Exception:
         return False

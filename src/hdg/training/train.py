@@ -549,7 +549,7 @@ def fine_tune_pauc_gnn(
 
     for epoch in range(1, epochs + 1):
         model.train()
-        optimizer.zero_grad()
+        optimizer.zero_grad(set_to_none=True)
 
         out = model(data.x_dict, data.edge_index_dict)
         ce_loss = F.cross_entropy(out[train_idx], y_all[train_idx])
