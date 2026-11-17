@@ -147,8 +147,8 @@ To resume the pipeline on the ISRO node:
 cd /home/rohit/Malicious-HDG-self
 git fetch origin main && git reset --hard origin/main
 git log -1 --oneline
-# Verify commit is fec85a1 (or latest main)
-# Message: refactor(lint): eliminate all unused imports, unused variables, and redundant f-strings across repository
+# Verify commit is 0ba99f2 (or latest main)
+# Message: fix(preflight): bind real_data_dev in CUDA profiling and guard non-fatal warnings
 
 bash pipeline/run_real_gpu.sh --device cuda
 ```
