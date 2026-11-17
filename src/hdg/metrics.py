@@ -386,6 +386,16 @@ def paired_mcnemar_test(
     Computes exact McNemar test for paired classifier predictions.
     Labelled correctly with min(b, c) as the exact test statistic.
     """
+    if len(y_pred_a) != len(y_pred_b) or len(y_true) != len(y_pred_a):
+        return {
+            "exact_statistic_min_b_c": 0.0,
+            "pvalue": 1.0,
+            "discordant_a_better": 0,
+            "discordant_b_better": 0,
+            "contingency_table": [[0, 0], [0, 0]],
+            "interpretation": "incompatible evaluation split dimensions"
+        }
+
     correct_a = (y_pred_a == y_true)
     correct_b = (y_pred_b == y_true)
 
@@ -416,6 +426,9 @@ def paired_bootstrap_auc_difference(
     seed: int = 42
 ) -> Dict[str, float]:
     """Paired bootstrap distribution of (AUC_a - AUC_b)."""
+    if len(y_prob_a) != len(y_prob_b) or len(y_true) != len(y_prob_a):
+        return {"mean_diff": 0.0, "ci_lower": 0.0, "ci_upper": 0.0, "pvalue_two_sided": 1.0}
+
     rng = np.random.default_rng(seed)
     n = len(y_true)
     diffs: List[float] = []
@@ -486,6 +499,9 @@ def multi_seed_paired_comparisons(
         y_pred_b = pb["y_pred"]
         y_prob_a = pa["y_prob"]
         y_prob_b = pb["y_prob"]
+
+        if len(y_pred_a) != len(y_pred_b) or len(y_true) != len(y_pred_a) or len(y_prob_a) != len(y_prob_b):
+            continue
 
         mcn = paired_mcnemar_test(y_true, y_pred_a, y_pred_b)
         auc_diff = paired_bootstrap_auc_difference(y_true, y_prob_a, y_prob_b, n_bootstrap=n_bootstrap, seed=s)

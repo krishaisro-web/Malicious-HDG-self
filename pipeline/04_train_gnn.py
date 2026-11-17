@@ -456,7 +456,7 @@ def main() -> None:
         )
 
     # Paired comparison against XGBoost tabular baseline (specifically on random split)
-    if "sage" in variants and len(seeds) > 0:
+    if args.split_type == "random" and "sage" in variants and len(seeds) > 0:
         xgb_preds = {}
         for s in seeds:
             xgb_run_path = paths.results_dir / "runs" / f"baseline_xgboost_tabular_seed_{s}.json"
