@@ -90,6 +90,12 @@
 - **Problem**: Pulling bug fixes changes the Git HEAD hash, which previously invalidated experiment fingerprints and forced re-running already completed stages (e.g. 10 minutes of SAGE).
 - **Patch (Commit `037b41b`)**: Updated `pipeline/04_train_gnn.py` to inspect existing run JSONs in `results/real_gpu/runs/`. If a run completed successfully with full metrics (`"status": "SUCCESS"` and `"roc_auc"`), it is automatically skipped in 0.1 seconds, resuming straight to the pending variant (ATTN).
 
+### Fix 4: Cross-Split Broadcasting Mismatch in Paired Comparisons (15,001 vs 53,943)
+- **Problem**: In Stage 6b (Temporal Split), after SAGE and ATTN finished training all epochs across all seeds, `pipeline/04_train_gnn.py:459` attempted to compute paired McNemar and bootstrap comparisons against `baseline_xgboost_tabular` (Stage 5). However, XGBoost was evaluated on the random split test set (15,001 domains), while temporal models were evaluated on the chronological holdout (53,943 domains). NumPy raised `ValueError: operands could not be broadcast together with shapes (15001,) (53943,)`.
+- **Patch (Commit `f48845d`)**:
+  - In `pipeline/04_train_gnn.py`: Added explicit guard `if args.split_type == "random":` for the tabular baseline paired comparison.
+  - In `src/hdg/metrics.py`: Added defensive length checks in `paired_mcnemar_test`, `paired_bootstrap_auc_difference`, and `multi_seed_paired_comparisons` to gracefully bypass incompatible evaluation split dimensions without crashing.
+
 ---
 
 ## 5. End-to-End Pipeline Stages & Real GPU Status
@@ -100,9 +106,8 @@
 | **0b** | `tools/verify_gpu_graph.py` | Graph VRAM & memory cap check | **PASSED** |
 | **0c** | `tools/verify_device_parity.py` | CPU vs GPU numerical parity | **PASSED** ($\lvert\Delta\rvert = 0.00210 \le 0.005$) |
 | **5** | `pipeline.03_run_baselines` | Multi-seed baselines (TF-IDF, XGBoost, MLP) | **PASSED** (`results/real_gpu/tables/baselines_results.json`) |
-| **6a (SAGE)** | `pipeline.04_train_gnn` | GraphSAGE Random Split (5 seeds) | **PASSED** (Seeds 42, 1337, 2024, 777, 999; AUC ~0.936) |
-| **6a (ATTN)** | `pipeline.04_train_gnn` | HGTConv Random Split (5 seeds) | **READY** (Resumes at Seed 42 with commit `037b41b`) |
-| **6b** | `pipeline.04_train_gnn` | Temporal Split (both variants) | Ready for sequential execution |
+| **6a** | `pipeline.04_train_gnn` | GraphSAGE & HGTConv Random Split (all 5 seeds) | **PASSED** (All 5 seeds for both SAGE & ATTN complete) |
+| **6b** | `pipeline.04_train_gnn` | Temporal Split (both variants, all seeds) | **PASSED TRAINING** (Resuming to emit report & paired tests) |
 | **6c** | `pipeline.04_train_gnn` | Group Split (component holdout) | Ready for sequential execution |
 | **6d** | `pipeline.04b_stop_rules` | Pre-committed stop rules | Ready for sequential execution |
 | **7** | `pipeline.05_ablation` | Topological & feature ablations | Ready for sequential execution |
@@ -123,10 +128,10 @@ To resume the pipeline on the ISRO node:
 cd /home/rohit/Malicious-HDG-self
 git fetch origin main && git reset --hard origin/main
 git log -1 --oneline
-# Verify commit is 28c9fa1 (or latest main)
-# Message: fix(pipeline): centralize resumability in should_skip_run and enforce zero_grad in pAUC fine-tuning
+# Verify commit is f48845d (or latest main)
+# Message: fix(eval): restrict baseline paired comparison to random split and guard array dimensions
 
 bash pipeline/run_real_gpu.sh --device cuda
 ```
 
-The runner will verify pre-flight checks, recognize that Stage 5 and Stage 6a SAGE are already complete, skip them in seconds, and begin training **Stage 6a ATTN (Seed 42)** directly.
+The runner will verify pre-flight checks, recognize that Stage 5, Stage 6a (both SAGE & ATTN), and Stage 6b models are already complete, and immediately continue through Stage 6c, 6d, 7, etc.
