@@ -17,6 +17,11 @@ from torch.utils.checkpoint import checkpoint
 from torch_geometric.nn import HeteroConv, SAGEConv, HGTConv
 from torch_geometric.utils import scatter
 
+from src.hdg.device import apply_memory_efficient_scatter_patch
+
+# Ensure memory-efficient scatter patch is active globally
+apply_memory_efficient_scatter_patch()
+
 
 class GNNGuardLayer(nn.Module):
     """
@@ -142,6 +147,7 @@ class HeteroGNN(nn.Module):
         use_edges: bool = True
     ):
         super().__init__()
+        apply_memory_efficient_scatter_patch()
         self.variant = variant.lower()
         self.metadata = metadata
         self.in_channels_dict = in_channels_dict

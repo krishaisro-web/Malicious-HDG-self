@@ -144,30 +144,37 @@ def train_eval_gnn(
     # Validation learning rate search if grid provided (only if starting fresh)
     if resumed_ckpt is None and lr_grid and len(lr_grid) > 1 and epochs > 5:
         best_grid_auc = -1.0
+        # Preserve pristine initial weights on CPU to avoid duplicate model in GPU VRAM
+        init_state = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
         for cand_lr in lr_grid:
-            m_copy = deepcopy(model)
-            opt_cand = torch.optim.Adam(m_copy.parameters(), lr=cand_lr, weight_decay=weight_decay)
+            model.load_state_dict(init_state)
+            opt_cand = torch.optim.Adam(model.parameters(), lr=cand_lr, weight_decay=weight_decay)
             for _ in range(min(5, epochs)):
-                m_copy.train()
+                model.train()
                 opt_cand.zero_grad()
-                out_c = m_copy(data.x_dict, data.edge_index_dict)
+                out_c = model(data.x_dict, data.edge_index_dict)
                 loss_c = F.cross_entropy(out_c[train_idx], y_all[train_idx], weight=class_weights)
                 loss_c.backward()
                 opt_cand.step()
-            m_copy.eval()
+            model.eval()
             with torch.no_grad():
-                val_c = m_copy(data.x_dict, data.edge_index_dict)
+                val_c = model(data.x_dict, data.edge_index_dict)
                 val_probs_c = F.softmax(val_c[val_idx], dim=-1)[:, 1].cpu().numpy()
                 auc_c = evaluate_predictions(y_all[val_idx].cpu().numpy(), val_probs_c)["roc_auc"]
             if auc_c > best_grid_auc:
                 best_grid_auc = auc_c
                 chosen_lr = cand_lr
-            del m_copy, opt_cand, out_c, loss_c, val_c
+            del opt_cand, out_c, loss_c, val_c
             import gc
             gc.collect()
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
 
+        # Restore pristine initial weights for actual training
+        model.load_state_dict(init_state)
+        del init_state
+        import gc
+        gc.collect()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
 
@@ -241,7 +248,7 @@ def train_eval_gnn(
 
         if is_best:
             best_val_auc = val_auc
-            best_weights = deepcopy(model.state_dict())
+            best_weights = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
             epochs_no_improve = 0
         else:
             epochs_no_improve += 1
