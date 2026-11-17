@@ -123,7 +123,8 @@ To resume the pipeline on the ISRO node:
 cd /home/rohit/Malicious-HDG-self
 git fetch origin main && git reset --hard origin/main
 git log -1 --oneline
-# Verify commit is 037b41b: fix(gpu): remove HGTConv checkpointing and harden VRAM lifecycle for 100k domain pipeline
+# Verify commit is 28c9fa1 (or latest main)
+# Message: fix(pipeline): centralize resumability in should_skip_run and enforce zero_grad in pAUC fine-tuning
 
 bash pipeline/run_real_gpu.sh --device cuda
 ```
