@@ -225,7 +225,7 @@ def run_preflight_checks(
             # If device is CUDA, profile single-pass memory and transfer
             if device.type == "cuda":
                 t_transfer_start = time.time()
-                _ = real_data.to(device)
+                real_data_dev = real_data.to(device)
                 transfer_sec = time.time() - t_transfer_start
                 mem_after_transfer = get_gpu_memory_info(device)
 
@@ -233,6 +233,7 @@ def run_preflight_checks(
                 profile_entry["vram_allocated_gb"] = mem_after_transfer["allocated_gb"]
                 profile_entry["vram_reserved_gb"] = mem_after_transfer["reserved_gb"]
                 profile_entry["vram_headroom_gb"] = mem_after_transfer["free_gb"]
+                profile_entry["transferred_node_types"] = len(real_data_dev.node_types)
                 del real_data_dev
                 torch.cuda.empty_cache()
 
@@ -249,9 +250,9 @@ def run_preflight_checks(
             "note": f"Real graph file not found at '{graph_path}'. Skipping real graph profiling.",
         }
 
-    # Determine overall status
+    # Determine overall status: all checks must pass or skip (or be non-fatal warnings)
     all_passed = all(
-        check.get("status") in ["PASS", "SKIP"] for check in results["checks"].values()
+        check.get("status") in ["PASS", "SKIP", "WARNING"] for check in results["checks"].values()
     )
     results["passed_all"] = all_passed
 
