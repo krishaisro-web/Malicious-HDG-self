@@ -7,6 +7,7 @@ Supports --limit N for quick smoke / real-data checks.
 """
 
 import argparse
+import json
 import sys
 from pathlib import Path
 

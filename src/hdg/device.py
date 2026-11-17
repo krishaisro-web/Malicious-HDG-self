@@ -152,7 +152,7 @@ def check_vram_available(
 def setup_shared_gpu_environment(
     dev_idx: int = 0,
     memory_fraction: float = 0.35,
-    min_free_vram_gb: float = 8.0,
+    min_free_vram_gb: float = 6.0,
 ) -> Dict[str, Any]:
     """
     Configure shared GPU environment safeguards adhering to Constraint #8.

@@ -16,6 +16,7 @@ import os
 import platform
 import sys
 from pathlib import Path
+from typing import List
 
 # Ensure repo root is on sys.path
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -23,7 +24,6 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 import numpy as np
-import pandas as pd
 import torch
 
 from src.hdg.models.hetero_gnn import HeteroGNN
@@ -61,17 +61,20 @@ def main() -> None:
     cfg = load_config(args.config)
     paths = get_resolved_paths(cfg, is_fixture=args.fixture, is_smoke=args.smoke, root_dir=REPO_ROOT)
 
-    run_name = "latency_eval"
-    if should_skip_run(paths, run_name, force=args.force):
-        print(f"[{run_name}] Run already completed. Skipping (use --force to rerun).")
-        return
-
     if args.out_dir:
         out_dir = Path(args.out_dir)
+        save_dir = out_dir.parent if out_dir.name == "tables" else out_dir
+        paths.results_dir = save_dir
         if "real_gpu" in str(out_dir):
             paths.checkpoints_dir = REPO_ROOT / "artifacts" / "checkpoints" / "real_gpu"
     else:
         out_dir = paths.results_dir / "tables"
+        save_dir = paths.results_dir
+
+    run_name = "latency_eval"
+    if should_skip_run(save_dir, run_name, force=args.force):
+        print(f"[{run_name}] Run already completed. Skipping (use --force to rerun).")
+        return
     paths.check_write_path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 

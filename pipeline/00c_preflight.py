@@ -164,7 +164,7 @@ def run_subsample_benchmark(
 
     # Measure 1 epoch
     model.train()
-    optimizer.zero_grad()
+    optimizer.zero_grad(set_to_none=True)
     t0 = time.perf_counter()
     out = model(data.x_dict, data.edge_index_dict)
     loss = F.cross_entropy(out[sample_tensor], data["domain"].y[sample_tensor])

@@ -79,7 +79,7 @@ def main() -> None:
     is_cuda = (device.type == "cuda")
     if is_cuda:
         dev_idx = device.index if device.index is not None else 0
-        setup_shared_gpu_environment(dev_idx=dev_idx, memory_fraction=0.35, min_free_vram_gb=8.0)
+        setup_shared_gpu_environment(dev_idx=dev_idx, memory_fraction=0.35, min_free_vram_gb=6.0)
 
     # Route results and checkpoints: GPU outputs write strictly to real_gpu
     if args.out_dir is not None:

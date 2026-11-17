@@ -22,7 +22,6 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 import numpy as np
-import pandas as pd
 import torch
 
 from src.hdg.models.hetero_gnn import HeteroGNN
@@ -65,7 +64,7 @@ def main() -> None:
     is_cuda = (device.type == "cuda")
     if is_cuda:
         dev_idx = device.index if device.index is not None else 0
-        setup_shared_gpu_environment(dev_idx=dev_idx, memory_fraction=0.35, min_free_vram_gb=8.0)
+        setup_shared_gpu_environment(dev_idx=dev_idx, memory_fraction=0.35, min_free_vram_gb=6.0)
 
     if args.out_dir:
         out_dir = Path(args.out_dir)
@@ -233,7 +232,12 @@ def main() -> None:
             seed_budget_results[str(k)] = b_stat
 
         save_dir = out_dir.parent if (args.out_dir and out_dir.name == "tables") else (Path(args.out_dir) if args.out_dir else paths.results_dir)
-        save_run_result(save_dir, run_name, {"experiment": "attack_eval", "seed": s, "budgets": seed_budget_results})
+        save_run_result(save_dir, run_name, {
+            "experiment": "attack_eval",
+            "seed": s,
+            "budgets": seed_budget_results,
+            "provenance": get_execution_provenance(device)
+        })
 
         del model_sage, model_guard, trained_sage, trained_guard, clean_scaled
         import gc

@@ -145,7 +145,7 @@ def train_step(
 
     for _ in range(epochs):
         model.train()
-        optimizer.zero_grad()
+        optimizer.zero_grad(set_to_none=True)
         out = model(data.x_dict, data.edge_index_dict)
         loss = F.cross_entropy(out[train_indices], y_tensor[train_indices])
         loss.backward()

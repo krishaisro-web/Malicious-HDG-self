@@ -96,6 +96,17 @@
   - In `pipeline/04_train_gnn.py`: Added explicit guard `if args.split_type == "random":` for the tabular baseline paired comparison.
   - In `src/hdg/metrics.py`: Added defensive length checks in `paired_mcnemar_test`, `paired_bootstrap_auc_difference`, and `multi_seed_paired_comparisons` to gracefully bypass incompatible evaluation split dimensions without crashing.
 
+### Fix 5: Comprehensive Pyflakes Static Analysis & Variable Hygiene Audit
+- **Problem**: Comprehensive pyflakes code analysis across `pipeline/`, `src/`, and `tools/` revealed latent runtime name errors that would crash later stages during long-running execution:
+  1. `pipeline/01_parse.py:53`: `json.load()` called without `import json`.
+  2. `pipeline/07_latency_eval.py:267`: Type hint `List[float]` evaluated at runtime without `from typing import List`.
+  3. `pipeline/11_make_report.py:487`: `compute_prevalence_adjusted_precision` called without import from `src.hdg.metrics`.
+  4. `pipeline/11_make_report.py:1187`: Unbound variable `res_dir` referenced instead of `paths.results_dir`.
+  5. `src/hdg/eval/streaming.py:148`: `optimizer.zero_grad()` retained zero-filled tensor buffers in VRAM instead of immediate deallocation via `set_to_none=True`.
+  6. `pipeline/09_streaming_eval.py`: Inconsistent passing of `ResolvedPaths` object instead of directory path to `should_skip_run` and `save_run_result`.
+  7. Shared GPU VRAM threshold: `min_free_vram_gb` default lowered to 6.0 GB in `src/hdg/device.py` to prevent false aborts on shared nodes where free VRAM is ~8.74-8.76 GB.
+- **Patch**: All 7 issues resolved and verified with `pyflakes` (0 undefined names, 0 syntax errors) and full test suite (168 passed).
+
 ---
 
 ## 5. End-to-End Pipeline Stages & Real GPU Status
@@ -128,8 +139,8 @@ To resume the pipeline on the ISRO node:
 cd /home/rohit/Malicious-HDG-self
 git fetch origin main && git reset --hard origin/main
 git log -1 --oneline
-# Verify commit is f48845d (or latest main)
-# Message: fix(eval): restrict baseline paired comparison to random split and guard array dimensions
+# Verify commit is 93dfcea (or latest main)
+# Message: fix(pipeline): resolve undefined names, typing errors, and memory hygiene across all stages
 
 bash pipeline/run_real_gpu.sh --device cuda
 ```

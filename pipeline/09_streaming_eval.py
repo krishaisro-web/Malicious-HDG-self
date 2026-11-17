@@ -66,7 +66,7 @@ def main() -> None:
     )
 
     run_name = "streaming_eval"
-    if should_skip_run(paths, run_name, force=args.force, expected_fingerprint=exp_fp):
+    if should_skip_run(paths.results_dir, run_name, force=args.force, expected_fingerprint=exp_fp):
         print(f"[{run_name}] Run already completed with matching fingerprint. Skipping (use --force to rerun).")
         return
 
@@ -127,7 +127,7 @@ def main() -> None:
         md_lines.append("> To evaluate temporal robustness on datasets with a single overlapping month, refer to the Single Chronological Holdout results in `gnn_evaluation_time.json`.")
         with open(md_path, "w", encoding="utf-8") as f:
             f.write("\n".join(md_lines) + "\n")
-        save_run_result(paths, run_name, res)
+        save_run_result(paths.results_dir, run_name, res)
         print(f"Results JSON: {json_path}")
         print(f"Results Markdown: {md_path}")
         return
@@ -168,7 +168,7 @@ def main() -> None:
         f.write("\n".join(md_lines) + "\n")
 
     # Resumability record
-    save_run_result(paths, run_name, res)
+    save_run_result(paths.results_dir, run_name, res)
 
     print(f"\n{pfx}=== STREAMING EVALUATION COMPLETE ===")
     print(f"Results JSON: {json_path}")

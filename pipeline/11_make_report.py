@@ -50,7 +50,8 @@ from src.hdg.config import (
 from src.hdg.metrics import (
     clopper_pearson_ci,
     compare_at_matched_fpr,
-    calibrate_certified_threshold
+    calibrate_certified_threshold,
+    compute_prevalence_adjusted_precision
 )
 from src.hdg.eval.attack import compute_attack_robustness_differences
 
@@ -268,20 +269,23 @@ def main() -> None:
     cfg = load_config(args.config)
     paths = get_resolved_paths(cfg, is_fixture=args.fixture, is_smoke=args.smoke, root_dir=REPO_ROOT)
 
-    run_name = "make_report"
-    if should_skip_run(paths, run_name, force=args.force):
-        print(f"[{run_name}] Run already completed. Skipping (use --force to rerun).")
-        return
-
     if args.out_dir:
         out_dir = Path(args.out_dir)
+        paths.results_dir = out_dir
         paths.check_write_path(out_dir)
     elif args.output:
         out_dir = Path(args.output).parent
+        paths.results_dir = out_dir
         paths.check_write_path(out_dir)
     else:
         out_dir = None
         paths.check_write_path(paths.results_dir)
+
+    run_name = "make_report"
+    effective_save_dir = out_dir if out_dir else paths.results_dir
+    if should_skip_run(effective_save_dir, run_name, force=args.force):
+        print(f"[{run_name}] Run already completed. Skipping (use --force to rerun).")
+        return
 
     def find_artifact(filename: str, subdirs: List[str] = ["tables", "runs", "profile", "rpz"]) -> Optional[Path]:
         if out_dir:
@@ -1184,7 +1188,7 @@ def main() -> None:
     elif args.out_dir:
         report_file = Path(args.out_dir) / "REPORT.md"
     else:
-        report_file = res_dir / "REPORT.md"
+        report_file = paths.results_dir / "REPORT.md"
 
     report_file.parent.mkdir(parents=True, exist_ok=True)
     with open(report_file, "w", encoding="utf-8") as f:
@@ -1196,7 +1200,7 @@ def main() -> None:
         "is_smoke": args.smoke,
         "report_file": str(report_file)
     }
-    save_dir = report_file.parent if (args.output or args.out_dir) else paths
+    save_dir = report_file.parent if (args.output or args.out_dir) else paths.results_dir
     save_run_result(save_dir, run_name, summary_payload)
 
     print(f"\n{pfx}=== REPORT GENERATION COMPLETE ===")
