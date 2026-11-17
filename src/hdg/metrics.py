@@ -11,7 +11,7 @@ Implements:
 - Paired bootstrap AUC differences across evaluation seeds
 """
 
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 from sklearn.metrics import (
     average_precision_score,

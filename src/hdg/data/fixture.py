@@ -7,7 +7,7 @@ Outputs strictly to data_fixture/zenodo/.
 import json
 import random
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 
 
 def generate_mongo_date(year: int, month: int, day: int, style: str = "iso") -> Any:

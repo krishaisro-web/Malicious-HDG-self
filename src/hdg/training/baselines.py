@@ -8,17 +8,15 @@ Baseline models evaluated on identical splits for Malicious-HDG:
 All hyperparameters and thresholds tuned strictly on validation splits.
 """
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Tuple
 import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 import xgboost as xgb
-import torch
-import torch.nn as nn
 
 from src.hdg.models.hetero_gnn import HeteroGNN
-from src.hdg.data.graph import extract_domain_feature_vector, extract_domain_features_vectorized
+from src.hdg.data.graph import extract_domain_features_vectorized
 from src.hdg.metrics import (
     compute_bootstrap_cis,
     choose_optimal_threshold,

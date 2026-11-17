@@ -13,7 +13,7 @@ import shutil
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
@@ -134,13 +134,11 @@ def run_subsample_benchmark(
 ) -> Dict[str, Any]:
     """Performs a 1-epoch timing of SAGE on a stratified subsample and extrapolates full training time."""
     import numpy as np
-    import pandas as pd
     import torch
     import torch.nn.functional as F
     from sklearn.model_selection import StratifiedShuffleSplit
     from src.hdg.models.hetero_gnn import HeteroGNN
 
-    df = pd.read_parquet(parquet_path)
     data = torch.load(graph_path, weights_only=False)
 
     n_domains = data["domain"].num_nodes

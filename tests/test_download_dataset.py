@@ -3,17 +3,11 @@ import io
 import json
 import subprocess
 from pathlib import Path
-from unittest.mock import MagicMock
-
-import pytest
 
 from tools.download_dataset import (
     verify_md5,
-    find_exact_match,
-    find_sample_match,
     download_full_file,
     download_sample_stream,
-    main,
 )
 
 

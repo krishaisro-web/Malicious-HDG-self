@@ -10,8 +10,6 @@ Provides a minimal synthetic graph with:
 Enables 100% of tests to pass on fresh checkouts without requiring data_raw/ or disk fixtures.
 """
 
-from typing import Dict, Tuple
-import numpy as np
 import pandas as pd
 import pytest
 import torch

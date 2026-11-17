@@ -17,19 +17,13 @@ Implements:
    over SAGE with 95% bootstrap CI excluding 0; otherwise transparently reports negative result.
 """
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List
 import numpy as np
-import pandas as pd
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedKFold
 from torch_geometric.data import HeteroData
 
-from src.hdg.metrics import (
-    compute_bootstrap_cis,
-    compute_tpr_at_fpr,
-    evaluate_predictions,
-    paired_bootstrap_auc_difference
-)
+from src.hdg.metrics import compute_tpr_at_fpr
 
 
 def compute_smoothed_gba_scores(
@@ -210,8 +204,6 @@ def evaluate_stacker_against_stop_rule(
     rng = np.random.default_rng(seed)
     n = len(y_test)
     delta_boots = []
-    test_negs_mask = (y_test == 0)
-    test_pos_mask = (y_test == 1)
 
     for _ in range(1000):
         idx = rng.choice(n, size=n, replace=True)

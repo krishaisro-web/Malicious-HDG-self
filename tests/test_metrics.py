@@ -8,12 +8,10 @@ Verifies:
 """
 
 import numpy as np
-import pytest
 
 from src.hdg.metrics import (
     compute_bootstrap_cis,
     compute_tpr_at_fpr,
-    evaluate_predictions,
     paired_bootstrap_auc_difference,
     paired_mcnemar_test,
 )

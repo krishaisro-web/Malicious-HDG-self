@@ -14,9 +14,6 @@ from src.hdg.data.splits import (
     DataSplits,
     rolling_origin_temporal_splits,
     assign_groups_stratified,
-    group_split_bipartite,
-    group_split_by_asn,
-    compute_asn_leakage_report,
 )
 
 
@@ -49,7 +46,6 @@ def test_rolling_origin_zero_overlap(minimal_domains_df: pd.DataFrame) -> None:
 def test_group_split_stratified_balance() -> None:
     """Verifies that greedy group assignment maintains class prevalence within tolerance."""
     # 50 clusters of size 4 = 200 nodes total
-    rng = np.random.default_rng(42)
     groups = {i: list(range(i * 4, (i + 1) * 4)) for i in range(50)}
     labels = np.zeros(200, dtype=int)
     for i in range(25):

@@ -5,11 +5,9 @@ and that stale or misaligned cohorts are rejected with clear diagnostics.
 """
 
 from pathlib import Path
-import numpy as np
 import pandas as pd
 import pytest
 import torch
-from torch_geometric.data import HeteroData
 
 from src.hdg.data.graph import (
     save_graph_cohort_bundle,

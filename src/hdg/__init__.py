@@ -60,6 +60,8 @@ __all__ = [
     "DataSplits",
     "build_base_graph",
     "apply_split_scaling",
+    "build_hetero_graph",
+    "TrainOnlyStandardizer",
     "make_fixture",
     "train_eval_gnn",
     "run_tfidf_lexical_baseline",

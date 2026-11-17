@@ -10,14 +10,11 @@ Outputs verification result to results/real_gpu/device_parity.json.
 
 import argparse
 import json
-import os
 import sys
 import time
 from pathlib import Path
 from typing import Any, Dict
 
-import numpy as np
-import pandas as pd
 import torch
 
 # Ensure repository root is on PYTHONPATH

@@ -9,14 +9,11 @@ import pytest
 import torch
 
 from src.hdg.config import (
-    load_config,
     get_resolved_paths,
     should_skip_run,
     save_run_result,
-    ResolvedPaths
 )
 from src.hdg.cache import (
-    compute_dict_fingerprint,
     compute_experiment_fingerprint,
     atomic_save_json,
     atomic_save_torch

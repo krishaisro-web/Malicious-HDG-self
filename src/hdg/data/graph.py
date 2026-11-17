@@ -10,12 +10,11 @@ Provides:
 """
 
 from collections import Counter
-import copy
 import json
 import logging
 import math
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 import torch
@@ -458,7 +457,6 @@ def apply_split_scaling(
 
     # 3. Relational Edges with Topology Isolation
     test_set = set(test_indices.tolist()) if test_indices is not None else set()
-    train_val_set = visible_set
 
     for edge_type in base.edge_types:
         src_t, rel, dst_t = edge_type

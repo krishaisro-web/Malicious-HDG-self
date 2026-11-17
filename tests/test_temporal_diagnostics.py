@@ -3,15 +3,12 @@ Unit and regression tests for temporal diagnostics, chronological holdout,
 rolling-origin validation, and leak-free temporal graph snapshots.
 """
 
-import numpy as np
 import pandas as pd
 import pytest
-import torch
 
 from src.hdg.data.temporal import (
     analyze_temporal_eligibility,
     single_chronological_holdout_split,
-    save_temporal_eligibility_report,
 )
 from src.hdg.data.splits import rolling_origin_temporal_splits
 from src.hdg.data.graph import build_temporal_graph_pair

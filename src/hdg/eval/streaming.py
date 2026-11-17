@@ -15,15 +15,14 @@ import logging
 from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
-from sklearn.metrics import roc_auc_score, f1_score, precision_score, recall_score, roc_curve
+from sklearn.metrics import roc_auc_score, f1_score, precision_score, recall_score
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.data import HeteroData
 
 from src.hdg.models.hetero_gnn import HeteroGNN
-from src.hdg.metrics import choose_optimal_threshold, evaluate_predictions
-from src.hdg.data.splits import DataSplits
+from src.hdg.metrics import choose_optimal_threshold
 
 logger = logging.getLogger(__name__)
 
@@ -350,7 +349,6 @@ def run_streaming_evaluation(
     cumulative_val = [m0_splits["val"]]
 
     # Historical validation negatives buffer for freezing operating threshold
-    last_val_indices = m0_splits["val"]
     last_calibrated_th_01 = m0_calibrated_th_01
 
     step_results: List[Dict[str, Any]] = []
@@ -498,8 +496,7 @@ def run_streaming_evaluation(
             "backward_transfer_f1": bwt_rep
         })
 
-        # Update last historical validation negatives & calibrated threshold for next month
-        last_val_indices = cur_splits["val"]
+        # Update calibrated threshold for next month
         last_calibrated_th_01 = calibrate_operating_threshold(
             model_scratch, step_scaled_data, cur_splits["val"], y_true_all, target_fpr=0.001
         )

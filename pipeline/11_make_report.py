@@ -28,11 +28,9 @@ Implements:
 import argparse
 from datetime import datetime, timezone
 import json
-import os
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
-import math
 import numpy as np
 from scipy import stats
 
@@ -50,7 +48,6 @@ from src.hdg.config import (
 from src.hdg.metrics import (
     clopper_pearson_ci,
     compare_at_matched_fpr,
-    calibrate_certified_threshold,
     compute_prevalence_adjusted_precision
 )
 from src.hdg.eval.attack import compute_attack_robustness_differences
@@ -963,7 +960,7 @@ def main() -> None:
     doc.append(rf"   - **Residual Gap**: $\Delta_{{\text{{res}}}} = \text{{F1}}_{{\text{{def}}}} - \text{{F1}}_{{\text{{clean}}}} = m_C - m_A = {r_m:+.4f}$ (95% CI: `[{r_ci[0]:+.4f}, {r_ci[1]:+.4f}]`)")
     doc.append(rf"   - **Defended Recovery Gain**: $\Delta_{{\text{{def}}}} = \text{{F1}}_{{\text{{def}}}} - \text{{F1}}_{{\text{{att}}}} = m_C - m_B = {g_m:+.4f}$ (95% CI: `[{g_ci[0]:+.4f}, {g_ci[1]:+.4f}]`)")
     doc.append(r"   - **Algebraic Identity**: $\Delta_{\text{res}} = \Delta_{\text{att}} + \Delta_{\text{def}}$ is preserved.")
-    doc.append(rf"   - **FPR Control & Controlled Domains**: Evaluated under **Pipeline 06 internal protocol** controlling $N_{{\text{{att}}}} = 25$ malicious test domains per seed. Under purity-ranked targets ($\ge 99\%$ benign purity), the attack legitimately degrades F1 by up to $-0.1292$. GNNGuard recovers realized FPR toward operational levels, with defense threshold fine-tuning scheduled for Phase 2.")
+    doc.append(r"   - **FPR Control & Controlled Domains**: Evaluated under **Pipeline 06 internal protocol** controlling $N_{\text{att}} = 25$ malicious test domains per seed. Under purity-ranked targets ($\ge 99\%$ benign purity), the attack legitimately degrades F1 by up to $-0.1292$. GNNGuard recovers realized FPR toward operational levels, with defense threshold fine-tuning scheduled for Phase 2.")
     doc.append("")
 
     # =========================================================================
@@ -1112,7 +1109,7 @@ def main() -> None:
 
     if streaming_data and streaming_data.get("status") == "BLOCKED_INSUFFICIENT_DATA":
         doc.append("> [!WARNING]")
-        doc.append(f"> **Status: BLOCKED_INSUFFICIENT_DATA**")
+        doc.append("> **Status: BLOCKED_INSUFFICIENT_DATA**")
         doc.append(f"> {streaming_data.get('reason')}")
         doc.append(r"> Continual-learning evaluation requires $\ge 2$ consecutive multi-class months ($T \to T+1$).")
     elif streaming_data and "steps" in streaming_data and streaming_data["steps"]:

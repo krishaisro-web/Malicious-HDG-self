@@ -12,7 +12,7 @@ import json
 import random
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 # Ensure repo root is on sys.path
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -20,7 +20,6 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 import numpy as np
-import pandas as pd
 import torch
 
 from src.hdg.models.hetero_gnn import HeteroGNN
@@ -28,7 +27,6 @@ from src.hdg.device import (
     resolve_device,
     get_execution_provenance,
     setup_shared_gpu_environment,
-    get_gpu_memory_info,
 )
 from src.hdg.config import (
     load_config,
@@ -38,17 +36,13 @@ from src.hdg.config import (
     save_run_result
 )
 from src.hdg.data.graph import apply_split_scaling, load_aligned_graph_cohort
-from src.hdg.metrics import (
-    multi_seed_paired_comparisons,
-    compute_bootstrap_cis
-)
+from src.hdg.metrics import multi_seed_paired_comparisons
 from src.hdg.data.splits import (
     random_stratified_split,
     rolling_origin_temporal_splits,
     single_chronological_holdout_split,
     group_split_bipartite,
     group_split_by_asn,
-    DataSplits
 )
 from src.hdg.data.temporal import analyze_temporal_eligibility
 from src.hdg.cache import compute_experiment_fingerprint
@@ -176,7 +170,7 @@ def main() -> None:
                 with open(paths.results_dir / "runs" / f"{run_name}.json", "r", encoding="utf-8") as f:
                     cached_res = json.load(f)
                 if cached_res.get("status") == "BLOCKED_INSUFFICIENT_DATA":
-                    print(f"  [RESUME] Cached run is marked BLOCKED_INSUFFICIENT_DATA.")
+                    print("  [RESUME] Cached run is marked BLOCKED_INSUFFICIENT_DATA.")
                     continue
                 results_by_variant[var].append(cached_res["metrics"])
                 if "predictions" in cached_res and isinstance(cached_res["predictions"], dict):
@@ -396,7 +390,7 @@ def main() -> None:
                     "selection_status": "EVALUATED"
                 }
                 print(f"  [CO-PRIMARY SELECTION (Seed 42)] In-distribution Val pAUC (FPR<=1%): {pauc_01:.4f}")
-                print(f"  [CO-PRIMARY SELECTION (Seed 42)] Paired with Cross-Source Transfer AUC in pipeline/08_provenance_checks.py")
+                print("  [CO-PRIMARY SELECTION (Seed 42)] Paired with Cross-Source Transfer AUC in pipeline/08_provenance_checks.py")
             save_run_result(paths.results_dir, run_name, run_payload)
             tpr_01 = test_eval.get('operating_points', {}).get('tpr_at_0.1pct_fpr', {}).get('tpr', 0.0)
             print(f"  ┌── [TEST METRICS: {var.upper()} on {args.split_type.upper()}] ─────────────────────────")
@@ -404,7 +398,7 @@ def main() -> None:
             print(f"  │  F1-Score:  {test_eval['f1']:.4f}  |  Accuracy: {test_eval.get('accuracy', (test_eval.get('precision', 0)+test_eval.get('recall', 0))/2):.4f}")
             print(f"  │  Precision: {test_eval.get('precision', 0.0):.4f}  |  Recall:   {test_eval.get('recall', 0.0):.4f}")
             print(f"  │  Operating Point TPR @ 0.1% FPR: {tpr_01:.4f} (Threshold: {test_eval['threshold']:.4f})")
-            print(f"  └───────────────────────────────────────────────────────────────────")
+            print("  └───────────────────────────────────────────────────────────────────")
 
             # Memory cleanup for low-resource / thin client execution
             del model, scaled_data
@@ -483,7 +477,7 @@ def main() -> None:
                 predictions_b=xgb_preds,
                 n_bootstrap=boot_samples
             )
-            print(f"  [PAIRED] Successfully computed multi-seed paired comparison for 'sage_vs_xgboost'.")
+            print("  [PAIRED] Successfully computed multi-seed paired comparison for 'sage_vs_xgboost'.")
 
     final_report = {
         "is_fixture": args.fixture,
@@ -508,7 +502,7 @@ def main() -> None:
         "|---|---|---|---|---|"
     ]
     if not aggregated_gnn:
-        md_lines.append(f"| `HeteroGNN` | BLOCKED | BLOCKED | BLOCKED | BLOCKED |")
+        md_lines.append("| `HeteroGNN` | BLOCKED | BLOCKED | BLOCKED | BLOCKED |")
         md_lines.append("")
         md_lines.append(f"> **Note**: Evaluation on split `{args.split_type}` was blocked due to insufficient temporal/cohort evidence.")
     else:

@@ -8,13 +8,12 @@ Shortcut, provenance, and collection artifact audit for Malicious-HDG:
 Outputs provenance_checks.json and provenance_checks.md with plain-language verdicts.
 """
 
-from typing import Optional
 import argparse
 from collections import Counter
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, Optional
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
@@ -28,7 +27,6 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import roc_auc_score, f1_score
 import xgboost as xgb
-import torch
 
 from src.hdg.models.hetero_gnn import HeteroGNN
 from src.hdg.data.graph import extract_domain_features_vectorized, apply_split_scaling

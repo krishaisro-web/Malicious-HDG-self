@@ -10,9 +10,8 @@ Implements the PPT threat model (Nazzal et al.):
 """
 
 from copy import deepcopy
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
-import pandas as pd
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -46,7 +45,6 @@ def generate_structural_attack(
     rng = np.random.default_rng(seed)
 
     test_idx = splits.test_indices
-    y_test = clean_cpu["domain"].y[test_idx].numpy()
     mal_test_idx = [idx for idx in test_idx if clean_cpu["domain"].y[idx].item() == 1]
 
     if not mal_test_idx:

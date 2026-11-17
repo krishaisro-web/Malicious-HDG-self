@@ -6,11 +6,10 @@ Verifies:
 3. Gradient flows back to the learnable beta layer-memory parameter.
 """
 
-import pytest
 import torch
 from torch_geometric.utils import scatter
 
-from src.hdg.models.hetero_gnn import GNNGuardLayer, HeteroGNN
+from src.hdg.models.hetero_gnn import GNNGuardLayer
 
 
 def test_gnnguard_edge_pruning() -> None:

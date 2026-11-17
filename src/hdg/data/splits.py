@@ -8,7 +8,6 @@ Implements:
 5. Group split by primary ASN with infrastructure leakage report.
 """
 
-from collections import Counter
 from dataclasses import dataclass, field
 import logging
 from typing import Any, Dict, List, Optional, Set, Tuple
@@ -315,7 +314,6 @@ def assign_groups_stratified(
     Guarantees no group cluster spans two sets.
     """
     rng = np.random.default_rng(seed)
-    n_total = len(labels)
     target_pos_ratio = float(np.mean(labels == 1))
 
     # Separate groups into positive-leaning and negative-leaning clusters
@@ -626,7 +624,6 @@ def group_split_by_asn(
     Alternative group split by primary ASN (used if bipartite giant component > 50%).
     Applies stratified group assignment and generates an infrastructure leakage report.
     """
-    n_domains = len(df)
     labels = df["label"].to_numpy()
 
     # Map missing ASNs to individual negative unique IDs
@@ -677,3 +674,17 @@ from src.hdg.data.temporal import (
     save_temporal_eligibility_report,
     TemporalEligibilityResult,
 )
+
+__all__ = [
+    "DataSplits",
+    "random_stratified_split",
+    "rolling_origin_temporal_splits",
+    "time_split",
+    "group_split_bipartite",
+    "group_split_by_asn",
+    "compute_asn_leakage_report",
+    "single_chronological_holdout_split",
+    "analyze_temporal_eligibility",
+    "save_temporal_eligibility_report",
+    "TemporalEligibilityResult",
+]

@@ -16,10 +16,8 @@ Outputs to:
 import argparse
 from datetime import datetime, timezone
 import json
-import os
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
 
 # Ensure repo root is on sys.path
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -29,14 +27,12 @@ if str(REPO_ROOT) not in sys.path:
 import numpy as np
 import pandas as pd
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 
 from src.hdg.models.hetero_gnn import HeteroGNN
 from src.hdg.config import (
     load_config,
     get_resolved_paths,
-    should_skip_run,
     save_run_result,
     init_thread_pool,
 )
@@ -45,8 +41,6 @@ from src.hdg.data.splits import (
     random_stratified_split,
     single_chronological_holdout_split,
     group_split_bipartite,
-    group_split_by_asn,
-    DataSplits
 )
 from src.hdg.data.graph import apply_split_scaling
 
@@ -149,8 +143,8 @@ def main() -> None:
                 c_dir / f"gnn_attn_{args.split_type}_seed_42.pt",
                 c_dir / f"gnn_sage_guard_{args.split_type}_seed_42.pt",
                 c_dir / f"gnn_sage_{args.split_type}_seed_42.pt",
-                c_dir / f"gnn_attn_random_seed_42.pt",
-                c_dir / f"gnn_sage_random_seed_42.pt",
+                c_dir / "gnn_attn_random_seed_42.pt",
+                c_dir / "gnn_sage_random_seed_42.pt",
             ]
             for p in preferred_candidates:
                 if p.exists() and p not in candidates_to_try:
@@ -678,7 +672,7 @@ def main() -> None:
         f"- **Observed False Positives on Holdout**: `{observed_fp_cert}`",
         f"- **Realized Certification FPR**: `{realized_cert_fpr * 100:.3f}%`",
         f"- **95% Confidence Upper Bound on Population FPR**: `{fpr_95_upper_bound * 100:.2f}%`",
-        f"- **Statistical Evidence Certification**: `CERTIFIED (Independent Verification Holdout)`",
+        "- **Statistical Evidence Certification**: `CERTIFIED (Independent Verification Holdout)`",
         f"- **Total Evaluated Domains**: `{n_test}`",
         f"- **Rules Emitted**: `{n_blocked}`",
         f"- **Estimated Blocking Rate**: `{blocking_rate:.2f}%`",

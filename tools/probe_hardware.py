@@ -383,10 +383,10 @@ def get_gpu_vram_info() -> Dict[str, Any]:
                 t0 = time.time()
                 t_a = torch.randn(1024, 1024, device="cuda:0", dtype=torch.float32)
                 t_b = torch.randn(1024, 1024, device="cuda:0", dtype=torch.float32)
-                t_c = torch.matmul(t_a, t_b)
+                _ = torch.matmul(t_a, t_b)
                 torch.cuda.synchronize(0)
                 dur_ms = (time.time() - t0) * 1000.0
-                del t_a, t_b, t_c
+                del t_a, t_b
                 torch.cuda.empty_cache()
                 gpu_data["execution_sanity_test"] = {
                     "passed": True,
@@ -724,7 +724,6 @@ def run_master_audit(repo_root: Optional[Path] = None, json_out: Optional[str] =
 def print_audit_report(report: Dict[str, Any], exported_path: Optional[Path]) -> None:
     """Print formatted audit report to console."""
     sep = "=" * 78
-    subsep = "-" * 78
 
     print(sep)
     print("      MALICIOUS-HDG MASTER SYSTEM, HARDWARE, GPU & DEPENDENCY AUDIT")
@@ -808,13 +807,11 @@ def print_audit_report(report: Dict[str, Any], exported_path: Optional[Path]) ->
 
     # 6. Python Libraries
     print("\n[6] REQUIRED PYTHON LIBRARIES & EXTENSIONS:")
-    all_libs_ok = True
     for mod_name, lib_data in report["libraries"].items():
         if lib_data["installed"]:
             status_tag = f"\033[1;32m[INSTALLED v{lib_data['version']}]\033[0m"
         else:
             status_tag = "\033[1;31m[MISSING]\033[0m"
-            all_libs_ok = False
         print(f"  - {mod_name:<20} {status_tag:<32} ({lib_data['description']})")
 
     # 7. Datasets

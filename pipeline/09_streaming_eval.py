@@ -13,7 +13,6 @@ Outputs to results/tables/streaming_eval.json, streaming_eval.md, and results/ru
 
 import argparse
 import json
-import os
 import sys
 from pathlib import Path
 
@@ -21,9 +20,6 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
-
-import pandas as pd
-import torch
 
 from src.hdg.config import (
     load_config,
@@ -109,7 +105,7 @@ def main() -> None:
             f"# {pfx}Streaming Domain Prototype Evaluation",
             "",
             "> [!WARNING]",
-            f"> **Status: BLOCKED_INSUFFICIENT_DATA**",
+            "> **Status: BLOCKED_INSUFFICIENT_DATA**",
             f"> {res.get('reason')}",
             "",
             "### Monthly Class Distribution in Dataset",

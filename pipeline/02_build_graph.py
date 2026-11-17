@@ -20,7 +20,7 @@ import pandas as pd
 import torch
 
 from src.hdg.config import load_config, get_resolved_paths, init_thread_pool
-from src.hdg.data.graph import build_base_graph, apply_split_scaling, save_graph_cohort_bundle
+from src.hdg.data.graph import build_base_graph, save_graph_cohort_bundle
 
 
 def main() -> None:
@@ -84,7 +84,7 @@ def main() -> None:
             base_graph[nt].x = torch.zeros((base_graph[nt].num_nodes, 1), dtype=torch.float)
 
     # Save base graph artifact and aligned cohort bundle atomically
-    manifest = save_graph_cohort_bundle(
+    save_graph_cohort_bundle(
         graph=base_graph,
         df=df,
         output_dir=paths.processed_dir,

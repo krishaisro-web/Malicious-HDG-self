@@ -6,7 +6,6 @@ strictly identical (within 1e-5) to slicing predictions from a full-graph forwar
 
 import numpy as np
 import pandas as pd
-import pytest
 import torch
 import torch.nn.functional as F
 from torch_geometric.data import HeteroData

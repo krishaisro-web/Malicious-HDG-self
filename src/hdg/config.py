@@ -14,13 +14,14 @@ os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
 
 try:
     import xgboost as _xgb_preinit
+    _ = _xgb_preinit
 except Exception:
     pass
 
 from dataclasses import dataclass
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, Optional, Union
 import torch
 import yaml
 

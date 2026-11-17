@@ -8,7 +8,6 @@ Implements:
 - Single-thread and all-thread evaluation modes for batch sizes 1 and 32
 """
 
-from collections import Counter
 from pathlib import Path
 import platform
 import time

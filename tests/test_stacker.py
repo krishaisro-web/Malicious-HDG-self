@@ -3,7 +3,6 @@ Unit tests for Post-Hoc Stacker with GBA features and pre-committed stop rule.
 """
 
 import numpy as np
-import pytest
 from torch_geometric.data import HeteroData
 
 from src.hdg.training.stacker import (

@@ -46,6 +46,8 @@ __all__ = [
     "TemporalEligibilityResult",
     "build_base_graph",
     "apply_split_scaling",
+    "build_hetero_graph",
+    "TrainOnlyStandardizer",
     "extract_domain_feature_vector",
     "extract_domain_features_vectorized",
     "make_fixture",

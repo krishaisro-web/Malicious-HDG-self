@@ -97,7 +97,7 @@
   - In `src/hdg/metrics.py`: Added defensive length checks in `paired_mcnemar_test`, `paired_bootstrap_auc_difference`, and `multi_seed_paired_comparisons` to gracefully bypass incompatible evaluation split dimensions without crashing.
 
 ### Fix 5: Comprehensive Pyflakes Static Analysis & Variable Hygiene Audit
-- **Problem**: Comprehensive pyflakes code analysis across `pipeline/`, `src/`, and `tools/` revealed latent runtime name errors that would crash later stages during long-running execution:
+- **Problem**: Comprehensive pyflakes code analysis across `pipeline/`, `src/`, `tools/`, and `tests/` revealed latent runtime name errors and code hygiene issues that would crash later stages during long-running execution:
   1. `pipeline/01_parse.py:53`: `json.load()` called without `import json`.
   2. `pipeline/07_latency_eval.py:267`: Type hint `List[float]` evaluated at runtime without `from typing import List`.
   3. `pipeline/11_make_report.py:487`: `compute_prevalence_adjusted_precision` called without import from `src.hdg.metrics`.
@@ -105,7 +105,8 @@
   5. `src/hdg/eval/streaming.py:148`: `optimizer.zero_grad()` retained zero-filled tensor buffers in VRAM instead of immediate deallocation via `set_to_none=True`.
   6. `pipeline/09_streaming_eval.py`: Inconsistent passing of `ResolvedPaths` object instead of directory path to `should_skip_run` and `save_run_result`.
   7. Shared GPU VRAM threshold: `min_free_vram_gb` default lowered to 6.0 GB in `src/hdg/device.py` to prevent false aborts on shared nodes where free VRAM is ~8.74-8.76 GB.
-- **Patch**: All 7 issues resolved and verified with `pyflakes` (0 undefined names, 0 syntax errors) and full test suite (168 passed).
+  8. Codebase Linter Sweep: Systematically removed all unused imports, unused local variables, and static placeholder-free f-strings across `pipeline/`, `src/`, `tools/`, and `tests/`.
+- **Patch**: All issues resolved and verified with `pyflakes` (0 undefined names, 0 syntax errors, 0 unused imports/variables) and full test suite (168 passed).
 
 ---
 

@@ -7,7 +7,6 @@ import subprocess
 import sys
 from pathlib import Path
 import unittest
-import torch
 
 from tools.verify_gpu_graph import run_preflight_checks
 

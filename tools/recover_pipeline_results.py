@@ -12,9 +12,8 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 import numpy as np
-import pandas as pd
 import torch
 import torch.nn.functional as F
 
@@ -106,7 +105,7 @@ def main() -> None:
             print(f"  [XGBoost Seed {s}] Computed & Saved (AUROC: {res_xgb['roc_auc']:.4f}, F1: {res_xgb['f1']:.4f})")
 
     # 3. Recover GNN Evaluation using Existing Saved Checkpoints
-    print(f"\n[Step 3/5] Evaluating existing GNN checkpoints (ZERO RETRAINING)...")
+    print("\n[Step 3/5] Evaluating existing GNN checkpoints (ZERO RETRAINING)...")
     results_by_variant: Dict[str, List[Dict[str, Any]]] = {v: [] for v in variants}
     predictions_by_variant: Dict[str, Dict[int, Dict[str, np.ndarray]]] = {v: {} for v in variants}
 
@@ -211,7 +210,7 @@ def main() -> None:
             }
 
     # 4. Compute Paired Hypothesis Tests (O3) and Aggregate Tables
-    print(f"\n[Step 4/5] Computing paired hypothesis tests & statistical significance...")
+    print("\n[Step 4/5] Computing paired hypothesis tests & statistical significance...")
     paired_results = {}
     if "sage" in variants and "attn" in variants and len(predictions_by_variant["sage"]) > 0:
         paired_results["sage_vs_attn"] = multi_seed_paired_comparisons(
@@ -234,12 +233,12 @@ def main() -> None:
         mcn = pooled.get("mcnemar", {})
         p_val_auc = auc_diff.get("pvalue_two_sided")
         mean_diff = auc_diff.get("mean_diff", 0.0)
-        print(f"  ┌── [O3 STATISTICAL COMPARISON: HeteroGNN SAGE vs XGBoost] ─────────")
+        print("  ┌── [O3 STATISTICAL COMPARISON: HeteroGNN SAGE vs XGBoost] ─────────")
         print(f"  │  Mean Δ AUC: +{mean_diff:.4f} [95% CI: {auc_diff.get('ci_lower')}, {auc_diff.get('ci_upper')}]")
         print(f"  │  Paired Bootstrap AUC p-value: {p_val_auc}")
         print(f"  │  McNemar Test p-value:         {mcn.get('pvalue')}")
         print(f"  │  Statistical Significance:      {'SIGNIFICANT (p < 0.05) -> O3 MET' if (p_val_auc is not None and p_val_auc < 0.05 and mean_diff > 0) else 'NOT SIGNIFICANT'}")
-        print(f"  └───────────────────────────────────────────────────────────────────")
+        print("  └───────────────────────────────────────────────────────────────────")
 
     # Aggregate GNN stats
     aggregated_gnn = {}
@@ -274,7 +273,7 @@ def main() -> None:
         json.dump(table_payload, f, indent=2)
 
     # 5. Fast Latency Benchmark (O4)
-    print(f"\n[Step 5/5] Benchmarking optimized CPU inference latency (O4)...")
+    print("\n[Step 5/5] Benchmarking optimized CPU inference latency (O4)...")
     from src.hdg.eval.latency import benchmark_cpu_query_latency
     ref_ckpt = paths.checkpoints_dir / "gnn_sage_random_seed_42.pt"
     if ref_ckpt.exists():
@@ -327,7 +326,7 @@ def main() -> None:
             pass
 
     # Compile Final Report
-    print(f"\nCompiling final report with updated O1-O5 objectives...")
+    print("\nCompiling final report with updated O1-O5 objectives...")
     report_script = REPO_ROOT / "pipeline" / "11_make_report.py"
     import subprocess
     cmd = [sys.executable, str(report_script), "--force"]

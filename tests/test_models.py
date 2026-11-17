@@ -6,7 +6,6 @@ Verifies:
 3. SAGE_Guard forward pass produces valid logits of shape [N_domains, 2].
 """
 
-import pytest
 import torch
 from torch_geometric.data import HeteroData
 

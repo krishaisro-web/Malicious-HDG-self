@@ -19,13 +19,12 @@ Provides:
    Persists machine-readable temporal_eligibility.json for pipeline auditing and reporting.
 """
 
-from collections import Counter, defaultdict
+from collections import Counter
 from dataclasses import dataclass
-from datetime import datetime
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd

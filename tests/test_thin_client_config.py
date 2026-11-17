@@ -3,8 +3,6 @@ Unit tests for HP Thin Client configuration, thread capping, and memory safety.
 """
 
 import os
-from pathlib import Path
-import pytest
 import torch
 
 from src.hdg.config import (

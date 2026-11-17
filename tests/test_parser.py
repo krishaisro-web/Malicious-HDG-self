@@ -14,13 +14,11 @@ from datetime import datetime, timezone
 import json
 from pathlib import Path
 import tempfile
-import pytest
 import tldextract
 
 from src.hdg.data.parse import (
     extract_leaf_certificate,
     resolve_asn,
-    resolve_registrar,
     stream_parse_file,
 )
 from src.hdg.data.profiler import parse_mongo_date

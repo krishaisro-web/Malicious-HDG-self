@@ -10,7 +10,6 @@ Verifies:
 import numpy as np
 import pandas as pd
 import pytest
-import torch
 
 from src.hdg.data.graph import build_hetero_graph, TrainOnlyStandardizer
 from src.hdg.data.splits import (
@@ -18,7 +17,6 @@ from src.hdg.data.splits import (
     time_split,
     group_split_bipartite,
     group_split_by_asn,
-    DataSplits
 )
 
 

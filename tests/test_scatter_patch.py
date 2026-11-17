@@ -7,7 +7,6 @@ between PyG fallback scatter and PyTorch native index_add_ / index_reduce_.
 import pytest
 import torch
 import torch.nn.functional as F
-from torch_geometric.data import HeteroData
 import torch_geometric.utils._scatter as pyg_scatter
 import torch_geometric.utils as pyg_utils
 

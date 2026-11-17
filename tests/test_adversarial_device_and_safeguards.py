@@ -6,7 +6,6 @@ CPU-only latency safeguards, FP32 precision/determinism, and atomic attack tenso
 import os
 import subprocess
 import sys
-from pathlib import Path
 from unittest import mock
 import numpy as np
 import pytest
@@ -18,12 +17,9 @@ from src.hdg.device import (
     set_cuda_precision_and_determinism,
     setup_shared_gpu_environment,
     get_provenance_metadata,
-    check_vram_available,
-    set_gpu_memory_limits,
 )
 from src.hdg.data.splits import DataSplits
-from src.hdg.eval.attack import generate_structural_attack, evaluate_attacked_model
-from src.hdg.models.hetero_gnn import HeteroGNN
+from src.hdg.eval.attack import generate_structural_attack
 
 
 class TestDeviceResolutionAdversarial:

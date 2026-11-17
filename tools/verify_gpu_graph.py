@@ -15,7 +15,6 @@ Performs:
 
 import argparse
 import json
-import os
 import sys
 import time
 from pathlib import Path
@@ -226,7 +225,7 @@ def run_preflight_checks(
             # If device is CUDA, profile single-pass memory and transfer
             if device.type == "cuda":
                 t_transfer_start = time.time()
-                real_data_dev = real_data.to(device)
+                _ = real_data.to(device)
                 transfer_sec = time.time() - t_transfer_start
                 mem_after_transfer = get_gpu_memory_info(device)
 
@@ -274,14 +273,14 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    print(f"==================================================================")
-    print(f"   MALICIOUS-HDG PRE-FLIGHT VERIFICATION & HARDWARE PROBING")
-    print(f"==================================================================")
+    print("==================================================================")
+    print("   MALICIOUS-HDG PRE-FLIGHT VERIFICATION & HARDWARE PROBING")
+    print("==================================================================")
     print(f"Target Device:        {args.device}")
     print(f"Output Directory:     {args.out_dir}")
     print(f"Memory Fraction Cap:  {args.mem_fraction}")
     print(f"Min Free VRAM:        {args.min_free_vram} GB")
-    print(f"------------------------------------------------------------------")
+    print("------------------------------------------------------------------")
 
     results = run_preflight_checks(
         device_str=args.device,
@@ -299,7 +298,7 @@ def main() -> None:
 
     print(f"\nOverall Pre-flight Status: {'PASSED (Ready for Execution)' if results['passed_all'] else 'FAILED'}")
     print(f"Report written to: {args.out_dir}/preflight_verification.json")
-    print(f"==================================================================")
+    print("==================================================================")
 
     if not results["passed_all"]:
         sys.exit(1)

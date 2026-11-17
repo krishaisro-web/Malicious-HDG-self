@@ -8,7 +8,6 @@ Verifies:
 
 from copy import deepcopy
 import numpy as np
-import pytest
 import torch
 from torch_geometric.data import HeteroData
 
