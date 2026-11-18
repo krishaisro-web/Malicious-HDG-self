@@ -1,0 +1,1367 @@
+{
+  "is_fixture": false,
+  "is_smoke": false,
+  "split_type": "time",
+  "variants": {
+    "sage": {
+      "num_seeds": 5,
+      "split_type": "time",
+      "roc_auc_mean": 0.6226,
+      "roc_auc_std": 0.0116,
+      "f1_mean": 0.1096,
+      "f1_std": 0.004,
+      "pr_auc_mean": 0.0597,
+      "pr_auc_std": 0.002,
+      "tpr_at_0.1pct_fpr_mean": 0.0324,
+      "runs": [
+        {
+          "roc_auc": 0.6089,
+          "pr_auc": 0.0582,
+          "f1": 0.1049,
+          "precision": 0.056,
+          "recall": 0.8166,
+          "specificity": 0.346,
+          "threshold": 0.24,
+          "test_counts": {
+            "total": 53943,
+            "positives": 2448,
+            "negatives": 51495,
+            "sample_prevalence": 0.0454
+          },
+          "confusion_matrix": {
+            "tp": 1999,
+            "tn": 17817,
+            "fp": 33678,
+            "fn": 449
+          },
+          "operating_points": {
+            "tpr_at_1.0pct_fpr": {
+              "tpr": 0.1389,
+              "threshold": 0.936,
+              "realised_test_fpr": 0.144461,
+              "f1_at_operating_point": 0.0665,
+              "precision_at_operating_point": 0.0437,
+              "recall_at_operating_point": 0.1389,
+              "prevalence_adjusted_precision": {
+                "pi_1.0pct": 0.0096,
+                "pi_0.1pct": 0.001
+              },
+              "expected_fp": 515,
+              "warning": null
+            },
+            "tpr_at_0.1pct_fpr": {
+              "tpr": 0.0372,
+              "threshold": 0.9936,
+              "realised_test_fpr": 0.032877,
+              "f1_at_operating_point": 0.043,
+              "precision_at_operating_point": 0.051,
+              "recall_at_operating_point": 0.0372,
+              "prevalence_adjusted_precision": {
+                "pi_1.0pct": 0.0113,
+                "pi_0.1pct": 0.0011
+              },
+              "expected_fp": 51,
+              "warning": null
+            }
+          },
+          "bootstrap_ci": {
+            "roc_auc": {
+              "point": 0.6092,
+              "ci_lower": 0.5993,
+              "ci_upper": 0.6204,
+              "std": 0.0054
+            },
+            "pr_auc": {
+              "point": 0.0584,
+              "ci_lower": 0.0553,
+              "ci_upper": 0.062,
+              "std": 0.0017
+            },
+            "f1": {
+              "point": 0.1049,
+              "ci_lower": 0.1008,
+              "ci_upper": 0.1091,
+              "std": 0.0021
+            }
+          },
+          "breakdowns": {
+            "by_resolution": {
+              "resolved": {
+                "count": 48004,
+                "roc_auc": 0.6236,
+                "f1": 0.1108
+              },
+              "no_ip": {
+                "count": 5939,
+                "roc_auc": 0.5613,
+                "f1": 0.0634
+              }
+            },
+            "by_source": {
+              "../../virus-total/finished_collections/benign_groundtruth2312.txt": {
+                "count": 51495,
+                "accuracy": 0.346
+              },
+              "Github": {
+                "count": 1708,
+                "accuracy": 0.8044
+              },
+              "URLhaus": {
+                "count": 740,
+                "accuracy": 0.8446
+              }
+            },
+            "by_malware_family": {
+              "unknown": {
+                "count": 2447,
+                "detection_rate_recall": 0.8165
+              }
+            }
+          },
+          "training_metadata": {
+            "chosen_lr": 0.005,
+            "lr_grid": [
+              0.001,
+              0.003,
+              0.005
+            ],
+            "epochs_trained": 200,
+            "best_val_auc": 0.9816,
+            "use_class_weights": false,
+            "checkpoint_path": "/home/rohit/Malicious-HDG-self/artifacts/checkpoints/real_gpu/gnn_sage_time_seed_42.pt"
+          }
+        },
+        {
+          "roc_auc": 0.6148,
+          "pr_auc": 0.0586,
+          "f1": 0.1046,
+          "precision": 0.0558,
+          "recall": 0.8423,
+          "specificity": 0.3222,
+          "threshold": 0.18,
+          "test_counts": {
+            "total": 53943,
+            "positives": 2448,
+            "negatives": 51495,
+            "sample_prevalence": 0.0454
+          },
+          "confusion_matrix": {
+            "tp": 2062,
+            "tn": 16592,
+            "fp": 34903,
+            "fn": 386
+          },
+          "operating_points": {
+            "tpr_at_1.0pct_fpr": {
+              "tpr": 0.1103,
+              "threshold": 0.9437,
+              "realised_test_fpr": 0.119507,
+              "f1_at_operating_point": 0.0609,
+              "precision_at_operating_point": 0.042,
+              "recall_at_operating_point": 0.1103,
+              "prevalence_adjusted_precision": {
+                "pi_1.0pct": 0.0092,
+                "pi_0.1pct": 0.0009
+              },
+              "expected_fp": 515,
+              "warning": null
+            },
+            "tpr_at_0.1pct_fpr": {
+              "tpr": 0.047,
+              "threshold": 0.9836,
+              "realised_test_fpr": 0.053928,
+              "f1_at_operating_point": 0.0431,
+              "precision_at_operating_point": 0.0398,
+              "recall_at_operating_point": 0.047,
+              "prevalence_adjusted_precision": {
+                "pi_1.0pct": 0.0087,
+                "pi_0.1pct": 0.0009
+              },
+              "expected_fp": 51,
+              "warning": null
+            }
+          },
+          "bootstrap_ci": {
+            "roc_auc": {
+              "point": 0.615,
+              "ci_lower": 0.6047,
+              "ci_upper": 0.6257,
+              "std": 0.0053
+            },
+            "pr_auc": {
+              "point": 0.0589,
+              "ci_lower": 0.0559,
+              "ci_upper": 0.0623,
+              "std": 0.0016
+            },
+            "f1": {
+              "point": 0.1047,
+              "ci_lower": 0.1008,
+              "ci_upper": 0.1092,
+              "std": 0.0021
+            }
+          },
+          "breakdowns": {
+            "by_resolution": {
+              "resolved": {
+                "count": 48004,
+                "roc_auc": 0.6308,
+                "f1": 0.1104
+              },
+              "no_ip": {
+                "count": 5939,
+                "roc_auc": 0.5445,
+                "f1": 0.0636
+              }
+            },
+            "by_source": {
+              "../../virus-total/finished_collections/benign_groundtruth2312.txt": {
+                "count": 51495,
+                "accuracy": 0.3222
+              },
+              "Github": {
+                "count": 1708,
+                "accuracy": 0.8349
+              },
+              "URLhaus": {
+                "count": 740,
+                "accuracy": 0.8595
+              }
+            },
+            "by_malware_family": {
+              "unknown": {
+                "count": 2447,
+                "detection_rate_recall": 0.8423
+              }
+            }
+          },
+          "training_metadata": {
+            "chosen_lr": 0.005,
+            "lr_grid": [
+              0.001,
+              0.003,
+              0.005
+            ],
+            "epochs_trained": 174,
+            "best_val_auc": 0.9796,
+            "use_class_weights": false,
+            "checkpoint_path": "/home/rohit/Malicious-HDG-self/artifacts/checkpoints/real_gpu/gnn_sage_time_seed_1337.pt"
+          }
+        },
+        {
+          "roc_auc": 0.6221,
+          "pr_auc": 0.059,
+          "f1": 0.1129,
+          "precision": 0.061,
+          "recall": 0.752,
+          "specificity": 0.4499,
+          "threshold": 0.23,
+          "test_counts": {
+            "total": 53943,
+            "positives": 2448,
+            "negatives": 51495,
+            "sample_prevalence": 0.0454
+          },
+          "confusion_matrix": {
+            "tp": 1841,
+            "tn": 23166,
+            "fp": 28329,
+            "fn": 607
+          },
+          "operating_points": {
+            "tpr_at_1.0pct_fpr": {
+              "tpr": 0.1062,
+              "threshold": 0.954,
+              "realised_test_fpr": 0.111487,
+              "f1_at_operating_point": 0.0615,
+              "precision_at_operating_point": 0.0433,
+              "recall_at_operating_point": 0.1062,
+              "prevalence_adjusted_precision": {
+                "pi_1.0pct": 0.0095,
+                "pi_0.1pct": 0.001
+              },
+              "expected_fp": 515,
+              "warning": null
+            },
+            "tpr_at_0.1pct_fpr": {
+              "tpr": 0.0167,
+              "threshold": 0.9958,
+              "realised_test_fpr": 0.016002,
+              "f1_at_operating_point": 0.0248,
+              "precision_at_operating_point": 0.0474,
+              "recall_at_operating_point": 0.0167,
+              "prevalence_adjusted_precision": {
+                "pi_1.0pct": 0.0105,
+                "pi_0.1pct": 0.001
+              },
+              "expected_fp": 51,
+              "warning": null
+            }
+          },
+          "bootstrap_ci": {
+            "roc_auc": {
+              "point": 0.6223,
+              "ci_lower": 0.6123,
+              "ci_upper": 0.632,
+              "std": 0.005
+            },
+            "pr_auc": {
+              "point": 0.0592,
+              "ci_lower": 0.056,
+              "ci_upper": 0.0622,
+              "std": 0.0016
+            },
+            "f1": {
+              "point": 0.1129,
+              "ci_lower": 0.1082,
+              "ci_upper": 0.1178,
+              "std": 0.0024
+            }
+          },
+          "breakdowns": {
+            "by_resolution": {
+              "resolved": {
+                "count": 48004,
+                "roc_auc": 0.6402,
+                "f1": 0.1212
+              },
+              "no_ip": {
+                "count": 5939,
+                "roc_auc": 0.5428,
+                "f1": 0.0632
+              }
+            },
+            "by_source": {
+              "../../virus-total/finished_collections/benign_groundtruth2312.txt": {
+                "count": 51495,
+                "accuracy": 0.4499
+              },
+              "Github": {
+                "count": 1708,
+                "accuracy": 0.7453
+              },
+              "URLhaus": {
+                "count": 740,
+                "accuracy": 0.7676
+              }
+            },
+            "by_malware_family": {
+              "unknown": {
+                "count": 2447,
+                "detection_rate_recall": 0.7523
+              }
+            }
+          },
+          "training_metadata": {
+            "chosen_lr": 0.005,
+            "lr_grid": [
+              0.001,
+              0.003,
+              0.005
+            ],
+            "epochs_trained": 189,
+            "best_val_auc": 0.9783,
+            "use_class_weights": false,
+            "checkpoint_path": "/home/rohit/Malicious-HDG-self/artifacts/checkpoints/real_gpu/gnn_sage_time_seed_2024.pt"
+          }
+        },
+        {
+          "roc_auc": 0.643,
+          "pr_auc": 0.0637,
+          "f1": 0.1128,
+          "precision": 0.0607,
+          "recall": 0.7945,
+          "specificity": 0.4157,
+          "threshold": 0.29,
+          "test_counts": {
+            "total": 53943,
+            "positives": 2448,
+            "negatives": 51495,
+            "sample_prevalence": 0.0454
+          },
+          "confusion_matrix": {
+            "tp": 1945,
+            "tn": 21408,
+            "fp": 30087,
+            "fn": 503
+          },
+          "operating_points": {
+            "tpr_at_1.0pct_fpr": {
+              "tpr": 0.1136,
+              "threshold": 0.959,
+              "realised_test_fpr": 0.111234,
+              "f1_at_operating_point": 0.0658,
+              "precision_at_operating_point": 0.0463,
+              "recall_at_operating_point": 0.1136,
+              "prevalence_adjusted_precision": {
+                "pi_1.0pct": 0.0102,
+                "pi_0.1pct": 0.001
+              },
+              "expected_fp": 515,
+              "warning": null
+            },
+            "tpr_at_0.1pct_fpr": {
+              "tpr": 0.0282,
+              "threshold": 0.9946,
+              "realised_test_fpr": 0.024216,
+              "f1_at_operating_point": 0.0367,
+              "precision_at_operating_point": 0.0524,
+              "recall_at_operating_point": 0.0282,
+              "prevalence_adjusted_precision": {
+                "pi_1.0pct": 0.0116,
+                "pi_0.1pct": 0.0012
+              },
+              "expected_fp": 51,
+              "warning": null
+            }
+          },
+          "bootstrap_ci": {
+            "roc_auc": {
+              "point": 0.643,
+              "ci_lower": 0.6334,
+              "ci_upper": 0.6524,
+              "std": 0.0049
+            },
+            "pr_auc": {
+              "point": 0.0639,
+              "ci_lower": 0.0605,
+              "ci_upper": 0.0674,
+              "std": 0.0018
+            },
+            "f1": {
+              "point": 0.1129,
+              "ci_lower": 0.1084,
+              "ci_upper": 0.1175,
+              "std": 0.0023
+            }
+          },
+          "breakdowns": {
+            "by_resolution": {
+              "resolved": {
+                "count": 48004,
+                "roc_auc": 0.6618,
+                "f1": 0.1201
+              },
+              "no_ip": {
+                "count": 5939,
+                "roc_auc": 0.5569,
+                "f1": 0.0647
+              }
+            },
+            "by_source": {
+              "../../virus-total/finished_collections/benign_groundtruth2312.txt": {
+                "count": 51495,
+                "accuracy": 0.4157
+              },
+              "Github": {
+                "count": 1708,
+                "accuracy": 0.7763
+              },
+              "URLhaus": {
+                "count": 740,
+                "accuracy": 0.8365
+              }
+            },
+            "by_malware_family": {
+              "unknown": {
+                "count": 2447,
+                "detection_rate_recall": 0.7944
+              }
+            }
+          },
+          "training_metadata": {
+            "chosen_lr": 0.005,
+            "lr_grid": [
+              0.001,
+              0.003,
+              0.005
+            ],
+            "epochs_trained": 200,
+            "best_val_auc": 0.9806,
+            "use_class_weights": false,
+            "checkpoint_path": "/home/rohit/Malicious-HDG-self/artifacts/checkpoints/real_gpu/gnn_sage_time_seed_777.pt"
+          }
+        },
+        {
+          "roc_auc": 0.6243,
+          "pr_auc": 0.0592,
+          "f1": 0.113,
+          "precision": 0.061,
+          "recall": 0.7684,
+          "specificity": 0.4376,
+          "threshold": 0.24,
+          "test_counts": {
+            "total": 53943,
+            "positives": 2448,
+            "negatives": 51495,
+            "sample_prevalence": 0.0454
+          },
+          "confusion_matrix": {
+            "tp": 1881,
+            "tn": 22533,
+            "fp": 28962,
+            "fn": 567
+          },
+          "operating_points": {
+            "tpr_at_1.0pct_fpr": {
+              "tpr": 0.105,
+              "threshold": 0.9444,
+              "realised_test_fpr": 0.102942,
+              "f1_at_operating_point": 0.0642,
+              "precision_at_operating_point": 0.0462,
+              "recall_at_operating_point": 0.105,
+              "prevalence_adjusted_precision": {
+                "pi_1.0pct": 0.0102,
+                "pi_0.1pct": 0.001
+              },
+              "expected_fp": 515,
+              "warning": null
+            },
+            "tpr_at_0.1pct_fpr": {
+              "tpr": 0.0327,
+              "threshold": 0.9902,
+              "realised_test_fpr": 0.032158,
+              "f1_at_operating_point": 0.0382,
+              "precision_at_operating_point": 0.0461,
+              "recall_at_operating_point": 0.0327,
+              "prevalence_adjusted_precision": {
+                "pi_1.0pct": 0.0102,
+                "pi_0.1pct": 0.001
+              },
+              "expected_fp": 51,
+              "warning": null
+            }
+          },
+          "bootstrap_ci": {
+            "roc_auc": {
+              "point": 0.6241,
+              "ci_lower": 0.6137,
+              "ci_upper": 0.6342,
+              "std": 0.0052
+            },
+            "pr_auc": {
+              "point": 0.0594,
+              "ci_lower": 0.0561,
+              "ci_upper": 0.0626,
+              "std": 0.0016
+            },
+            "f1": {
+              "point": 0.113,
+              "ci_lower": 0.1082,
+              "ci_upper": 0.1177,
+              "std": 0.0025
+            }
+          },
+          "breakdowns": {
+            "by_resolution": {
+              "resolved": {
+                "count": 48004,
+                "roc_auc": 0.6438,
+                "f1": 0.1209
+              },
+              "no_ip": {
+                "count": 5939,
+                "roc_auc": 0.5417,
+                "f1": 0.0642
+              }
+            },
+            "by_source": {
+              "../../virus-total/finished_collections/benign_groundtruth2312.txt": {
+                "count": 51495,
+                "accuracy": 0.4376
+              },
+              "Github": {
+                "count": 1708,
+                "accuracy": 0.7641
+              },
+              "URLhaus": {
+                "count": 740,
+                "accuracy": 0.7784
+              }
+            },
+            "by_malware_family": {
+              "unknown": {
+                "count": 2447,
+                "detection_rate_recall": 0.7687
+              }
+            }
+          },
+          "training_metadata": {
+            "chosen_lr": 0.005,
+            "lr_grid": [
+              0.001,
+              0.003,
+              0.005
+            ],
+            "epochs_trained": 199,
+            "best_val_auc": 0.9795,
+            "use_class_weights": false,
+            "checkpoint_path": "/home/rohit/Malicious-HDG-self/artifacts/checkpoints/real_gpu/gnn_sage_time_seed_999.pt"
+          }
+        }
+      ]
+    },
+    "attn": {
+      "num_seeds": 5,
+      "split_type": "time",
+      "roc_auc_mean": 0.6153,
+      "roc_auc_std": 0.0245,
+      "f1_mean": 0.1065,
+      "f1_std": 0.0087,
+      "pr_auc_mean": 0.0614,
+      "pr_auc_std": 0.0051,
+      "tpr_at_0.1pct_fpr_mean": 0.0671,
+      "runs": [
+        {
+          "roc_auc": 0.6284,
+          "pr_auc": 0.0642,
+          "f1": 0.1061,
+          "precision": 0.0568,
+          "recall": 0.7994,
+          "specificity": 0.3691,
+          "threshold": 0.42,
+          "test_counts": {
+            "total": 53943,
+            "positives": 2448,
+            "negatives": 51495,
+            "sample_prevalence": 0.0454
+          },
+          "confusion_matrix": {
+            "tp": 1957,
+            "tn": 19008,
+            "fp": 32487,
+            "fn": 491
+          },
+          "operating_points": {
+            "tpr_at_1.0pct_fpr": {
+              "tpr": 0.1949,
+              "threshold": 0.9737,
+              "realised_test_fpr": 0.123507,
+              "f1_at_operating_point": 0.1027,
+              "precision_at_operating_point": 0.0698,
+              "recall_at_operating_point": 0.1949,
+              "prevalence_adjusted_precision": {
+                "pi_1.0pct": 0.0157,
+                "pi_0.1pct": 0.0016
+              },
+              "expected_fp": 515,
+              "warning": null
+            },
+            "tpr_at_0.1pct_fpr": {
+              "tpr": 0.0094,
+              "threshold": 0.9989,
+              "realised_test_fpr": 0.008098,
+              "f1_at_operating_point": 0.0159,
+              "precision_at_operating_point": 0.0523,
+              "recall_at_operating_point": 0.0094,
+              "prevalence_adjusted_precision": {
+                "pi_1.0pct": 0.0116,
+                "pi_0.1pct": 0.0012
+              },
+              "expected_fp": 51,
+              "warning": null
+            }
+          },
+          "bootstrap_ci": {
+            "roc_auc": {
+              "point": 0.6287,
+              "ci_lower": 0.6183,
+              "ci_upper": 0.6408,
+              "std": 0.0056
+            },
+            "pr_auc": {
+              "point": 0.0644,
+              "ci_lower": 0.0609,
+              "ci_upper": 0.0683,
+              "std": 0.0019
+            },
+            "f1": {
+              "point": 0.1061,
+              "ci_lower": 0.102,
+              "ci_upper": 0.1105,
+              "std": 0.0021
+            }
+          },
+          "breakdowns": {
+            "by_resolution": {
+              "resolved": {
+                "count": 48004,
+                "roc_auc": 0.6385,
+                "f1": 0.111
+              },
+              "no_ip": {
+                "count": 5939,
+                "roc_auc": 0.5841,
+                "f1": 0.0692
+              }
+            },
+            "by_source": {
+              "../../virus-total/finished_collections/benign_groundtruth2312.txt": {
+                "count": 51495,
+                "accuracy": 0.3691
+              },
+              "Github": {
+                "count": 1708,
+                "accuracy": 0.7834
+              },
+              "URLhaus": {
+                "count": 740,
+                "accuracy": 0.8365
+              }
+            },
+            "by_malware_family": {
+              "unknown": {
+                "count": 2447,
+                "detection_rate_recall": 0.7993
+              }
+            }
+          },
+          "training_metadata": {
+            "chosen_lr": 0.005,
+            "lr_grid": [
+              0.001,
+              0.003,
+              0.005
+            ],
+            "epochs_trained": 135,
+            "best_val_auc": 0.9789,
+            "use_class_weights": false,
+            "checkpoint_path": "/home/rohit/Malicious-HDG-self/artifacts/checkpoints/real_gpu/gnn_attn_time_seed_42.pt"
+          }
+        },
+        {
+          "roc_auc": 0.6389,
+          "pr_auc": 0.0654,
+          "f1": 0.1152,
+          "precision": 0.0624,
+          "recall": 0.7459,
+          "specificity": 0.4672,
+          "threshold": 0.34,
+          "test_counts": {
+            "total": 53943,
+            "positives": 2448,
+            "negatives": 51495,
+            "sample_prevalence": 0.0454
+          },
+          "confusion_matrix": {
+            "tp": 1826,
+            "tn": 24057,
+            "fp": 27438,
+            "fn": 622
+          },
+          "operating_points": {
+            "tpr_at_1.0pct_fpr": {
+              "tpr": 0.1708,
+              "threshold": 0.9618,
+              "realised_test_fpr": 0.120264,
+              "f1_at_operating_point": 0.0923,
+              "precision_at_operating_point": 0.0632,
+              "recall_at_operating_point": 0.1708,
+              "prevalence_adjusted_precision": {
+                "pi_1.0pct": 0.0141,
+                "pi_0.1pct": 0.0014
+              },
+              "expected_fp": 515,
+              "warning": null
+            },
+            "tpr_at_0.1pct_fpr": {
+              "tpr": 0.0629,
+              "threshold": 0.9919,
+              "realised_test_fpr": 0.04416,
+              "f1_at_operating_point": 0.0632,
+              "precision_at_operating_point": 0.0634,
+              "recall_at_operating_point": 0.0629,
+              "prevalence_adjusted_precision": {
+                "pi_1.0pct": 0.0142,
+                "pi_0.1pct": 0.0014
+              },
+              "expected_fp": 51,
+              "warning": null
+            }
+          },
+          "bootstrap_ci": {
+            "roc_auc": {
+              "point": 0.6391,
+              "ci_lower": 0.6288,
+              "ci_upper": 0.6486,
+              "std": 0.0051
+            },
+            "pr_auc": {
+              "point": 0.0657,
+              "ci_lower": 0.062,
+              "ci_upper": 0.0697,
+              "std": 0.002
+            },
+            "f1": {
+              "point": 0.1152,
+              "ci_lower": 0.1106,
+              "ci_upper": 0.1203,
+              "std": 0.0024
+            }
+          },
+          "breakdowns": {
+            "by_resolution": {
+              "resolved": {
+                "count": 48004,
+                "roc_auc": 0.6559,
+                "f1": 0.124
+              },
+              "no_ip": {
+                "count": 5939,
+                "roc_auc": 0.5744,
+                "f1": 0.0621
+              }
+            },
+            "by_source": {
+              "../../virus-total/finished_collections/benign_groundtruth2312.txt": {
+                "count": 51495,
+                "accuracy": 0.4672
+              },
+              "Github": {
+                "count": 1708,
+                "accuracy": 0.7377
+              },
+              "URLhaus": {
+                "count": 740,
+                "accuracy": 0.7649
+              }
+            },
+            "by_malware_family": {
+              "unknown": {
+                "count": 2447,
+                "detection_rate_recall": 0.7462
+              }
+            }
+          },
+          "training_metadata": {
+            "chosen_lr": 0.005,
+            "lr_grid": [
+              0.001,
+              0.003,
+              0.005
+            ],
+            "epochs_trained": 183,
+            "best_val_auc": 0.982,
+            "use_class_weights": false,
+            "checkpoint_path": "/home/rohit/Malicious-HDG-self/artifacts/checkpoints/real_gpu/gnn_attn_time_seed_1337.pt"
+          }
+        },
+        {
+          "roc_auc": 0.6349,
+          "pr_auc": 0.0642,
+          "f1": 0.1168,
+          "precision": 0.0633,
+          "recall": 0.7516,
+          "specificity": 0.4716,
+          "threshold": 0.37,
+          "test_counts": {
+            "total": 53943,
+            "positives": 2448,
+            "negatives": 51495,
+            "sample_prevalence": 0.0454
+          },
+          "confusion_matrix": {
+            "tp": 1840,
+            "tn": 24285,
+            "fp": 27210,
+            "fn": 608
+          },
+          "operating_points": {
+            "tpr_at_1.0pct_fpr": {
+              "tpr": 0.1838,
+              "threshold": 0.9651,
+              "realised_test_fpr": 0.139703,
+              "f1_at_operating_point": 0.0892,
+              "precision_at_operating_point": 0.0589,
+              "recall_at_operating_point": 0.1838,
+              "prevalence_adjusted_precision": {
+                "pi_1.0pct": 0.0131,
+                "pi_0.1pct": 0.0013
+              },
+              "expected_fp": 515,
+              "warning": null
+            },
+            "tpr_at_0.1pct_fpr": {
+              "tpr": 0.0609,
+              "threshold": 0.9956,
+              "realised_test_fpr": 0.043422,
+              "f1_at_operating_point": 0.0617,
+              "precision_at_operating_point": 0.0625,
+              "recall_at_operating_point": 0.0609,
+              "prevalence_adjusted_precision": {
+                "pi_1.0pct": 0.014,
+                "pi_0.1pct": 0.0014
+              },
+              "expected_fp": 51,
+              "warning": null
+            }
+          },
+          "bootstrap_ci": {
+            "roc_auc": {
+              "point": 0.635,
+              "ci_lower": 0.6247,
+              "ci_upper": 0.645,
+              "std": 0.0051
+            },
+            "pr_auc": {
+              "point": 0.0644,
+              "ci_lower": 0.0607,
+              "ci_upper": 0.068,
+              "std": 0.0019
+            },
+            "f1": {
+              "point": 0.1168,
+              "ci_lower": 0.1117,
+              "ci_upper": 0.1217,
+              "std": 0.0025
+            }
+          },
+          "breakdowns": {
+            "by_resolution": {
+              "resolved": {
+                "count": 48004,
+                "roc_auc": 0.6518,
+                "f1": 0.1259
+              },
+              "no_ip": {
+                "count": 5939,
+                "roc_auc": 0.5547,
+                "f1": 0.0635
+              }
+            },
+            "by_source": {
+              "../../virus-total/finished_collections/benign_groundtruth2312.txt": {
+                "count": 51495,
+                "accuracy": 0.4716
+              },
+              "Github": {
+                "count": 1708,
+                "accuracy": 0.7248
+              },
+              "URLhaus": {
+                "count": 740,
+                "accuracy": 0.8135
+              }
+            },
+            "by_malware_family": {
+              "unknown": {
+                "count": 2447,
+                "detection_rate_recall": 0.7515
+              }
+            }
+          },
+          "training_metadata": {
+            "chosen_lr": 0.005,
+            "lr_grid": [
+              0.001,
+              0.003,
+              0.005
+            ],
+            "epochs_trained": 200,
+            "best_val_auc": 0.9811,
+            "use_class_weights": false,
+            "checkpoint_path": "/home/rohit/Malicious-HDG-self/artifacts/checkpoints/real_gpu/gnn_attn_time_seed_2024.pt"
+          }
+        },
+        {
+          "roc_auc": 0.575,
+          "pr_auc": 0.0514,
+          "f1": 0.101,
+          "precision": 0.0541,
+          "recall": 0.7582,
+          "specificity": 0.3697,
+          "threshold": 0.27,
+          "test_counts": {
+            "total": 53943,
+            "positives": 2448,
+            "negatives": 51495,
+            "sample_prevalence": 0.0454
+          },
+          "confusion_matrix": {
+            "tp": 1856,
+            "tn": 19039,
+            "fp": 32456,
+            "fn": 592
+          },
+          "operating_points": {
+            "tpr_at_1.0pct_fpr": {
+              "tpr": 0.1859,
+              "threshold": 0.9796,
+              "realised_test_fpr": 0.180484,
+              "f1_at_operating_point": 0.0746,
+              "precision_at_operating_point": 0.0467,
+              "recall_at_operating_point": 0.1859,
+              "prevalence_adjusted_precision": {
+                "pi_1.0pct": 0.0103,
+                "pi_0.1pct": 0.001
+              },
+              "expected_fp": 515,
+              "warning": null
+            },
+            "tpr_at_0.1pct_fpr": {
+              "tpr": 0.0837,
+              "threshold": 0.9952,
+              "realised_test_fpr": 0.094553,
+              "f1_at_operating_point": 0.0545,
+              "precision_at_operating_point": 0.0404,
+              "recall_at_operating_point": 0.0837,
+              "prevalence_adjusted_precision": {
+                "pi_1.0pct": 0.0089,
+                "pi_0.1pct": 0.0009
+              },
+              "expected_fp": 51,
+              "warning": null
+            }
+          },
+          "bootstrap_ci": {
+            "roc_auc": {
+              "point": 0.575,
+              "ci_lower": 0.5651,
+              "ci_upper": 0.5862,
+              "std": 0.0053
+            },
+            "pr_auc": {
+              "point": 0.0515,
+              "ci_lower": 0.049,
+              "ci_upper": 0.0543,
+              "std": 0.0013
+            },
+            "f1": {
+              "point": 0.101,
+              "ci_lower": 0.0969,
+              "ci_upper": 0.1053,
+              "std": 0.0021
+            }
+          },
+          "breakdowns": {
+            "by_resolution": {
+              "resolved": {
+                "count": 48004,
+                "roc_auc": 0.5819,
+                "f1": 0.1063
+              },
+              "no_ip": {
+                "count": 5939,
+                "roc_auc": 0.5782,
+                "f1": 0.0647
+              }
+            },
+            "by_source": {
+              "../../virus-total/finished_collections/benign_groundtruth2312.txt": {
+                "count": 51495,
+                "accuracy": 0.3697
+              },
+              "Github": {
+                "count": 1708,
+                "accuracy": 0.7611
+              },
+              "URLhaus": {
+                "count": 740,
+                "accuracy": 0.7514
+              }
+            },
+            "by_malware_family": {
+              "unknown": {
+                "count": 2447,
+                "detection_rate_recall": 0.7581
+              }
+            }
+          },
+          "training_metadata": {
+            "chosen_lr": 0.005,
+            "lr_grid": [
+              0.001,
+              0.003,
+              0.005
+            ],
+            "epochs_trained": 200,
+            "best_val_auc": 0.9815,
+            "use_class_weights": false,
+            "checkpoint_path": "/home/rohit/Malicious-HDG-self/artifacts/checkpoints/real_gpu/gnn_attn_time_seed_777.pt"
+          }
+        },
+        {
+          "roc_auc": 0.5994,
+          "pr_auc": 0.0616,
+          "f1": 0.0936,
+          "precision": 0.0494,
+          "recall": 0.8962,
+          "specificity": 0.1795,
+          "threshold": 0.34,
+          "test_counts": {
+            "total": 53943,
+            "positives": 2448,
+            "negatives": 51495,
+            "sample_prevalence": 0.0454
+          },
+          "confusion_matrix": {
+            "tp": 2194,
+            "tn": 9241,
+            "fp": 42254,
+            "fn": 254
+          },
+          "operating_points": {
+            "tpr_at_1.0pct_fpr": {
+              "tpr": 0.2933,
+              "threshold": 0.9596,
+              "realised_test_fpr": 0.199398,
+              "f1_at_operating_point": 0.1069,
+              "precision_at_operating_point": 0.0654,
+              "recall_at_operating_point": 0.2933,
+              "prevalence_adjusted_precision": {
+                "pi_1.0pct": 0.0146,
+                "pi_0.1pct": 0.0015
+              },
+              "expected_fp": 515,
+              "warning": null
+            },
+            "tpr_at_0.1pct_fpr": {
+              "tpr": 0.1185,
+              "threshold": 0.9914,
+              "realised_test_fpr": 0.071483,
+              "f1_at_operating_point": 0.0904,
+              "precision_at_operating_point": 0.073,
+              "recall_at_operating_point": 0.1185,
+              "prevalence_adjusted_precision": {
+                "pi_1.0pct": 0.0165,
+                "pi_0.1pct": 0.0017
+              },
+              "expected_fp": 51,
+              "warning": null
+            }
+          },
+          "bootstrap_ci": {
+            "roc_auc": {
+              "point": 0.5991,
+              "ci_lower": 0.5877,
+              "ci_upper": 0.6102,
+              "std": 0.0059
+            },
+            "pr_auc": {
+              "point": 0.0617,
+              "ci_lower": 0.0578,
+              "ci_upper": 0.0657,
+              "std": 0.002
+            },
+            "f1": {
+              "point": 0.0936,
+              "ci_lower": 0.0899,
+              "ci_upper": 0.0972,
+              "std": 0.0019
+            }
+          },
+          "breakdowns": {
+            "by_resolution": {
+              "resolved": {
+                "count": 48004,
+                "roc_auc": 0.6079,
+                "f1": 0.0971
+              },
+              "no_ip": {
+                "count": 5939,
+                "roc_auc": 0.5747,
+                "f1": 0.0631
+              }
+            },
+            "by_source": {
+              "../../virus-total/finished_collections/benign_groundtruth2312.txt": {
+                "count": 51495,
+                "accuracy": 0.1795
+              },
+              "Github": {
+                "count": 1708,
+                "accuracy": 0.88
+              },
+              "URLhaus": {
+                "count": 740,
+                "accuracy": 0.9338
+              }
+            },
+            "by_malware_family": {
+              "unknown": {
+                "count": 2447,
+                "detection_rate_recall": 0.8962
+              }
+            }
+          },
+          "training_metadata": {
+            "chosen_lr": 0.005,
+            "lr_grid": [
+              0.001,
+              0.003,
+              0.005
+            ],
+            "epochs_trained": 177,
+            "best_val_auc": 0.9794,
+            "use_class_weights": false,
+            "checkpoint_path": "/home/rohit/Malicious-HDG-self/artifacts/checkpoints/real_gpu/gnn_attn_time_seed_999.pt"
+          }
+        }
+      ]
+    }
+  },
+  "paired_comparisons": {
+    "sage_vs_attn": {
+      "per_seed": {
+        "42": {
+          "mcnemar": {
+            "exact_statistic_min_b_c": 4735.0,
+            "pvalue": 7.065502521927667e-29,
+            "discordant_a_better": 4735,
+            "discordant_b_better": 5884,
+            "contingency_table": [
+              [
+                15081,
+                4735
+              ],
+              [
+                5884,
+                28243
+              ]
+            ],
+            "interpretation": "statistically significant difference"
+          },
+          "bootstrap_auc_diff": {
+            "mean_diff": -0.0195,
+            "ci_lower": -0.026,
+            "ci_upper": -0.0134,
+            "pvalue_two_sided": 0.0
+          }
+        },
+        "1337": {
+          "mcnemar": {
+            "exact_statistic_min_b_c": 2084.0,
+            "pvalue": 0.0,
+            "discordant_a_better": 2084,
+            "discordant_b_better": 9313,
+            "contingency_table": [
+              [
+                16570,
+                2084
+              ],
+              [
+                9313,
+                25976
+              ]
+            ],
+            "interpretation": "statistically significant difference"
+          },
+          "bootstrap_auc_diff": {
+            "mean_diff": -0.0241,
+            "ci_lower": -0.0303,
+            "ci_upper": -0.0177,
+            "pvalue_two_sided": 0.0
+          }
+        },
+        "2024": {
+          "mcnemar": {
+            "exact_statistic_min_b_c": 3963.0,
+            "pvalue": 6.240693551754162e-32,
+            "discordant_a_better": 3963,
+            "discordant_b_better": 5081,
+            "contingency_table": [
+              [
+                21044,
+                3963
+              ],
+              [
+                5081,
+                23855
+              ]
+            ],
+            "interpretation": "statistically significant difference"
+          },
+          "bootstrap_auc_diff": {
+            "mean_diff": -0.0128,
+            "ci_lower": -0.0184,
+            "ci_upper": -0.0072,
+            "pvalue_two_sided": 0.0
+          }
+        },
+        "777": {
+          "mcnemar": {
+            "exact_statistic_min_b_c": 4579.0,
+            "pvalue": 6.833318070867853e-116,
+            "discordant_a_better": 7037,
+            "discordant_b_better": 4579,
+            "contingency_table": [
+              [
+                16316,
+                7037
+              ],
+              [
+                4579,
+                26011
+              ]
+            ],
+            "interpretation": "statistically significant difference"
+          },
+          "bootstrap_auc_diff": {
+            "mean_diff": 0.068,
+            "ci_lower": 0.0609,
+            "ci_upper": 0.0747,
+            "pvalue_two_sided": 0.0
+          }
+        },
+        "999": {
+          "mcnemar": {
+            "exact_statistic_min_b_c": 1485.0,
+            "pvalue": 0.0,
+            "discordant_a_better": 14464,
+            "discordant_b_better": 1485,
+            "contingency_table": [
+              [
+                9950,
+                14464
+              ],
+              [
+                1485,
+                28044
+              ]
+            ],
+            "interpretation": "statistically significant difference"
+          },
+          "bootstrap_auc_diff": {
+            "mean_diff": 0.025,
+            "ci_lower": 0.0168,
+            "ci_upper": 0.0331,
+            "pvalue_two_sided": 0.0
+          }
+        }
+      },
+      "cross_seed_summary": {
+        "num_evaluated_seeds": 5,
+        "mean_paired_auc_difference": 0.0073,
+        "mcnemar_significant_seeds_count": 5,
+        "auc_significant_seeds_count": 5,
+        "all_seeds_auc_significant": true
+      },
+      "pooled_summary": {
+        "mcnemar": {
+          "exact_statistic_min_b_c": 26342.0,
+          "pvalue": 3.947670052701871e-133,
+          "discordant_a_better": 32283,
+          "discordant_b_better": 26342,
+          "contingency_table": [
+            [
+              78961,
+              32283
+            ],
+            [
+              26342,
+              132129
+            ]
+          ],
+          "interpretation": "statistically significant difference"
+        },
+        "bootstrap_auc_diff": {
+          "mean_diff": 0.0112,
+          "ci_lower": 0.0079,
+          "ci_upper": 0.0143,
+          "pvalue_two_sided": 0.0
+        },
+        "warning": "Overlapping test cohorts across random seeds mean naive pooled tests have correlated observations. Refer to cross_seed_summary and per_seed results for uninflated degrees of freedom."
+      }
+    }
+  }
+}

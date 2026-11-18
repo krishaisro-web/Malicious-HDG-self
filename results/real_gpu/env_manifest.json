@@ -1,0 +1,14 @@
+{
+  "device": "cpu",
+  "device_type": "cpu",
+  "torch_version": "2.5.1+cu121",
+  "cuda_available": true,
+  "cuda_version": "12.1",
+  "git_commit": "9c2d254c4545953b3e736c35bef735a921cf37db",
+  "hostname": "odpd-lcws-a100-2024-01",
+  "platform": "Linux-5.14.0-427.13.1.el9_4.x86_64-x86_64-with-glibc2.34",
+  "precision": "FP32",
+  "tf32_matmul_enabled": false,
+  "tf32_cudnn_enabled": true,
+  "device_name": "x86_64"
+}

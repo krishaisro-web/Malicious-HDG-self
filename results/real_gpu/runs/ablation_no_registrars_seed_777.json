@@ -1,0 +1,266 @@
+{
+  "experiment": "ablation",
+  "name": "no_registrars",
+  "seed": 777,
+  "metrics": {
+    "roc_auc": 0.9164,
+    "pr_auc": 0.8526,
+    "f1": 0.7695,
+    "precision": 0.6828,
+    "recall": 0.8813,
+    "specificity": 0.7961,
+    "threshold": 0.22,
+    "test_counts": {
+      "total": 15001,
+      "positives": 4988,
+      "negatives": 10013,
+      "sample_prevalence": 0.3325
+    },
+    "confusion_matrix": {
+      "tp": 4396,
+      "tn": 7971,
+      "fp": 2042,
+      "fn": 592
+    },
+    "operating_points": {
+      "tpr_at_1.0pct_fpr": {
+        "tpr": 0.3224,
+        "threshold": 0.8363,
+        "realised_test_fpr": 0.012384,
+        "f1_at_operating_point": 0.4786,
+        "precision_at_operating_point": 0.9284,
+        "recall_at_operating_point": 0.3224,
+        "prevalence_adjusted_precision": {
+          "pi_1.0pct": 0.2082,
+          "pi_0.1pct": 0.0254
+        },
+        "expected_fp": 100,
+        "warning": null
+      },
+      "tpr_at_0.1pct_fpr": {
+        "tpr": 0.1726,
+        "threshold": 0.9044,
+        "realised_test_fpr": 0.002397,
+        "f1_at_operating_point": 0.2932,
+        "precision_at_operating_point": 0.9729,
+        "recall_at_operating_point": 0.1726,
+        "prevalence_adjusted_precision": {
+          "pi_1.0pct": 0.4211,
+          "pi_0.1pct": 0.0672
+        },
+        "expected_fp": 10,
+        "warning": null
+      }
+    },
+    "bootstrap_ci": {
+      "roc_auc": {
+        "point": 0.9164,
+        "ci_lower": 0.9118,
+        "ci_upper": 0.9207,
+        "std": 0.0023
+      },
+      "pr_auc": {
+        "point": 0.8526,
+        "ci_lower": 0.8435,
+        "ci_upper": 0.8606,
+        "std": 0.0044
+      },
+      "f1": {
+        "point": 0.7694,
+        "ci_lower": 0.761,
+        "ci_upper": 0.7778,
+        "std": 0.0044
+      }
+    },
+    "breakdowns": {
+      "by_resolution": {
+        "resolved": {
+          "count": 11795,
+          "roc_auc": 0.9106,
+          "f1": 0.7185
+        },
+        "no_ip": {
+          "count": 3206,
+          "roc_auc": 0.8591,
+          "f1": 0.8534
+        }
+      },
+      "by_source": {
+        "../../virus-total/finished_collections/benign_groundtruth2312.txt": {
+          "count": 7777,
+          "accuracy": 0.7649
+        },
+        "Github": {
+          "count": 683,
+          "accuracy": 0.8258
+        },
+        "MISP": {
+          "count": 140,
+          "accuracy": 0.8857
+        },
+        "Spam404": {
+          "count": 47,
+          "accuracy": 0.9149
+        },
+        "Steven Black": {
+          "count": 1053,
+          "accuracy": 0.8898
+        },
+        "The Firebog": {
+          "count": 940,
+          "accuracy": 0.9096
+        },
+        "ThreatFox": {
+          "count": 1968,
+          "accuracy": 0.8933
+        },
+        "URLhaus": {
+          "count": 157,
+          "accuracy": 0.7325
+        },
+        "data/alexa.csv": {
+          "count": 1149,
+          "accuracy": 0.9487
+        },
+        "data/cisco_umbrella_year_filtered_domains.csv": {
+          "count": 1087,
+          "accuracy": 0.8574
+        }
+      },
+      "by_malware_family": {
+        "Astaroth": {
+          "count": 77,
+          "detection_rate_recall": 0.9481
+        },
+        "BazarBackdoor": {
+          "count": 11,
+          "detection_rate_recall": 0.9091
+        },
+        "Chrysaor": {
+          "count": 35,
+          "detection_rate_recall": 1.0
+        },
+        "Cobalt Strike": {
+          "count": 155,
+          "detection_rate_recall": 0.9484
+        },
+        "CryptBot": {
+          "count": 93,
+          "detection_rate_recall": 0.9892
+        },
+        "Formbook": {
+          "count": 7,
+          "detection_rate_recall": 1.0
+        },
+        "Gozi": {
+          "count": 8,
+          "detection_rate_recall": 1.0
+        },
+        "Hydra": {
+          "count": 14,
+          "detection_rate_recall": 1.0
+        },
+        "IRATA": {
+          "count": 10,
+          "detection_rate_recall": 0.9
+        },
+        "ISFB": {
+          "count": 16,
+          "detection_rate_recall": 1.0
+        },
+        "IcedID": {
+          "count": 121,
+          "detection_rate_recall": 0.9917
+        },
+        "IcedID Downloader": {
+          "count": 20,
+          "detection_rate_recall": 1.0
+        },
+        "Joker": {
+          "count": 5,
+          "detection_rate_recall": 1.0
+        },
+        "Loki Password Stealer (PWS)": {
+          "count": 5,
+          "detection_rate_recall": 0.8
+        },
+        "Lu0Bot": {
+          "count": 6,
+          "detection_rate_recall": 1.0
+        },
+        "Mirai": {
+          "count": 6,
+          "detection_rate_recall": 0.6667
+        },
+        "Prometei": {
+          "count": 78,
+          "detection_rate_recall": 1.0
+        },
+        "QakBot": {
+          "count": 1083,
+          "detection_rate_recall": 0.8338
+        },
+        "Raspberry Robin": {
+          "count": 10,
+          "detection_rate_recall": 1.0
+        },
+        "RedLine Stealer": {
+          "count": 11,
+          "detection_rate_recall": 0.9091
+        },
+        "SMSspy": {
+          "count": 12,
+          "detection_rate_recall": 0.9167
+        },
+        "SmokeLoader": {
+          "count": 14,
+          "detection_rate_recall": 0.9286
+        },
+        "TrickBot": {
+          "count": 5,
+          "detection_rate_recall": 1.0
+        },
+        "Vidar": {
+          "count": 36,
+          "detection_rate_recall": 0.9722
+        },
+        "Zloader": {
+          "count": 7,
+          "detection_rate_recall": 1.0
+        },
+        "magecart": {
+          "count": 11,
+          "detection_rate_recall": 1.0
+        },
+        "unknown": {
+          "count": 3056,
+          "detection_rate_recall": 0.8737
+        }
+      }
+    },
+    "training_metadata": {
+      "chosen_lr": 0.005,
+      "lr_grid": null,
+      "epochs_trained": 200,
+      "best_val_auc": 0.9206,
+      "use_class_weights": false,
+      "checkpoint_path": null
+    }
+  },
+  "provenance": {
+    "device": "cuda",
+    "device_type": "cuda",
+    "torch_version": "2.5.1+cu121",
+    "cuda_available": true,
+    "cuda_version": "12.1",
+    "git_commit": "9c2d254c4545953b3e736c35bef735a921cf37db",
+    "hostname": "odpd-lcws-a100-2024-01",
+    "platform": "Linux-5.14.0-427.13.1.el9_4.x86_64-x86_64-with-glibc2.34",
+    "precision": "FP32",
+    "tf32_matmul_enabled": false,
+    "tf32_cudnn_enabled": false,
+    "device_name": "NVIDIA A100 80GB PCIe",
+    "vram_free_gb": 8.057,
+    "vram_total_gb": 79.254
+  }
+}

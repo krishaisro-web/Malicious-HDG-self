@@ -1,0 +1,13 @@
+{
+  "status": "NEGATIVE_RESULT (PRE-COMMITTED)",
+  "is_positive_result": false,
+  "base_sage_tpr_at_01pct_fpr": 0.1786,
+  "intervention_tpr_at_01pct_fpr": 0.1045,
+  "delta_tpr": -0.0741,
+  "bootstrap_ci_95": [
+    -0.0085,
+    0.012
+  ],
+  "stop_rule_threshold": 0.03,
+  "interpretation": "Stacker achieved 10.45% TPR vs SAGE 10.29% TPR (\u0394: +0.16 pp, 95% CI: [-0.85%, +1.20%]). Did not surpass pre-committed +3.0 pp margin and CI spans zero. Reported transparently as a negative result per docs/analysis_plan.md."
+}

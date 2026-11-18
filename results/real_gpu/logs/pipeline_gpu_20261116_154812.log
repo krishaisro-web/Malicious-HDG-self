@@ -1,0 +1,215 @@
+
+[1;34m[2026-11-16 15:48:12] Using default production configuration: configs/default.yaml[0m
+
+[1;34m[2026-11-16 15:48:12] ==========================================================================[0m
+
+[1;34m[2026-11-16 15:48:12]    MALICIOUS-HDG A100 GPU EXECUTION PIPELINE (PHASE 2 PROTOCOL)[0m
+
+[1;34m[2026-11-16 15:48:12] ==========================================================================[0m
+
+[1;34m[2026-11-16 15:48:12]  Target Device:     cuda[0m
+
+[1;34m[2026-11-16 15:48:12]  Output Directory:  /home/rohit/Malicious-HDG-self/results/real_gpu[0m
+
+[1;34m[2026-11-16 15:48:12]  Checkpoints:       /home/rohit/Malicious-HDG-self/artifacts/checkpoints/real_gpu[0m
+
+[1;34m[2026-11-16 15:48:12]  Precision:         Strict FP32 (allow_tf32 = False, No BF16)[0m
+
+[1;34m[2026-11-16 15:48:12]  Python Binary:     /home/rohit/miniconda3/envs/zeekGNN/bin/python[0m
+
+[1;34m[2026-11-16 15:48:12]  Reference Base:    results/real/ (Read-Only Immutable Reference)[0m
+
+[1;34m[2026-11-16 15:48:12] ==========================================================================[0m
+
+[1;34m[2026-11-16 15:48:12] Verifying required Python packages (torch, torch_geometric, pyarrow, xgboost)...[0m
+[1;32m[2026-11-16 15:48:18] All required runtime dependencies verified.[0m
+
+[1;34m[2026-11-16 15:48:18] STAGE 0a: Probing Host Environment & Emitting env_manifest.json...[0m
+======================================================================
+    ISRO HP THIN CLIENT HARDWARE & ENVIRONMENT AUDIT
+======================================================================
+
+[1] OPERATING SYSTEM & KERNEL:
+Red Hat Enterprise Linux 9.4 (Plow)
+Linux odpd-lcws-a100-2024-01 5.14.0-427.13.1.el9_4.x86_64 #1 SMP PREEMPT_DYNAMIC Wed Apr 10 10:29:16 EDT 2024 x86_64 x86_64 x86_64 GNU/Linux
+
+[2] CPU MODEL & CORES:
+CPU(s):                             128
+Model name:                         Intel(R) Xeon(R) Gold 6430
+Thread(s) per core:                 2
+Core(s) per socket:                 32
+Socket(s):                          2
+CPU max MHz:                        3400.0000
+NUMA node0 CPU(s):                  0-31,64-95
+NUMA node1 CPU(s):                  32-63,96-127
+Logical Threads Detected (nproc): 128
+
+[3] MEMORY & SWAP (CRITICAL FOR LINUX OOM KILLER PREVENTION):
+               total        used        free      shared  buff/cache   available
+Mem:           503Gi        33Gi        35Gi       5.0Gi       442Gi       469Gi
+Swap:           63Gi        57Mi        63Gi
+  -> Physical RAM: 503 GB
+  -> Swap Space:   63 GB
+
+[4] AVAILABLE DISK SPACE IN WORKSPACE:
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/md126p6    300G  276G   25G  92% /home
+
+[5] PYTHON & PYTORCH ENVIRONMENT:
+Python 3.10.20
+PyTorch 2.5.1+cu121, CPU Threads: 64, CUDA Available: True
+
+[5b] NVIDIA GPU & ACCELERATOR ENVIRONMENT:
+  [FOUND] nvidia-smi detected:
+NVIDIA A100 80GB PCIe, 565.57.01, 81920 MiB, 9127 MiB
+NVIDIA T400 4GB, 565.57.01, 4096 MiB, 3459 MiB
+  [FOUND] nvcc compiler: 12.4, V12.4.99
+  [MANIFEST] Hardware provenance emitted to results/mac/env_manifest.json
+
+==============================================================================
+      MALICIOUS-HDG MASTER SYSTEM, HARDWARE, GPU & DEPENDENCY AUDIT
+==============================================================================
+
+[1] OPERATING SYSTEM & RUNTIME:
+  Hostname:           odpd-lcws-a100-2024-01
+  OS Platform:        Linux-5.14.0-427.13.1.el9_4.x86_64-x86_64-with-glibc2.34
+  Architecture:       x86_64
+  User / Workspace:   rohit @ /home/rohit/Malicious-HDG-self
+  System Uptime:      1513h 36m 2s
+  Python Runtime:     v3.10.20 (/home/rohit/miniconda3/envs/zeekGNN/bin/python)
+
+[2] CPU ARCHITECTURE & CORES:
+  CPU Model:          Intel(R) Xeon(R) Gold 6430
+  Logical Cores:      128 threads (Physical: 64 cores)
+  Clock Frequency:    3399.9 MHz
+  Load Average:       [7.33, 6.59, 7.16]
+
+[3] PHYSICAL MEMORY & SWAP (OOM Killer Prevention):
+  Physical RAM:       503.57 GB total (469.9 GB available, 33.67 GB used)
+  Swap Space:         64.0 GB total (63.94 GB free)
+
+[4] STORAGE, DISK PARTITIONS & I/O:
+  Workspace:          /home/rohit/Malicious-HDG-self
+  Workspace Capacity: 24.2 GB free / 299.85 GB total (91.9% used)
+  Write Permission:   OK (Writable)
+  Disk I/O Latency:   6.43 ms (5MB sync flush)
+  Root '/' Partition: 205.21 GB free out of 279.86 GB
+  '/home' Partition:  24.2 GB free out of 299.85 GB
+
+[5] GPU HARDWARE, VRAM & PROCESS MONITOR:
+  CUDA Available:     True
+  CUDA Version:       12.1 (cuDNN: 90100)
+  Detected GPUs:      1
+    -> GPU [0]: NVIDIA A100 80GB PCIe
+       Compute Cap:   8.0 | SMs: 108
+       Total VRAM:    79.25 GB (81155.8 MB)
+       Free VRAM:     8.5 GB (8706.6 MB)
+       Used VRAM:     70.75 GB (72449.1 MB)
+       BF16 Support:  True | TF32 Support: True
+  Strict FP32 State:  WARNING (TF32 active)
+  Live Sanity Test:   PASSED (1024x1024 MatMul latency: 21.87 ms)
+  --- Active Multi-Tenant GPU Processes ---
+    [PROCESS] PID 57310   | VLLM::EngineCore             | Memory: 71998 MiB
+
+[6] REQUIRED PYTHON LIBRARIES & EXTENSIONS:
+  - torch                [1;32m[INSTALLED v2.5.1+cu121][0m (Core PyTorch deep learning runtime)
+  - torch_geometric      [1;32m[INSTALLED v2.7.0][0m    (PyG heterogeneous graph neural network framework)
+  - torch_scatter        [1;31m[MISSING][0m             (PyG GPU scatter aggregation (optional C++ kernel))
+  - torch_sparse         [1;31m[MISSING][0m             (PyG sparse operations (optional C++ kernel))
+  - torch_cluster        [1;31m[MISSING][0m             (PyG graph clustering (optional C++ kernel))
+  - torch_spline_conv    [1;31m[MISSING][0m             (PyG spline conv (optional C++ kernel))
+  - numpy                [1;32m[INSTALLED v2.2.6][0m    (Numerical vector and matrix computing)
+  - scipy                [1;32m[INSTALLED v1.15.3][0m   (Scientific computing, statistical tests & bootstrapping)
+  - pandas               [1;32m[INSTALLED v2.3.3][0m    (Dataframe ingestion, tabular processing & dataset alignment)
+  - sklearn              [1;32m[INSTALLED v1.7.2][0m    (Machine learning baselines, ROC-AUC, threshold metrics)
+  - xgboost              [1;32m[INSTALLED v3.2.0][0m    (Gradient boosted decision tree baseline)
+  - yaml                 [1;32m[INSTALLED v6.0.3][0m    (YAML configuration parser (PyYAML))
+  - pyarrow              [1;32m[INSTALLED v25.0.1][0m   (Fast columnar Parquet dataset read/write)
+  - psutil               [1;32m[INSTALLED v7.2.2][0m    (Hardware, RAM, Swap and process monitoring)
+  - pytest               [1;31m[MISSING][0m             (Automated test suite execution)
+  - requests             [1;32m[INSTALLED v2.33.0][0m   (HTTP client for external dataset downloads)
+
+[7] DATASET & GRAPH ARTIFACTS AUDIT (100% DYNAMIC INSPECTION):
+  --- Raw Zenodo JSON Datasets ---
+  [✓] malware.json             | Records: 100809 | Size: 1034.27 MB | Keys: [_id, domain_name, category, dns, evaluated_on]
+  [✓] benign_umbrella.json     | Records: 368956 | Size: 5793.95 MB | Keys: [_id, domain_name, dns, evaluated_on, ip_data]
+  [✓] benign_cesnet.json       | Records: 461388 | Size: 6138.85 MB | Keys: [_id, domain_name, category, dns, evaluated_on]
+
+  --- Processed Heterogeneous Graph Cohort ---
+  [✓] domains.parquet:        250062 domains, 37 columns (51.509 MB)
+      Label Counts:           Label 0: 166708, Label 1: 83354
+  [✓] heterodata.pt:          348237 total nodes across 6 types (53.688 MB)
+      Node Breakdown:         domain: 100000, ip: 131084, nameserver: 47092, registrar: 2796, asn: 5263, certificate: 62002
+      Total Edges:            1369520 edges across 12 relation types
+      Domain Features Shape:  [100000, 17]
+
+==============================================================================
+                      AUDIT SUMMARY & MANIFEST
+==============================================================================
+  -> JSON Manifest Exported:  results/mac/master_system_audit.json
+  -> System Ready for A100 GPU Execution: YES (Strict FP32 & Shared Cap Enabled)
+==============================================================================
+
+
+[6] RAW ZENODO DATASET FILES CHECK (data/raw/zenodo):
+  [FOUND] data/raw/zenodo/malware.json (1.1G)
+  [FOUND] data/raw/zenodo/benign_umbrella.json (5.7G)
+  [FOUND] data/raw/zenodo/benign_cesnet.json (6.0G)
+
+======================================================================
+      CHATGPT-READY DYNAMIC CALIBRATION FOR configs/hp_thin_client.yaml
+======================================================================
+Copy-paste this exact diagnostic block into ChatGPT, or apply directly to
+configs/hp_thin_client.yaml:
+
+Hardware Detected: 128 CPU Cores | 503 GB RAM | 63 GB Swap
+Threading Rationale: System has 128 cores. Using 8 threads (higher thread counts on CPU GNNs exhibit diminishing returns and high memory per thread).
+
+--- RECOMMENDED YAML SNIPPET ---
+hardware:
+  num_threads: 8  # System has 128 cores. Using 8 threads (higher thread counts on CPU GNNs exhibit diminishing returns and high memory per thread).
+======================================================================
+  [ENTERPRISE SERVER DETECTED] (~503 GB RAM, 128 CORES)
+======================================================================
+Your server has ~503 GB RAM! You have immense memory headroom.
+You DO NOT need configs/hp_thin_client.yaml or subsampling restrictions.
+Use the standard production configuration: configs/default.yaml
+Run the full pipeline with:
+  bash pipeline/run_real.sh
+======================================================================
+
+[1;34m[2026-11-16 15:52:36] STAGE 0b: Verifying Pre-Flight GPU Graph Constraints & Shared Memory Cap...[0m
+/home/rohit/miniconda3/envs/zeekGNN/lib/python3.10/site-packages/torch/nn/modules/linear.py:125: UserWarning: Deterministic behavior was enabled with either `torch.use_deterministic_algorithms(True)` or `at::Context::setDeterministicAlgorithms(true)`, but this operation is not deterministic because it uses CuBLAS and you have CUDA >= 10.2. To enable deterministic behavior in this case, you must set an environment variable before running your PyTorch application: CUBLAS_WORKSPACE_CONFIG=:4096:8 or CUBLAS_WORKSPACE_CONFIG=:16:8. For more information, go to https://docs.nvidia.com/cuda/cublas/index.html#results-reproducibility (Triggered internally at ../aten/src/ATen/Context.cpp:208.)
+  return F.linear(input, self.weight, self.bias)
+/home/rohit/miniconda3/envs/zeekGNN/lib/python3.10/site-packages/torch_geometric/nn/dense/linear.py:127: UserWarning: Deterministic behavior was enabled with either `torch.use_deterministic_algorithms(True)` or `at::Context::setDeterministicAlgorithms(true)`, but this operation is not deterministic because it uses CuBLAS and you have CUDA >= 10.2. To enable deterministic behavior in this case, you must set an environment variable before running your PyTorch application: CUBLAS_WORKSPACE_CONFIG=:4096:8 or CUBLAS_WORKSPACE_CONFIG=:16:8. For more information, go to https://docs.nvidia.com/cuda/cublas/index.html#results-reproducibility (Triggered internally at ../aten/src/ATen/Context.cpp:208.)
+  return F.linear(x, self.weight, self.bias)
+/home/rohit/miniconda3/envs/zeekGNN/lib/python3.10/site-packages/torch/autograd/graph.py:825: UserWarning: Deterministic behavior was enabled with either `torch.use_deterministic_algorithms(True)` or `at::Context::setDeterministicAlgorithms(true)`, but this operation is not deterministic because it uses CuBLAS and you have CUDA >= 10.2. To enable deterministic behavior in this case, you must set an environment variable before running your PyTorch application: CUBLAS_WORKSPACE_CONFIG=:4096:8 or CUBLAS_WORKSPACE_CONFIG=:16:8. For more information, go to https://docs.nvidia.com/cuda/cublas/index.html#results-reproducibility (Triggered internally at ../aten/src/ATen/Context.cpp:208.)
+  return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+/home/rohit/miniconda3/envs/zeekGNN/lib/python3.10/site-packages/torch_geometric/nn/dense/linear.py:251: UserWarning: Deterministic behavior was enabled with either `torch.use_deterministic_algorithms(True)` or `at::Context::setDeterministicAlgorithms(true)`, but this operation is not deterministic because it uses CuBLAS and you have CUDA >= 10.2. To enable deterministic behavior in this case, you must set an environment variable before running your PyTorch application: CUBLAS_WORKSPACE_CONFIG=:4096:8 or CUBLAS_WORKSPACE_CONFIG=:16:8. For more information, go to https://docs.nvidia.com/cuda/cublas/index.html#results-reproducibility (Triggered internally at ../aten/src/ATen/Context.cpp:208.)
+  out[start:end] = x[start:end] @ self.weight[i]
+==================================================================
+   MALICIOUS-HDG PRE-FLIGHT VERIFICATION & HARDWARE PROBING
+==================================================================
+Target Device:        cuda
+Output Directory:     /home/rohit/Malicious-HDG-self/results/real_gpu
+Memory Fraction Cap:  0.35
+Min Free VRAM:        6.0 GB
+------------------------------------------------------------------
+
+--- Pre-Flight Check Results ---
+[✓] device_resolution: PASS
+[✓] shared_gpu_safeguards: PASS
+[✓] strict_fp32: PASS
+[✓] synthetic_gnn_execution: PASS
+[✓] real_graph_profiling: PASS
+
+Overall Pre-flight Status: PASSED (Ready for Execution)
+Report written to: /home/rohit/Malicious-HDG-self/results/real_gpu/preflight_verification.json
+==================================================================
+
+[1;34m[2026-11-16 15:52:45] STAGE 0c: Verifying Seed 42 Device Parity Tolerance (|AUC_gpu - AUC_cpu| <= 0.002)...[0m
+  File "/home/rohit/Malicious-HDG-self/tools/verify_device_parity.py", line 26
+    from src.hdg.device import resolve_device, get_execution_provenance from src.hdg.config import load_config, get_resolved_paths from src.dg.data.splits imort random_stratified_split from 
+                                                                        ^^^^
+SyntaxError: invalid syntax
+[1;31m[2026-11-16 15:52:46] ERROR: Pipeline aborted prematurely at line 164![0m

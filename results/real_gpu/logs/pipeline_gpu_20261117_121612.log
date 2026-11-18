@@ -1,0 +1,68 @@
+
+[1;34m[2026-11-17 12:16:12] Using default production configuration: configs/default.yaml[0m
+
+[1;34m[2026-11-17 12:16:12] ==========================================================================[0m
+
+[1;34m[2026-11-17 12:16:12]    MALICIOUS-HDG A100 GPU EXECUTION PIPELINE (PHASE 2 PROTOCOL)[0m
+
+[1;34m[2026-11-17 12:16:12] ==========================================================================[0m
+
+[1;34m[2026-11-17 12:16:12]  Target Device:     cuda[0m
+
+[1;34m[2026-11-17 12:16:12]  Output Directory:  /home/rohit/Malicious-HDG-self/results/real_gpu[0m
+
+[1;34m[2026-11-17 12:16:12]  Checkpoints:       /home/rohit/Malicious-HDG-self/artifacts/checkpoints/real_gpu[0m
+
+[1;34m[2026-11-17 12:16:12]  Precision:         Strict FP32 (allow_tf32 = False, No BF16)[0m
+
+[1;34m[2026-11-17 12:16:12]  Python Binary:     /home/rohit/miniconda3/envs/zeekGNN/bin/python[0m
+
+[1;34m[2026-11-17 12:16:12]  Reference Base:    results/real/ (Read-Only Immutable Reference)[0m
+
+[1;34m[2026-11-17 12:16:12] ==========================================================================[0m
+
+[1;34m[2026-11-17 12:16:12] Verifying required Python packages (torch, torch_geometric, pyarrow, xgboost)...[0m
+[1;32m[2026-11-17 12:16:18] All required runtime dependencies verified.[0m
+
+[1;34m[2026-11-17 12:16:18] STAGE 0a: Probing Host Environment & Emitting env_manifest.json...[0m
+======================================================================
+    ISRO HP THIN CLIENT HARDWARE & ENVIRONMENT AUDIT
+======================================================================
+
+[1] OPERATING SYSTEM & KERNEL:
+Red Hat Enterprise Linux 9.4 (Plow)
+Linux odpd-lcws-a100-2024-01 5.14.0-427.13.1.el9_4.x86_64 #1 SMP PREEMPT_DYNAMIC Wed Apr 10 10:29:16 EDT 2024 x86_64 x86_64 x86_64 GNU/Linux
+
+[2] CPU MODEL & CORES:
+CPU(s):                             128
+Model name:                         Intel(R) Xeon(R) Gold 6430
+Thread(s) per core:                 2
+Core(s) per socket:                 32
+Socket(s):                          2
+CPU max MHz:                        3400.0000
+NUMA node0 CPU(s):                  0-31,64-95
+NUMA node1 CPU(s):                  32-63,96-127
+Logical Threads Detected (nproc): 128
+
+[3] MEMORY & SWAP (CRITICAL FOR LINUX OOM KILLER PREVENTION):
+               total        used        free      shared  buff/cache   available
+Mem:           503Gi        33Gi        43Gi       4.9Gi       434Gi       469Gi
+Swap:           63Gi        51Mi        63Gi
+  -> Physical RAM: 503 GB
+  -> Swap Space:   63 GB
+
+[4] AVAILABLE DISK SPACE IN WORKSPACE:
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/md126p6    300G  277G   24G  93% /home
+
+[5] PYTHON & PYTORCH ENVIRONMENT:
+Python 3.10.20
+PyTorch 2.5.1+cu121, CPU Threads: 64, CUDA Available: True
+
+[5b] NVIDIA GPU & ACCELERATOR ENVIRONMENT:
+  [FOUND] nvidia-smi detected:
+NVIDIA A100 80GB PCIe, 565.57.01, 81920 MiB, 8947 MiB
+NVIDIA T400 4GB, 565.57.01, 4096 MiB, 3449 MiB
+  [FOUND] nvcc compiler: 12.4, V12.4.99
+  [MANIFEST] Hardware provenance emitted to results/real_gpu/env_manifest.json
+

@@ -1,0 +1,30 @@
+
+[1;34m[2026-11-17 14:08:27] Using default production configuration: configs/default.yaml[0m
+
+[1;34m[2026-11-17 14:08:27] ==========================================================================[0m
+
+[1;34m[2026-11-17 14:08:27]    MALICIOUS-HDG A100 GPU EXECUTION PIPELINE (PHASE 2 PROTOCOL)[0m
+
+[1;34m[2026-11-17 14:08:27] ==========================================================================[0m
+
+[1;34m[2026-11-17 14:08:27]  Target Device:     cuda[0m
+
+[1;34m[2026-11-17 14:08:27]  Output Directory:  /home/rohit/Malicious-HDG-self/results/real_gpu[0m
+
+[1;34m[2026-11-17 14:08:27]  Checkpoints:       /home/rohit/Malicious-HDG-self/artifacts/checkpoints/real_gpu[0m
+
+[1;34m[2026-11-17 14:08:27]  Precision:         Strict FP32 (allow_tf32 = False, No BF16)[0m
+
+[1;34m[2026-11-17 14:08:27]  Python Binary:     /home/rohit/miniconda3/bin/python[0m
+
+[1;34m[2026-11-17 14:08:27]  Reference Base:    results/real/ (Read-Only Immutable Reference)[0m
+
+[1;34m[2026-11-17 14:08:27] ==========================================================================[0m
+
+[1;34m[2026-11-17 14:08:27] Verifying required Python packages (torch, torch_geometric, pyarrow, xgboost)...[0m
+
+[1;31m[ERROR] Missing required Python package(s): torch torch_geometric pyarrow xgboost[0m
+Please install missing packages in your active environment:
+
+    /home/rohit/miniconda3/bin/python -m pip install torch torch_geometric pyarrow xgboost
+

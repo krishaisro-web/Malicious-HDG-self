@@ -1,7 +1,7 @@
 {
   "title": "Malicious-HDG Master System, Hardware, GPU & Dataset Audit Manifest",
   "system": {
-    "timestamp_utc": "2026-11-16T04:06:09Z",
+    "timestamp_utc": "2026-11-17T11:13:19Z",
     "hostname": "odpd-lcws-a100-2024-01",
     "platform": "Linux-5.14.0-427.13.1.el9_4.x86_64-x86_64-with-glibc2.34",
     "system": "Linux",
@@ -12,8 +12,8 @@
       "2.34"
     ],
     "uptime": {
-      "uptime_seconds": 5426628,
-      "uptime_human": "1507h 23m 48s",
+      "uptime_seconds": 5538658,
+      "uptime_human": "1538h 30m 58s",
       "boot_timestamp": "2026-09-14T08:42:21Z"
     },
     "current_user": "rohit",
@@ -33,22 +33,22 @@
       "max_mhz": 3400.0
     },
     "load_average_1_5_15": [
-      1.09,
-      2.57,
-      2.56
+      1.57,
+      1.46,
+      3.35
     ],
     "lscpu_summary": "Architecture:                       x86_64\nCPU op-mode(s):                     32-bit, 64-bit\nAddress sizes:                      46 bits physical, 57 bits virtual\nByte Order:                         Little Endian\nCPU(s):                             128\nOn-line CPU(s) list:                0-127\nVendor ID:                          GenuineIntel\nModel name:                         Intel(R) Xeon(R) Gold 6430\nCPU family:                         6\nModel:                              143\nThread(s) per core:                 2\nCore(s) per socket:                 32\nSocket(s):                          2\nStepping:                           8\nCPU(s) scaling MHz:                 100%\nCPU max MHz:                        3400.0000\nCPU min MHz:                        800.0000\nBogoMIPS:                           4200.00\nFlags:                              fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm constant_tsc art arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc cpuid aperfmperf tsc_known_freq pni pclmulqdq dtes64 monitor ds_cpl vmx smx est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid dca sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm 3dnowprefetch cpuid_fault epb cat_l3 cat_l2 cdp_l3 intel_ppin cdp_l2 ssbd mba ibrs ibpb stibp ibrs_enhanced tpr_shadow flexpriority ept vpid ept_ad fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid cqm rdt_a avx512f avx512dq rdseed adx smap avx512ifma clflushopt clwb intel_pt avx512cd sha_ni avx512bw avx512vl xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local split_lock_detect avx_vnni avx512_bf16 wbnoinvd dtherm ida arat pln pts vnmi avx512vbmi umip pku ospke waitpkg avx512_vbmi2 gfni vaes vpclmulqdq avx512_vnni avx512_bitalg tme avx512_vpopcntdq la57 rdpid bus_lock_detect cldemote movdiri movdir64b enqcmd fsrm md_clear serialize tsxldtrk pconfig arch_lbr ibt amx_bf16 avx512_fp16 amx_tile amx_int8 flush_l1d arch_capabilities\nVirtualization:                     VT-x\nL1d cache:                          3 MiB (64 instances)\nL1i cache:                          2 MiB (64 instances)\nL2 cache:                           128 MiB (64 instances)\nL3 cache:                           120 MiB (2 instances)\nNUMA node(s):                       2\nNUMA node0 CPU(s):                  0-31,64-95\nNUMA node1 CPU(s):                  32-63,96-127\nVulnerability Gather data sampling: Not affected\nVulnerability Itlb multihit:        Not affected\nVulnerability L1tf:                 Not affected\nVulnerability Mds:                  Not affected\nVulnerability Meltdown:             Not affected\nVulnerability Mmio stale data:      Not affected\nVulnerability Retbleed:             Not affected\nVulnerability Spec rstack overflow: Not affected\nVulnerability Spec store bypass:    Mitigation; Speculative Store Bypass disabled via prctl\nVulnerability Spectre v1:           Mitigation; usercopy/swapgs barriers and __user pointer sanitization\nVulnerability Spectre v2:           Mitigation; Enhanced / Automatic IBRS, IBPB conditional, RSB filling, PBRSB-eIBRS SW sequence\nVulnerability Srbds:                Not affected\nVulnerability Tsx async abort:      Not affected"
   },
   "memory": {
     "ram_total_gb": 503.57,
-    "ram_available_gb": 471.22,
-    "ram_used_gb": 32.35,
-    "ram_free_gb": 46.02,
-    "ram_percent_used": 6.4,
+    "ram_available_gb": 469.22,
+    "ram_used_gb": 34.36,
+    "ram_free_gb": 67.47,
+    "ram_percent_used": 6.8,
     "swap_total_gb": 64.0,
-    "swap_used_gb": 0.01,
-    "swap_free_gb": 63.99,
-    "raw_free_output": "total        used        free      shared  buff/cache   available\nMem:           503Gi        32Gi        46Gi       5.0Gi       433Gi       471Gi\nSwap:           63Gi       5.0Mi        63Gi"
+    "swap_used_gb": 0.04,
+    "swap_free_gb": 63.96,
+    "raw_free_output": "total        used        free      shared  buff/cache   available\nMem:           503Gi        34Gi        67Gi       4.9Gi       409Gi       469Gi\nSwap:           63Gi        36Mi        63Gi"
   },
   "storage": {
     "workspace_root": "/home/rohit/Malicious-HDG-self",
@@ -56,24 +56,24 @@
       "root": {
         "mount": "/",
         "total_gb": 279.86,
-        "used_gb": 74.61,
-        "free_gb": 205.25
+        "used_gb": 74.64,
+        "free_gb": 205.22
       },
       "home": {
         "mount": "/home",
         "total_gb": 299.85,
-        "used_gb": 262.11,
-        "free_gb": 37.74
+        "used_gb": 275.76,
+        "free_gb": 24.09
       }
     },
-    "raw_df_output": "Filesystem      Size  Used Avail Use% Mounted on\n/dev/md126p3    280G   75G  206G  27% /\n/dev/md126p6    300G  263G   38G  88% /home",
-    "write_latency_ms": 5.81,
+    "raw_df_output": "Filesystem      Size  Used Avail Use% Mounted on\n/dev/md126p3    280G   75G  206G  27% /\n/dev/md126p6    300G  276G   25G  92% /home",
+    "write_latency_ms": 6.22,
     "workspace": {
       "path": "/home/rohit/Malicious-HDG-self",
       "total_gb": 299.85,
-      "used_gb": 262.11,
-      "free_gb": 37.74,
-      "percent_used": 87.4,
+      "used_gb": 275.76,
+      "free_gb": 24.09,
+      "percent_used": 92.0,
       "write_accessible": true
     }
   },
@@ -81,7 +81,7 @@
     "cuda_available": true,
     "cuda_version": "12.1",
     "cudnn_version": 90100,
-    "device_count": 2,
+    "device_count": 1,
     "devices": [
       {
         "index": 0,
@@ -89,49 +89,32 @@
         "compute_capability": "8.0",
         "multi_processor_count": 108,
         "total_vram_gb": 79.25,
-        "free_vram_gb": 8.5,
-        "used_vram_gb": 70.75,
+        "free_vram_gb": 8.33,
+        "used_vram_gb": 70.93,
         "allocated_vram_gb": 0.0,
         "reserved_vram_gb": 0.0,
         "total_vram_mb": 81155.8,
-        "free_vram_mb": 8706.6,
-        "used_vram_mb": 72449.1,
+        "free_vram_mb": 8526.6,
+        "used_vram_mb": 72629.1,
         "bf16_supported": true,
         "fp16_supported": true,
         "tf32_supported": true
-      },
-      {
-        "index": 1,
-        "name": "NVIDIA T400 4GB",
-        "compute_capability": "7.5",
-        "multi_processor_count": 6,
-        "total_vram_gb": 3.63,
-        "free_vram_gb": 3.31,
-        "used_vram_gb": 0.32,
-        "allocated_vram_gb": 0.0,
-        "reserved_vram_gb": 0.0,
-        "total_vram_mb": 3715.7,
-        "free_vram_mb": 3389.8,
-        "used_vram_mb": 325.9,
-        "bf16_supported": true,
-        "fp16_supported": true,
-        "tf32_supported": false
       }
     ],
     "nvidia_smi_detected": true,
-    "nvidia_smi_output": "0, NVIDIA A100 80GB PCIe, 565.57.01, 81920 MiB, 9127 MiB, 72030 MiB, 54, 0 %, 74.20 W, 300.00 W\n1, NVIDIA T400 4GB, 565.57.01, 4096 MiB, 3429 MiB, 288 MiB, 61, 0 %, [N/A], 31.32 W",
+    "nvidia_smi_output": "0, NVIDIA A100 80GB PCIe, 565.57.01, 81920 MiB, 8947 MiB, 72210 MiB, 63, 100 %, 300.60 W, 300.00 W\n1, NVIDIA T400 4GB, 565.57.01, 4096 MiB, 3449 MiB, 268 MiB, 63, 0 %, [N/A], 31.32 W",
     "active_gpu_processes": [
       {
         "gpu_name": "NVIDIA A100 80GB PCIe",
         "pid": "57310",
         "process_name": "VLLM::EngineCore",
-        "used_memory": "71998 MiB"
+        "used_memory": "72178 MiB"
       }
     ],
     "execution_sanity_test": {
       "passed": true,
       "test_device": "cuda:0",
-      "matmul_1024_latency_ms": 40.53
+      "matmul_1024_latency_ms": 30.1
     },
     "precision_safeguards": {
       "tf32_matmul_enabled": false,
@@ -193,8 +176,8 @@
     },
     "xgboost": {
       "description": "Gradient boosted decision tree baseline",
-      "installed": false,
-      "version": null
+      "installed": true,
+      "version": "3.2.0"
     },
     "yaml": {
       "description": "YAML configuration parser (PyYAML)",
@@ -203,8 +186,8 @@
     },
     "pyarrow": {
       "description": "Fast columnar Parquet dataset read/write",
-      "installed": false,
-      "version": null
+      "installed": true,
+      "version": "25.0.1"
     },
     "psutil": {
       "description": "Hardware, RAM, Swap and process monitoring",
@@ -225,29 +208,322 @@
   "datasets": {
     "raw_datasets": {
       "malware.json": {
-        "present": false,
+        "present": true,
         "file_name": "malware.json",
-        "file_path": "/home/rohit/Malicious-HDG-self/data/raw/zenodo/malware.json"
+        "file_path": "/home/rohit/Malicious-HDG-self/data/raw/zenodo/malware.json",
+        "size_bytes": 1084514082,
+        "size_mb": 1034.273,
+        "num_records": 100809,
+        "detected_schema_keys": [
+          "_id",
+          "domain_name",
+          "category",
+          "dns",
+          "evaluated_on",
+          "ip_data",
+          "label",
+          "rdap",
+          "remarks",
+          "source",
+          "sourced_on",
+          "tls",
+          "url",
+          "malware_type"
+        ],
+        "sample_domains": [
+          "irradiateher.com",
+          "eloquentcs.com",
+          "www.neutralsystemsolution.space",
+          "www.drshiwanijainpainclinic.com",
+          "mkt9136.com",
+          "www.ninjacondoms.com",
+          "gabbyloans.com",
+          "www.poczta-polska.e-kei.pl",
+          "xinchaocfcddl.org",
+          "siwakuposo.com"
+        ]
       },
       "benign_umbrella.json": {
-        "present": false,
+        "present": true,
         "file_name": "benign_umbrella.json",
-        "file_path": "/home/rohit/Malicious-HDG-self/data/raw/zenodo/benign_umbrella.json"
+        "file_path": "/home/rohit/Malicious-HDG-self/data/raw/zenodo/benign_umbrella.json",
+        "size_bytes": 6075400719,
+        "size_mb": 5793.954,
+        "num_records": 368956,
+        "detected_schema_keys": [
+          "_id",
+          "domain_name",
+          "dns",
+          "evaluated_on",
+          "ip_data",
+          "label",
+          "rdap",
+          "remarks",
+          "sourced_on",
+          "tls",
+          "category",
+          "source"
+        ],
+        "sample_domains": [
+          "stepstone.at",
+          "m.ladies.de",
+          "www.4digitalsignage.com",
+          "hme-live-nitro-feedback-service.hmecloud.com",
+          "www.douyin.com.bytedns1.com",
+          "booking.almasriaairlines.com",
+          "hr.hit.gemius.pl",
+          "essex.ac.uk",
+          "megamailservers.com",
+          "autohero.com"
+        ]
       },
       "benign_cesnet.json": {
-        "present": false,
+        "present": true,
         "file_name": "benign_cesnet.json",
-        "file_path": "/home/rohit/Malicious-HDG-self/data/raw/zenodo/benign_cesnet.json"
+        "file_path": "/home/rohit/Malicious-HDG-self/data/raw/zenodo/benign_cesnet.json",
+        "size_bytes": 6437047412,
+        "size_mb": 6138.847,
+        "num_records": 461388,
+        "detected_schema_keys": [
+          "_id",
+          "domain_name",
+          "category",
+          "dns",
+          "evaluated_on",
+          "ip_data",
+          "label",
+          "rdap",
+          "remarks",
+          "source",
+          "sourced_on",
+          "tls",
+          "url"
+        ],
+        "sample_domains": [
+          "000000.pn01.edugroup.at",
+          "000000.tpn01.edugroup.at",
+          "00000.cz",
+          "00000fs3085d.han2.savba.sk",
+          "0000100b00e9.han2.savba.sk",
+          "0000100b01bd.han2.savba.sk",
+          "0000100m0030.han2.savba.sk",
+          "0000100q012c.han2.savba.sk",
+          "0000100q0296.han2.savba.sk",
+          "0000101m0051.han2.savba.sk"
+        ]
       }
     },
     "processed_cohort": {
-      "present": false,
+      "present": true,
       "directory": "/home/rohit/Malicious-HDG-self/data/processed/real",
-      "parquet_cohort": {},
-      "hetero_graph": {},
-      "manifest": {}
+      "parquet_cohort": {
+        "present": true,
+        "file_path": "/home/rohit/Malicious-HDG-self/data/processed/real/domains.parquet",
+        "size_mb": 51.509,
+        "num_rows": 250062,
+        "num_columns": 37,
+        "column_names": [
+          "domain",
+          "raw_domain",
+          "e2LD",
+          "has_subdomain",
+          "label",
+          "source",
+          "family",
+          "t",
+          "t_month",
+          "t_source",
+          "t_eval",
+          "t_reg",
+          "no_ip",
+          "no_rdap",
+          "no_tls",
+          "mx_count",
+          "has_spf",
+          "has_dmarc",
+          "has_dkim",
+          "dnssec",
+          "ttl_a",
+          "ttl_ns",
+          "nameservers",
+          "registrar",
+          "tls_protocol",
+          "tls_cipher",
+          "tls_cert_count",
+          "leaf_cert_key",
+          "leaf_cert_key_cn",
+          "leaf_cert_key_coissue",
+          "cert_valid_len",
+          "primary_asn",
+          "asns",
+          "resolved_ips",
+          "ip_records",
+          "ns_ip_pairs",
+          "in_time_matched"
+        ],
+        "label_distribution": {
+          "0": 166708,
+          "1": 83354
+        },
+        "distinct_sources": [
+          "Github",
+          "Steven Black",
+          "MISP",
+          "ThreatFox",
+          "The Firebog",
+          "Spam404",
+          "URLhaus",
+          "data/cisco_umbrella_year_filtered_domains.csv",
+          "../../virus-total/finished_collections/benign_groundtruth2312.txt",
+          "data/alexa.csv"
+        ]
+      },
+      "hetero_graph": {
+        "present": true,
+        "file_path": "/home/rohit/Malicious-HDG-self/data/processed/real/heterodata.pt",
+        "size_mb": 53.688,
+        "total_nodes": 348237,
+        "total_edges": 1369520,
+        "node_types": [
+          "domain",
+          "ip",
+          "nameserver",
+          "registrar",
+          "asn",
+          "certificate"
+        ],
+        "node_counts": {
+          "domain": 100000,
+          "ip": 131084,
+          "nameserver": 47092,
+          "registrar": 2796,
+          "asn": 5263,
+          "certificate": 62002
+        },
+        "edge_types": [
+          [
+            "domain",
+            "resolves_to",
+            "ip"
+          ],
+          [
+            "ip",
+            "rev_resolves_to",
+            "domain"
+          ],
+          [
+            "nameserver",
+            "ns_ip",
+            "ip"
+          ],
+          [
+            "ip",
+            "rev_ns_ip",
+            "nameserver"
+          ],
+          [
+            "domain",
+            "uses_ns",
+            "nameserver"
+          ],
+          [
+            "nameserver",
+            "rev_uses_ns",
+            "domain"
+          ],
+          [
+            "domain",
+            "registered_by",
+            "registrar"
+          ],
+          [
+            "registrar",
+            "rev_registered_by",
+            "domain"
+          ],
+          [
+            "ip",
+            "belongs_to_asn",
+            "asn"
+          ],
+          [
+            "asn",
+            "rev_belongs_to_asn",
+            "ip"
+          ],
+          [
+            "domain",
+            "uses_cert",
+            "certificate"
+          ],
+          [
+            "certificate",
+            "rev_uses_cert",
+            "domain"
+          ]
+        ],
+        "edge_counts": {
+          "domain__resolves_to__ip": 158578,
+          "ip__rev_resolves_to__domain": 158578,
+          "nameserver__ns_ip__ip": 56669,
+          "ip__rev_ns_ip__nameserver": 56669,
+          "domain__uses_ns__nameserver": 239932,
+          "nameserver__rev_uses_ns__domain": 239932,
+          "domain__registered_by__registrar": 66902,
+          "registrar__rev_registered_by__domain": 66902,
+          "ip__belongs_to_asn__asn": 87970,
+          "asn__rev_belongs_to_asn__ip": 87970,
+          "domain__uses_cert__certificate": 74709,
+          "certificate__rev_uses_cert__domain": 74709
+        },
+        "domain_feature_tensor_shape": [
+          100000,
+          17
+        ]
+      },
+      "manifest": {
+        "present": true,
+        "file_path": "/home/rohit/Malicious-HDG-self/data/processed/real/graph_manifest.json",
+        "size_kb": 1.13,
+        "payload": {
+          "schema_version": "2.1.0",
+          "domain_count": 100000,
+          "domain_names_sha256": "3ea2051869d26cadb3b6c6eab96aea0acabb0b820c1a347792e386a16c3a27c4",
+          "labels_sha256": "45331ca4cc9ef80e430e5b4c8725853433cb514efe90c71203c71a4ec630922d",
+          "node_counts": {
+            "domain": 100000,
+            "ip": 131084,
+            "nameserver": 47092,
+            "registrar": 2796,
+            "asn": 5263,
+            "certificate": 62002
+          },
+          "edge_counts": {
+            "domain__resolves_to__ip": 158578,
+            "ip__rev_resolves_to__domain": 158578,
+            "nameserver__ns_ip__ip": 56669,
+            "ip__rev_ns_ip__nameserver": 56669,
+            "domain__uses_ns__nameserver": 239932,
+            "nameserver__rev_uses_ns__domain": 239932,
+            "domain__registered_by__registrar": 66902,
+            "registrar__rev_registered_by__domain": 66902,
+            "ip__belongs_to_asn__asn": 87970,
+            "asn__rev_belongs_to_asn__ip": 87970,
+            "domain__uses_cert__certificate": 74709,
+            "certificate__rev_uses_cert__domain": 74709
+          },
+          "feature_dim": 17,
+          "config_hash": "83bfe7805c275788",
+          "created_at": "2026-11-16T08:26:20.244320+00:00",
+          "extra_metadata": {
+            "is_smoke": false,
+            "is_fixture": false
+          },
+          "manifest_id": "e38279ba630c23ed"
+        }
+      }
     },
-    "all_raw_present": false,
-    "processed_ready": false
+    "all_raw_present": true,
+    "processed_ready": true
   }
 }

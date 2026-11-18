@@ -1,0 +1,1290 @@
+
+[1;34m[2026-11-17 09:30:25] Using default production configuration: configs/default.yaml[0m
+
+[1;34m[2026-11-17 09:30:25] ==========================================================================[0m
+
+[1;34m[2026-11-17 09:30:25]    MALICIOUS-HDG A100 GPU EXECUTION PIPELINE (PHASE 2 PROTOCOL)[0m
+
+[1;34m[2026-11-17 09:30:25] ==========================================================================[0m
+
+[1;34m[2026-11-17 09:30:25]  Target Device:     cuda[0m
+
+[1;34m[2026-11-17 09:30:25]  Output Directory:  /home/rohit/Malicious-HDG-self/results/real_gpu[0m
+
+[1;34m[2026-11-17 09:30:25]  Checkpoints:       /home/rohit/Malicious-HDG-self/artifacts/checkpoints/real_gpu[0m
+
+[1;34m[2026-11-17 09:30:25]  Precision:         Strict FP32 (allow_tf32 = False, No BF16)[0m
+
+[1;34m[2026-11-17 09:30:25]  Python Binary:     /home/rohit/miniconda3/envs/zeekGNN/bin/python[0m
+
+[1;34m[2026-11-17 09:30:25]  Reference Base:    results/real/ (Read-Only Immutable Reference)[0m
+
+[1;34m[2026-11-17 09:30:25] ==========================================================================[0m
+
+[1;34m[2026-11-17 09:30:25] Verifying required Python packages (torch, torch_geometric, pyarrow, xgboost)...[0m
+[1;32m[2026-11-17 09:30:30] All required runtime dependencies verified.[0m
+
+[1;34m[2026-11-17 09:30:30] STAGE 0a: Probing Host Environment & Emitting env_manifest.json...[0m
+======================================================================
+    ISRO HP THIN CLIENT HARDWARE & ENVIRONMENT AUDIT
+======================================================================
+
+[1] OPERATING SYSTEM & KERNEL:
+Red Hat Enterprise Linux 9.4 (Plow)
+Linux odpd-lcws-a100-2024-01 5.14.0-427.13.1.el9_4.x86_64 #1 SMP PREEMPT_DYNAMIC Wed Apr 10 10:29:16 EDT 2024 x86_64 x86_64 x86_64 GNU/Linux
+
+[2] CPU MODEL & CORES:
+CPU(s):                             128
+Model name:                         Intel(R) Xeon(R) Gold 6430
+Thread(s) per core:                 2
+Core(s) per socket:                 32
+Socket(s):                          2
+CPU max MHz:                        3400.0000
+NUMA node0 CPU(s):                  0-31,64-95
+NUMA node1 CPU(s):                  32-63,96-127
+Logical Threads Detected (nproc): 128
+
+[3] MEMORY & SWAP (CRITICAL FOR LINUX OOM KILLER PREVENTION):
+               total        used        free      shared  buff/cache   available
+Mem:           503Gi        35Gi        30Gi       5.0Gi       445Gi       467Gi
+Swap:           63Gi        15Mi        63Gi
+  -> Physical RAM: 503 GB
+  -> Swap Space:   63 GB
+
+[4] AVAILABLE DISK SPACE IN WORKSPACE:
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/md126p6    300G  276G   25G  92% /home
+
+[5] PYTHON & PYTORCH ENVIRONMENT:
+Python 3.10.20
+PyTorch 2.5.1+cu121, CPU Threads: 64, CUDA Available: True
+
+[5b] NVIDIA GPU & ACCELERATOR ENVIRONMENT:
+  [FOUND] nvidia-smi detected:
+NVIDIA A100 80GB PCIe, 565.57.01, 81920 MiB, 9127 MiB
+NVIDIA T400 4GB, 565.57.01, 4096 MiB, 3441 MiB
+  [FOUND] nvcc compiler: 12.4, V12.4.99
+  [MANIFEST] Hardware provenance emitted to results/real_gpu/env_manifest.json
+
+==============================================================================
+      MALICIOUS-HDG MASTER SYSTEM, HARDWARE, GPU & DEPENDENCY AUDIT
+==============================================================================
+
+[1] OPERATING SYSTEM & RUNTIME:
+  Hostname:           odpd-lcws-a100-2024-01
+  OS Platform:        Linux-5.14.0-427.13.1.el9_4.x86_64-x86_64-with-glibc2.34
+  Architecture:       x86_64
+  User / Workspace:   rohit @ /home/rohit/Malicious-HDG-self
+  System Uptime:      1531h 18m 16s
+  Python Runtime:     v3.10.20 (/home/rohit/miniconda3/envs/zeekGNN/bin/python)
+
+[2] CPU ARCHITECTURE & CORES:
+  CPU Model:          Intel(R) Xeon(R) Gold 6430
+  Logical Cores:      128 threads (Physical: 64 cores)
+  Clock Frequency:    3400.0 MHz
+  Load Average:       [2.48, 3.91, 2.81]
+
+[3] PHYSICAL MEMORY & SWAP (OOM Killer Prevention):
+  Physical RAM:       503.57 GB total (467.76 GB available, 35.82 GB used)
+  Swap Space:         64.0 GB total (63.98 GB free)
+
+[4] STORAGE, DISK PARTITIONS & I/O:
+  Workspace:          /home/rohit/Malicious-HDG-self
+  Workspace Capacity: 24.22 GB free / 299.85 GB total (91.9% used)
+  Write Permission:   OK (Writable)
+  Disk I/O Latency:   5.95 ms (5MB sync flush)
+  Root '/' Partition: 205.21 GB free out of 279.86 GB
+  '/home' Partition:  24.22 GB free out of 299.85 GB
+
+[5] GPU HARDWARE, VRAM & PROCESS MONITOR:
+  CUDA Available:     True
+  CUDA Version:       12.1 (cuDNN: 90100)
+  Detected GPUs:      1
+    -> GPU [0]: NVIDIA A100 80GB PCIe
+       Compute Cap:   8.0 | SMs: 108
+       Total VRAM:    79.25 GB (81155.8 MB)
+       Free VRAM:     8.5 GB (8706.6 MB)
+       Used VRAM:     70.75 GB (72449.1 MB)
+       BF16 Support:  True | TF32 Support: True
+  Strict FP32 State:  WARNING (TF32 active)
+  Live Sanity Test:   PASSED (1024x1024 MatMul latency: 22.67 ms)
+  --- Active Multi-Tenant GPU Processes ---
+    [PROCESS] PID 57310   | VLLM::EngineCore             | Memory: 71998 MiB
+
+[6] REQUIRED PYTHON LIBRARIES & EXTENSIONS:
+  - torch                [1;32m[INSTALLED v2.5.1+cu121][0m (Core PyTorch deep learning runtime)
+  - torch_geometric      [1;32m[INSTALLED v2.7.0][0m    (PyG heterogeneous graph neural network framework)
+  - torch_scatter        [1;31m[MISSING][0m             (PyG GPU scatter aggregation (optional C++ kernel))
+  - torch_sparse         [1;31m[MISSING][0m             (PyG sparse operations (optional C++ kernel))
+  - torch_cluster        [1;31m[MISSING][0m             (PyG graph clustering (optional C++ kernel))
+  - torch_spline_conv    [1;31m[MISSING][0m             (PyG spline conv (optional C++ kernel))
+  - numpy                [1;32m[INSTALLED v2.2.6][0m    (Numerical vector and matrix computing)
+  - scipy                [1;32m[INSTALLED v1.15.3][0m   (Scientific computing, statistical tests & bootstrapping)
+  - pandas               [1;32m[INSTALLED v2.3.3][0m    (Dataframe ingestion, tabular processing & dataset alignment)
+  - sklearn              [1;32m[INSTALLED v1.7.2][0m    (Machine learning baselines, ROC-AUC, threshold metrics)
+  - xgboost              [1;32m[INSTALLED v3.2.0][0m    (Gradient boosted decision tree baseline)
+  - yaml                 [1;32m[INSTALLED v6.0.3][0m    (YAML configuration parser (PyYAML))
+  - pyarrow              [1;32m[INSTALLED v25.0.1][0m   (Fast columnar Parquet dataset read/write)
+  - psutil               [1;32m[INSTALLED v7.2.2][0m    (Hardware, RAM, Swap and process monitoring)
+  - pytest               [1;31m[MISSING][0m             (Automated test suite execution)
+  - requests             [1;32m[INSTALLED v2.33.0][0m   (HTTP client for external dataset downloads)
+
+[7] DATASET & GRAPH ARTIFACTS AUDIT (100% DYNAMIC INSPECTION):
+  --- Raw Zenodo JSON Datasets ---
+  [✓] malware.json             | Records: 100809 | Size: 1034.27 MB | Keys: [_id, domain_name, category, dns, evaluated_on]
+  [✓] benign_umbrella.json     | Records: 368956 | Size: 5793.95 MB | Keys: [_id, domain_name, dns, evaluated_on, ip_data]
+  [✓] benign_cesnet.json       | Records: 461388 | Size: 6138.85 MB | Keys: [_id, domain_name, category, dns, evaluated_on]
+
+  --- Processed Heterogeneous Graph Cohort ---
+  [✓] domains.parquet:        250062 domains, 37 columns (51.509 MB)
+      Label Counts:           Label 0: 166708, Label 1: 83354
+  [✓] heterodata.pt:          348237 total nodes across 6 types (53.688 MB)
+      Node Breakdown:         domain: 100000, ip: 131084, nameserver: 47092, registrar: 2796, asn: 5263, certificate: 62002
+      Total Edges:            1369520 edges across 12 relation types
+      Domain Features Shape:  [100000, 17]
+
+==============================================================================
+                      AUDIT SUMMARY & MANIFEST
+==============================================================================
+  -> JSON Manifest Exported:  results/real_gpu/master_system_audit.json
+  -> System Ready for A100 GPU Execution: YES (Strict FP32 & Shared Cap Enabled)
+==============================================================================
+
+
+[6] RAW ZENODO DATASET FILES CHECK (data/raw/zenodo):
+  [FOUND] data/raw/zenodo/malware.json (1.1G)
+  [FOUND] data/raw/zenodo/benign_umbrella.json (5.7G)
+  [FOUND] data/raw/zenodo/benign_cesnet.json (6.0G)
+
+======================================================================
+      CHATGPT-READY DYNAMIC CALIBRATION FOR configs/hp_thin_client.yaml
+======================================================================
+Copy-paste this exact diagnostic block into ChatGPT, or apply directly to
+configs/hp_thin_client.yaml:
+
+Hardware Detected: 128 CPU Cores | 503 GB RAM | 63 GB Swap
+Threading Rationale: System has 128 cores. Using 8 threads (higher thread counts on CPU GNNs exhibit diminishing returns and high memory per thread).
+
+--- RECOMMENDED YAML SNIPPET ---
+hardware:
+  num_threads: 8  # System has 128 cores. Using 8 threads (higher thread counts on CPU GNNs exhibit diminishing returns and high memory per thread).
+======================================================================
+  [ENTERPRISE SERVER DETECTED] (~503 GB RAM, 128 CORES)
+======================================================================
+Your server has ~503 GB RAM! You have immense memory headroom.
+You DO NOT need configs/hp_thin_client.yaml or subsampling restrictions.
+Use the standard production configuration: configs/default.yaml
+Run the full pipeline with:
+  bash pipeline/run_real.sh
+======================================================================
+
+[1;34m[2026-11-17 09:34:41] STAGE 0b: Verifying Pre-Flight GPU Graph Constraints & Shared Memory Cap...[0m
+==================================================================
+   MALICIOUS-HDG PRE-FLIGHT VERIFICATION & HARDWARE PROBING
+==================================================================
+Target Device:        cuda
+Output Directory:     /home/rohit/Malicious-HDG-self/results/real_gpu
+Memory Fraction Cap:  0.35
+Min Free VRAM:        8.0 GB
+------------------------------------------------------------------
+
+--- Pre-Flight Check Results ---
+[✓] device_resolution: PASS
+[✓] shared_gpu_safeguards: PASS
+[✓] strict_fp32: PASS
+[✓] synthetic_gnn_execution: PASS
+[✓] real_graph_profiling: PASS
+
+Overall Pre-flight Status: PASSED (Ready for Execution)
+Report written to: /home/rohit/Malicious-HDG-self/results/real_gpu/preflight_verification.json
+==================================================================
+
+[1;34m[2026-11-17 09:34:49] STAGE 0c: Verifying Seed 42 Device Parity Tolerance (|AUC_gpu - AUC_cpu| <= 0.005)...[0m
+==================================================================
+   MALICIOUS-HDG SEED 42 DEVICE PARITY BENCHMARK
+==================================================================
+Seed:               42
+Config:             configs/default.yaml
+Tolerance:          |AUC_gpu - AUC_cpu| <= 0.005
+Output Directory:   /home/rohit/Malicious-HDG-self/results/real_gpu
+------------------------------------------------------------------
+[*] Running Seed 42 CPU reference pass...
+    [Epoch 001/050] Train Loss: 0.6791 | Val Loss: 0.7399 | Val AUC: 0.6056 | Time: 0.82s ★ (Best Val AUC)
+    [Epoch 002/050] Train Loss: 0.6304 | Val Loss: 0.6663 | Val AUC: 0.7214 | Time: 0.59s ★ (Best Val AUC)
+    [Epoch 003/050] Train Loss: 0.5929 | Val Loss: 0.6342 | Val AUC: 0.7618 | Time: 0.49s ★ (Best Val AUC)
+    [Epoch 004/050] Train Loss: 0.5675 | Val Loss: 0.6263 | Val AUC: 0.7758 | Time: 0.45s ★ (Best Val AUC)
+    [Epoch 005/050] Train Loss: 0.5451 | Val Loss: 0.6239 | Val AUC: 0.7849 | Time: 0.43s ★ (Best Val AUC)
+    [Epoch 006/050] Train Loss: 0.5306 | Val Loss: 0.5867 | Val AUC: 0.7967 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 007/050] Train Loss: 0.5186 | Val Loss: 0.5650 | Val AUC: 0.8064 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 008/050] Train Loss: 0.5135 | Val Loss: 0.5685 | Val AUC: 0.8150 | Time: 0.43s ★ (Best Val AUC)
+    [Epoch 009/050] Train Loss: 0.5006 | Val Loss: 0.5574 | Val AUC: 0.8268 | Time: 0.44s ★ (Best Val AUC)
+    [Epoch 010/050] Train Loss: 0.4892 | Val Loss: 0.5485 | Val AUC: 0.8316 | Time: 0.43s ★ (Best Val AUC)
+    [Epoch 011/050] Train Loss: 0.4833 | Val Loss: 0.5525 | Val AUC: 0.8362 | Time: 0.44s ★ (Best Val AUC)
+    [Epoch 012/050] Train Loss: 0.4772 | Val Loss: 0.5399 | Val AUC: 0.8398 | Time: 0.45s ★ (Best Val AUC)
+    [Epoch 013/050] Train Loss: 0.4707 | Val Loss: 0.5256 | Val AUC: 0.8427 | Time: 0.44s ★ (Best Val AUC)
+    [Epoch 014/050] Train Loss: 0.4640 | Val Loss: 0.5133 | Val AUC: 0.8456 | Time: 0.44s ★ (Best Val AUC)
+    [Epoch 015/050] Train Loss: 0.4591 | Val Loss: 0.5103 | Val AUC: 0.8481 | Time: 0.43s ★ (Best Val AUC)
+    [Epoch 016/050] Train Loss: 0.4547 | Val Loss: 0.5196 | Val AUC: 0.8500 | Time: 0.43s ★ (Best Val AUC)
+    [Epoch 017/050] Train Loss: 0.4518 | Val Loss: 0.5086 | Val AUC: 0.8532 | Time: 0.44s ★ (Best Val AUC)
+    [Epoch 018/050] Train Loss: 0.4480 | Val Loss: 0.5046 | Val AUC: 0.8556 | Time: 0.44s ★ (Best Val AUC)
+    [Epoch 019/050] Train Loss: 0.4420 | Val Loss: 0.5098 | Val AUC: 0.8584 | Time: 0.43s ★ (Best Val AUC)
+    [Epoch 020/050] Train Loss: 0.4366 | Val Loss: 0.5113 | Val AUC: 0.8611 | Time: 0.43s ★ (Best Val AUC)
+    [Epoch 021/050] Train Loss: 0.4342 | Val Loss: 0.5030 | Val AUC: 0.8636 | Time: 0.44s ★ (Best Val AUC)
+    [Epoch 022/050] Train Loss: 0.4304 | Val Loss: 0.4917 | Val AUC: 0.8658 | Time: 0.43s ★ (Best Val AUC)
+    [Epoch 023/050] Train Loss: 0.4301 | Val Loss: 0.4847 | Val AUC: 0.8673 | Time: 0.44s ★ (Best Val AUC)
+    [Epoch 024/050] Train Loss: 0.4260 | Val Loss: 0.4892 | Val AUC: 0.8688 | Time: 0.43s ★ (Best Val AUC)
+    [Epoch 025/050] Train Loss: 0.4246 | Val Loss: 0.4893 | Val AUC: 0.8705 | Time: 0.44s ★ (Best Val AUC)
+    [Epoch 026/050] Train Loss: 0.4212 | Val Loss: 0.4718 | Val AUC: 0.8718 | Time: 0.44s ★ (Best Val AUC)
+    [Epoch 027/050] Train Loss: 0.4193 | Val Loss: 0.4940 | Val AUC: 0.8730 | Time: 0.44s ★ (Best Val AUC)
+    [Epoch 028/050] Train Loss: 0.4173 | Val Loss: 0.4840 | Val AUC: 0.8749 | Time: 0.44s ★ (Best Val AUC)
+    [Epoch 030/050] Train Loss: 0.4146 | Val Loss: 0.4836 | Val AUC: 0.8769 | Time: 0.43s ★ (Best Val AUC)
+    [Epoch 031/050] Train Loss: 0.4096 | Val Loss: 0.4799 | Val AUC: 0.8787 | Time: 0.44s ★ (Best Val AUC)
+    [Epoch 032/050] Train Loss: 0.4061 | Val Loss: 0.4587 | Val AUC: 0.8797 | Time: 0.44s ★ (Best Val AUC)
+    [Epoch 033/050] Train Loss: 0.4080 | Val Loss: 0.4582 | Val AUC: 0.8814 | Time: 0.44s ★ (Best Val AUC)
+    [Epoch 034/050] Train Loss: 0.4034 | Val Loss: 0.4798 | Val AUC: 0.8824 | Time: 0.44s ★ (Best Val AUC)
+    [Epoch 035/050] Train Loss: 0.4013 | Val Loss: 0.4687 | Val AUC: 0.8839 | Time: 0.44s ★ (Best Val AUC)
+    [Epoch 036/050] Train Loss: 0.3986 | Val Loss: 0.4421 | Val AUC: 0.8844 | Time: 0.44s ★ (Best Val AUC)
+    [Epoch 037/050] Train Loss: 0.4015 | Val Loss: 0.4585 | Val AUC: 0.8862 | Time: 0.49s ★ (Best Val AUC)
+    [Epoch 038/050] Train Loss: 0.3954 | Val Loss: 0.4750 | Val AUC: 0.8876 | Time: 0.46s ★ (Best Val AUC)
+    [Epoch 039/050] Train Loss: 0.3933 | Val Loss: 0.4534 | Val AUC: 0.8894 | Time: 0.46s ★ (Best Val AUC)
+    [Epoch 040/050] Train Loss: 0.3895 | Val Loss: 0.4437 | Val AUC: 0.8905 | Time: 0.47s ★ (Best Val AUC)
+    [Epoch 041/050] Train Loss: 0.3897 | Val Loss: 0.4463 | Val AUC: 0.8919 | Time: 0.49s ★ (Best Val AUC)
+    [Epoch 042/050] Train Loss: 0.3866 | Val Loss: 0.4546 | Val AUC: 0.8930 | Time: 0.44s ★ (Best Val AUC)
+    [Epoch 043/050] Train Loss: 0.3847 | Val Loss: 0.4359 | Val AUC: 0.8941 | Time: 0.44s ★ (Best Val AUC)
+    [Epoch 044/050] Train Loss: 0.3822 | Val Loss: 0.4311 | Val AUC: 0.8954 | Time: 0.43s ★ (Best Val AUC)
+    [Epoch 045/050] Train Loss: 0.3825 | Val Loss: 0.4333 | Val AUC: 0.8969 | Time: 0.43s ★ (Best Val AUC)
+    [Epoch 046/050] Train Loss: 0.3794 | Val Loss: 0.4350 | Val AUC: 0.8979 | Time: 0.47s ★ (Best Val AUC)
+    [Epoch 047/050] Train Loss: 0.3782 | Val Loss: 0.4267 | Val AUC: 0.8983 | Time: 0.45s ★ (Best Val AUC)
+    [Epoch 048/050] Train Loss: 0.3756 | Val Loss: 0.4299 | Val AUC: 0.8991 | Time: 0.45s ★ (Best Val AUC)
+    [Epoch 050/050] Train Loss: 0.3851 | Val Loss: 0.4116 | Val AUC: 0.8992 | Time: 0.47s ★ (Best Val AUC)
+    CPU Test ROC-AUC: 0.9019 (took 29.80s)
+[*] Running Seed 42 GPU pass on cuda (strict FP32)...
+    [Epoch 001/050] Train Loss: 0.6799 | Val Loss: 0.7211 | Val AUC: 0.6434 | Time: 0.57s ★ (Best Val AUC)
+    [Epoch 002/050] Train Loss: 0.6233 | Val Loss: 0.6682 | Val AUC: 0.7287 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 003/050] Train Loss: 0.5867 | Val Loss: 0.6369 | Val AUC: 0.7641 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 004/050] Train Loss: 0.5594 | Val Loss: 0.6259 | Val AUC: 0.7829 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 005/050] Train Loss: 0.5381 | Val Loss: 0.5959 | Val AUC: 0.7957 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 006/050] Train Loss: 0.5224 | Val Loss: 0.5810 | Val AUC: 0.8024 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 007/050] Train Loss: 0.5148 | Val Loss: 0.5665 | Val AUC: 0.8145 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 008/050] Train Loss: 0.5054 | Val Loss: 0.5656 | Val AUC: 0.8245 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 009/050] Train Loss: 0.4946 | Val Loss: 0.5647 | Val AUC: 0.8307 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 010/050] Train Loss: 0.4862 | Val Loss: 0.5416 | Val AUC: 0.8357 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 011/050] Train Loss: 0.4769 | Val Loss: 0.5375 | Val AUC: 0.8399 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 012/050] Train Loss: 0.4692 | Val Loss: 0.5328 | Val AUC: 0.8427 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 013/050] Train Loss: 0.4641 | Val Loss: 0.5165 | Val AUC: 0.8460 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 014/050] Train Loss: 0.4580 | Val Loss: 0.5260 | Val AUC: 0.8479 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 015/050] Train Loss: 0.4540 | Val Loss: 0.5162 | Val AUC: 0.8512 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 016/050] Train Loss: 0.4513 | Val Loss: 0.5074 | Val AUC: 0.8538 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 017/050] Train Loss: 0.4453 | Val Loss: 0.5091 | Val AUC: 0.8562 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 018/050] Train Loss: 0.4414 | Val Loss: 0.5032 | Val AUC: 0.8592 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 019/050] Train Loss: 0.4378 | Val Loss: 0.5046 | Val AUC: 0.8625 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 020/050] Train Loss: 0.4331 | Val Loss: 0.5106 | Val AUC: 0.8647 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 021/050] Train Loss: 0.4326 | Val Loss: 0.4792 | Val AUC: 0.8663 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 022/050] Train Loss: 0.4313 | Val Loss: 0.4889 | Val AUC: 0.8682 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 023/050] Train Loss: 0.4263 | Val Loss: 0.4964 | Val AUC: 0.8692 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 024/050] Train Loss: 0.4275 | Val Loss: 0.4756 | Val AUC: 0.8708 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 025/050] Train Loss: 0.4217 | Val Loss: 0.4750 | Val AUC: 0.8720 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 026/050] Train Loss: 0.4178 | Val Loss: 0.5017 | Val AUC: 0.8738 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 027/050] Train Loss: 0.4159 | Val Loss: 0.5001 | Val AUC: 0.8750 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 029/050] Train Loss: 0.4153 | Val Loss: 0.4685 | Val AUC: 0.8775 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 030/050] Train Loss: 0.4090 | Val Loss: 0.5032 | Val AUC: 0.8781 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 031/050] Train Loss: 0.4113 | Val Loss: 0.4769 | Val AUC: 0.8800 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 032/050] Train Loss: 0.4061 | Val Loss: 0.4482 | Val AUC: 0.8807 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 033/050] Train Loss: 0.4109 | Val Loss: 0.4567 | Val AUC: 0.8824 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 034/050] Train Loss: 0.4018 | Val Loss: 0.4790 | Val AUC: 0.8833 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 035/050] Train Loss: 0.4004 | Val Loss: 0.4721 | Val AUC: 0.8846 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 036/050] Train Loss: 0.3989 | Val Loss: 0.4490 | Val AUC: 0.8854 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 037/050] Train Loss: 0.3942 | Val Loss: 0.4500 | Val AUC: 0.8868 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 038/050] Train Loss: 0.3917 | Val Loss: 0.4706 | Val AUC: 0.8881 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 039/050] Train Loss: 0.3912 | Val Loss: 0.4689 | Val AUC: 0.8898 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 040/050] Train Loss: 0.3900 | Val Loss: 0.4355 | Val AUC: 0.8913 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 041/050] Train Loss: 0.3868 | Val Loss: 0.4364 | Val AUC: 0.8928 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 042/050] Train Loss: 0.3856 | Val Loss: 0.4595 | Val AUC: 0.8936 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 043/050] Train Loss: 0.3847 | Val Loss: 0.4499 | Val AUC: 0.8952 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 044/050] Train Loss: 0.3839 | Val Loss: 0.4185 | Val AUC: 0.8962 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 045/050] Train Loss: 0.3873 | Val Loss: 0.4434 | Val AUC: 0.8972 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 046/050] Train Loss: 0.3801 | Val Loss: 0.4571 | Val AUC: 0.8976 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 047/050] Train Loss: 0.3780 | Val Loss: 0.4261 | Val AUC: 0.8985 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 048/050] Train Loss: 0.3768 | Val Loss: 0.4290 | Val AUC: 0.8992 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 049/050] Train Loss: 0.3754 | Val Loss: 0.4411 | Val AUC: 0.8999 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 050/050] Train Loss: 0.3742 | Val Loss: 0.4311 | Val AUC: 0.9008 | Time: 0.42s ★ (Best Val AUC)
+    GPU Test ROC-AUC: 0.9040 (took 28.20s)
+[*] Parity Delta: 0.00210 (Tolerance: <= 0.005)
+[*] Status: PASSED
+==================================================================
+[1;32m[2026-11-17 09:35:52] Stage 0c (Device Parity) PASSED.[0m
+[1;32m[2026-11-17 09:35:52] Pre-flight environment and hardware checks PASSED.[0m
+
+[1;34m[2026-11-17 09:35:52] STAGE 5: Running Multi-Seed Baselines (identical splits)...[0m
+[REAL] Loading aligned graph-cohort bundle from /home/rohit/Malicious-HDG-self/data/processed/real...
+[REAL] Running baselines across 5 seed(s): [42, 1337, 2024, 777, 999]...
+
+--- Evaluating Seed 42 ---
+  [TF-IDF LogReg] ROC-AUC: 0.9048, F1: 0.7592
+  [XGBoost Tabular] ROC-AUC: 0.8847, F1: 0.7272
+  [XGBoost Tabular+Lexical] ROC-AUC: 0.8969, F1: 0.7320
+  [Single-Feat Length] ROC-AUC: 0.6218, F1: 0.5199
+  [Single-Feat No-IP] ROC-AUC: 0.6264, F1: 0.4991
+    [Epoch 001/030] Train Loss: 0.6703 | Val Loss: 0.6849 | Val AUC: 0.7067 | Time: 0.05s ★ (Best Val AUC)
+    [Epoch 002/030] Train Loss: 0.6439 | Val Loss: 0.6768 | Val AUC: 0.7395 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 003/030] Train Loss: 0.6223 | Val Loss: 0.6699 | Val AUC: 0.7482 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 004/030] Train Loss: 0.6023 | Val Loss: 0.6624 | Val AUC: 0.7540 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 005/030] Train Loss: 0.5819 | Val Loss: 0.6551 | Val AUC: 0.7585 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 006/030] Train Loss: 0.5633 | Val Loss: 0.6493 | Val AUC: 0.7623 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 007/030] Train Loss: 0.5464 | Val Loss: 0.6462 | Val AUC: 0.7661 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 008/030] Train Loss: 0.5345 | Val Loss: 0.6447 | Val AUC: 0.7701 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 009/030] Train Loss: 0.5270 | Val Loss: 0.6420 | Val AUC: 0.7743 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 010/030] Train Loss: 0.5236 | Val Loss: 0.6365 | Val AUC: 0.7787 | Time: 0.04s ★ (Best Val AUC)
+    [Epoch 011/030] Train Loss: 0.5205 | Val Loss: 0.6286 | Val AUC: 0.7832 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 012/030] Train Loss: 0.5184 | Val Loss: 0.6192 | Val AUC: 0.7876 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 013/030] Train Loss: 0.5155 | Val Loss: 0.6097 | Val AUC: 0.7917 | Time: 0.04s ★ (Best Val AUC)
+    [Epoch 014/030] Train Loss: 0.5097 | Val Loss: 0.6017 | Val AUC: 0.7954 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 015/030] Train Loss: 0.5044 | Val Loss: 0.5963 | Val AUC: 0.7984 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 016/030] Train Loss: 0.5008 | Val Loss: 0.5926 | Val AUC: 0.8003 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 017/030] Train Loss: 0.4984 | Val Loss: 0.5879 | Val AUC: 0.8022 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 018/030] Train Loss: 0.4962 | Val Loss: 0.5809 | Val AUC: 0.8047 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 019/030] Train Loss: 0.4943 | Val Loss: 0.5731 | Val AUC: 0.8076 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 020/030] Train Loss: 0.4921 | Val Loss: 0.5664 | Val AUC: 0.8106 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 021/030] Train Loss: 0.4889 | Val Loss: 0.5624 | Val AUC: 0.8130 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 022/030] Train Loss: 0.4864 | Val Loss: 0.5614 | Val AUC: 0.8149 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 023/030] Train Loss: 0.4839 | Val Loss: 0.5634 | Val AUC: 0.8164 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 024/030] Train Loss: 0.4813 | Val Loss: 0.5673 | Val AUC: 0.8176 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 025/030] Train Loss: 0.4797 | Val Loss: 0.5723 | Val AUC: 0.8188 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 026/030] Train Loss: 0.4788 | Val Loss: 0.5766 | Val AUC: 0.8200 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 027/030] Train Loss: 0.4770 | Val Loss: 0.5788 | Val AUC: 0.8211 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 028/030] Train Loss: 0.4770 | Val Loss: 0.5778 | Val AUC: 0.8222 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 029/030] Train Loss: 0.4758 | Val Loss: 0.5738 | Val AUC: 0.8234 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 030/030] Train Loss: 0.4747 | Val Loss: 0.5679 | Val AUC: 0.8246 | Time: 0.03s ★ (Best Val AUC)
+  [Isolated Domain MLP] ROC-AUC: 0.8337, F1: 0.6563
+
+--- Evaluating Seed 1337 ---
+  [TF-IDF LogReg] ROC-AUC: 0.9055, F1: 0.7603
+  [XGBoost Tabular] ROC-AUC: 0.8870, F1: 0.7304
+  [XGBoost Tabular+Lexical] ROC-AUC: 0.8978, F1: 0.7407
+  [Single-Feat Length] ROC-AUC: 0.6240, F1: 0.5194
+  [Single-Feat No-IP] ROC-AUC: 0.6259, F1: 0.4991
+    [Epoch 001/030] Train Loss: 0.7033 | Val Loss: 0.6798 | Val AUC: 0.6219 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 002/030] Train Loss: 0.6781 | Val Loss: 0.6688 | Val AUC: 0.6644 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 003/030] Train Loss: 0.6562 | Val Loss: 0.6571 | Val AUC: 0.6939 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 004/030] Train Loss: 0.6348 | Val Loss: 0.6443 | Val AUC: 0.7165 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 005/030] Train Loss: 0.6124 | Val Loss: 0.6320 | Val AUC: 0.7329 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 006/030] Train Loss: 0.5905 | Val Loss: 0.6226 | Val AUC: 0.7445 | Time: 0.04s ★ (Best Val AUC)
+    [Epoch 007/030] Train Loss: 0.5704 | Val Loss: 0.6182 | Val AUC: 0.7534 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 008/030] Train Loss: 0.5543 | Val Loss: 0.6205 | Val AUC: 0.7609 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 009/030] Train Loss: 0.5446 | Val Loss: 0.6285 | Val AUC: 0.7678 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 010/030] Train Loss: 0.5387 | Val Loss: 0.6383 | Val AUC: 0.7742 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 011/030] Train Loss: 0.5375 | Val Loss: 0.6446 | Val AUC: 0.7802 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 012/030] Train Loss: 0.5344 | Val Loss: 0.6444 | Val AUC: 0.7857 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 013/030] Train Loss: 0.5306 | Val Loss: 0.6374 | Val AUC: 0.7906 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 014/030] Train Loss: 0.5249 | Val Loss: 0.6255 | Val AUC: 0.7949 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 015/030] Train Loss: 0.5180 | Val Loss: 0.6110 | Val AUC: 0.7986 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 016/030] Train Loss: 0.5124 | Val Loss: 0.5963 | Val AUC: 0.8018 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 017/030] Train Loss: 0.5075 | Val Loss: 0.5833 | Val AUC: 0.8048 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 018/030] Train Loss: 0.5042 | Val Loss: 0.5732 | Val AUC: 0.8076 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 019/030] Train Loss: 0.5014 | Val Loss: 0.5664 | Val AUC: 0.8103 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 020/030] Train Loss: 0.4998 | Val Loss: 0.5626 | Val AUC: 0.8131 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 021/030] Train Loss: 0.4979 | Val Loss: 0.5609 | Val AUC: 0.8158 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 022/030] Train Loss: 0.4946 | Val Loss: 0.5607 | Val AUC: 0.8182 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 023/030] Train Loss: 0.4921 | Val Loss: 0.5615 | Val AUC: 0.8202 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 024/030] Train Loss: 0.4891 | Val Loss: 0.5630 | Val AUC: 0.8218 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 025/030] Train Loss: 0.4863 | Val Loss: 0.5646 | Val AUC: 0.8230 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 026/030] Train Loss: 0.4848 | Val Loss: 0.5660 | Val AUC: 0.8240 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 027/030] Train Loss: 0.4831 | Val Loss: 0.5668 | Val AUC: 0.8249 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 028/030] Train Loss: 0.4812 | Val Loss: 0.5667 | Val AUC: 0.8259 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 029/030] Train Loss: 0.4808 | Val Loss: 0.5655 | Val AUC: 0.8272 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 030/030] Train Loss: 0.4790 | Val Loss: 0.5631 | Val AUC: 0.8285 | Time: 0.03s ★ (Best Val AUC)
+  [Isolated Domain MLP] ROC-AUC: 0.8297, F1: 0.6583
+
+--- Evaluating Seed 2024 ---
+  [TF-IDF LogReg] ROC-AUC: 0.9047, F1: 0.7492
+  [XGBoost Tabular] ROC-AUC: 0.8845, F1: 0.7241
+  [XGBoost Tabular+Lexical] ROC-AUC: 0.8953, F1: 0.7407
+  [Single-Feat Length] ROC-AUC: 0.6192, F1: 0.5211
+  [Single-Feat No-IP] ROC-AUC: 0.6262, F1: 0.4991
+    [Epoch 001/030] Train Loss: 0.6834 | Val Loss: 0.6967 | Val AUC: 0.6034 | Time: 0.04s ★ (Best Val AUC)
+    [Epoch 002/030] Train Loss: 0.6543 | Val Loss: 0.6854 | Val AUC: 0.7142 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 003/030] Train Loss: 0.6299 | Val Loss: 0.6765 | Val AUC: 0.7379 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 004/030] Train Loss: 0.6067 | Val Loss: 0.6705 | Val AUC: 0.7494 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 005/030] Train Loss: 0.5849 | Val Loss: 0.6685 | Val AUC: 0.7565 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 006/030] Train Loss: 0.5672 | Val Loss: 0.6702 | Val AUC: 0.7616 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 007/030] Train Loss: 0.5544 | Val Loss: 0.6725 | Val AUC: 0.7663 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 008/030] Train Loss: 0.5467 | Val Loss: 0.6708 | Val AUC: 0.7710 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 009/030] Train Loss: 0.5419 | Val Loss: 0.6622 | Val AUC: 0.7756 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 010/030] Train Loss: 0.5365 | Val Loss: 0.6474 | Val AUC: 0.7801 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 011/030] Train Loss: 0.5306 | Val Loss: 0.6297 | Val AUC: 0.7844 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 012/030] Train Loss: 0.5248 | Val Loss: 0.6124 | Val AUC: 0.7888 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 013/030] Train Loss: 0.5198 | Val Loss: 0.5975 | Val AUC: 0.7936 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 014/030] Train Loss: 0.5141 | Val Loss: 0.5862 | Val AUC: 0.7987 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 015/030] Train Loss: 0.5079 | Val Loss: 0.5793 | Val AUC: 0.8038 | Time: 0.02s ★ (Best Val AUC)
+    [Epoch 016/030] Train Loss: 0.5031 | Val Loss: 0.5764 | Val AUC: 0.8077 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 017/030] Train Loss: 0.4991 | Val Loss: 0.5763 | Val AUC: 0.8103 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 018/030] Train Loss: 0.4974 | Val Loss: 0.5764 | Val AUC: 0.8122 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 019/030] Train Loss: 0.4958 | Val Loss: 0.5743 | Val AUC: 0.8142 | Time: 0.02s ★ (Best Val AUC)
+    [Epoch 020/030] Train Loss: 0.4942 | Val Loss: 0.5692 | Val AUC: 0.8168 | Time: 0.02s ★ (Best Val AUC)
+    [Epoch 021/030] Train Loss: 0.4909 | Val Loss: 0.5624 | Val AUC: 0.8196 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 022/030] Train Loss: 0.4873 | Val Loss: 0.5560 | Val AUC: 0.8217 | Time: 0.02s ★ (Best Val AUC)
+    [Epoch 023/030] Train Loss: 0.4847 | Val Loss: 0.5513 | Val AUC: 0.8231 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 024/030] Train Loss: 0.4839 | Val Loss: 0.5493 | Val AUC: 0.8241 | Time: 0.02s ★ (Best Val AUC)
+    [Epoch 025/030] Train Loss: 0.4822 | Val Loss: 0.5498 | Val AUC: 0.8248 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 026/030] Train Loss: 0.4812 | Val Loss: 0.5519 | Val AUC: 0.8256 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 027/030] Train Loss: 0.4801 | Val Loss: 0.5549 | Val AUC: 0.8266 | Time: 0.02s ★ (Best Val AUC)
+    [Epoch 028/030] Train Loss: 0.4785 | Val Loss: 0.5578 | Val AUC: 0.8277 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 029/030] Train Loss: 0.4779 | Val Loss: 0.5592 | Val AUC: 0.8289 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 030/030] Train Loss: 0.4762 | Val Loss: 0.5586 | Val AUC: 0.8301 | Time: 0.03s ★ (Best Val AUC)
+  [Isolated Domain MLP] ROC-AUC: 0.8289, F1: 0.6518
+
+--- Evaluating Seed 777 ---
+  [TF-IDF LogReg] ROC-AUC: 0.9067, F1: 0.7588
+  [XGBoost Tabular] ROC-AUC: 0.8813, F1: 0.7242
+  [XGBoost Tabular+Lexical] ROC-AUC: 0.8904, F1: 0.7422
+  [Single-Feat Length] ROC-AUC: 0.6193, F1: 0.5292
+  [Single-Feat No-IP] ROC-AUC: 0.6260, F1: 0.4991
+    [Epoch 001/030] Train Loss: 0.6698 | Val Loss: 0.6950 | Val AUC: 0.6707 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 002/030] Train Loss: 0.6396 | Val Loss: 0.6806 | Val AUC: 0.7334 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 003/030] Train Loss: 0.6137 | Val Loss: 0.6692 | Val AUC: 0.7522 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 004/030] Train Loss: 0.5904 | Val Loss: 0.6606 | Val AUC: 0.7614 | Time: 0.02s ★ (Best Val AUC)
+    [Epoch 005/030] Train Loss: 0.5695 | Val Loss: 0.6551 | Val AUC: 0.7686 | Time: 0.02s ★ (Best Val AUC)
+    [Epoch 006/030] Train Loss: 0.5523 | Val Loss: 0.6507 | Val AUC: 0.7757 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 007/030] Train Loss: 0.5395 | Val Loss: 0.6444 | Val AUC: 0.7820 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 008/030] Train Loss: 0.5300 | Val Loss: 0.6340 | Val AUC: 0.7870 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 009/030] Train Loss: 0.5221 | Val Loss: 0.6198 | Val AUC: 0.7912 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 010/030] Train Loss: 0.5164 | Val Loss: 0.6040 | Val AUC: 0.7951 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 011/030] Train Loss: 0.5110 | Val Loss: 0.5891 | Val AUC: 0.7993 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 012/030] Train Loss: 0.5063 | Val Loss: 0.5767 | Val AUC: 0.8036 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 013/030] Train Loss: 0.5026 | Val Loss: 0.5679 | Val AUC: 0.8082 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 014/030] Train Loss: 0.4979 | Val Loss: 0.5632 | Val AUC: 0.8123 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 015/030] Train Loss: 0.4941 | Val Loss: 0.5632 | Val AUC: 0.8152 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 016/030] Train Loss: 0.4903 | Val Loss: 0.5663 | Val AUC: 0.8166 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 017/030] Train Loss: 0.4896 | Val Loss: 0.5685 | Val AUC: 0.8177 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 018/030] Train Loss: 0.4892 | Val Loss: 0.5660 | Val AUC: 0.8197 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 019/030] Train Loss: 0.4876 | Val Loss: 0.5599 | Val AUC: 0.8227 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 020/030] Train Loss: 0.4846 | Val Loss: 0.5528 | Val AUC: 0.8255 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 021/030] Train Loss: 0.4818 | Val Loss: 0.5473 | Val AUC: 0.8276 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 022/030] Train Loss: 0.4785 | Val Loss: 0.5443 | Val AUC: 0.8291 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 023/030] Train Loss: 0.4765 | Val Loss: 0.5439 | Val AUC: 0.8302 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 024/030] Train Loss: 0.4757 | Val Loss: 0.5449 | Val AUC: 0.8311 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 025/030] Train Loss: 0.4748 | Val Loss: 0.5460 | Val AUC: 0.8321 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 026/030] Train Loss: 0.4733 | Val Loss: 0.5462 | Val AUC: 0.8334 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 027/030] Train Loss: 0.4714 | Val Loss: 0.5453 | Val AUC: 0.8347 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 028/030] Train Loss: 0.4698 | Val Loss: 0.5434 | Val AUC: 0.8361 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 029/030] Train Loss: 0.4686 | Val Loss: 0.5412 | Val AUC: 0.8374 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 030/030] Train Loss: 0.4667 | Val Loss: 0.5389 | Val AUC: 0.8383 | Time: 0.02s ★ (Best Val AUC)
+  [Isolated Domain MLP] ROC-AUC: 0.8343, F1: 0.6585
+
+--- Evaluating Seed 999 ---
+  [TF-IDF LogReg] ROC-AUC: 0.9049, F1: 0.7593
+  [XGBoost Tabular] ROC-AUC: 0.8863, F1: 0.7282
+  [XGBoost Tabular+Lexical] ROC-AUC: 0.8951, F1: 0.7501
+  [Single-Feat Length] ROC-AUC: 0.6192, F1: 0.5263
+  [Single-Feat No-IP] ROC-AUC: 0.6273, F1: 0.4991
+    [Epoch 001/030] Train Loss: 0.6768 | Val Loss: 0.6664 | Val AUC: 0.7411 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 002/030] Train Loss: 0.6455 | Val Loss: 0.6573 | Val AUC: 0.7592 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 003/030] Train Loss: 0.6218 | Val Loss: 0.6476 | Val AUC: 0.7661 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 004/030] Train Loss: 0.6009 | Val Loss: 0.6371 | Val AUC: 0.7705 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 005/030] Train Loss: 0.5802 | Val Loss: 0.6271 | Val AUC: 0.7737 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 006/030] Train Loss: 0.5617 | Val Loss: 0.6196 | Val AUC: 0.7764 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 007/030] Train Loss: 0.5466 | Val Loss: 0.6167 | Val AUC: 0.7789 | Time: 0.02s ★ (Best Val AUC)
+    [Epoch 008/030] Train Loss: 0.5356 | Val Loss: 0.6188 | Val AUC: 0.7818 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 009/030] Train Loss: 0.5308 | Val Loss: 0.6230 | Val AUC: 0.7856 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 010/030] Train Loss: 0.5292 | Val Loss: 0.6252 | Val AUC: 0.7902 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 011/030] Train Loss: 0.5289 | Val Loss: 0.6229 | Val AUC: 0.7952 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 012/030] Train Loss: 0.5259 | Val Loss: 0.6167 | Val AUC: 0.8001 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 013/030] Train Loss: 0.5203 | Val Loss: 0.6084 | Val AUC: 0.8046 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 014/030] Train Loss: 0.5149 | Val Loss: 0.5993 | Val AUC: 0.8086 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 015/030] Train Loss: 0.5096 | Val Loss: 0.5899 | Val AUC: 0.8120 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 016/030] Train Loss: 0.5050 | Val Loss: 0.5800 | Val AUC: 0.8149 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 017/030] Train Loss: 0.5017 | Val Loss: 0.5698 | Val AUC: 0.8178 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 018/030] Train Loss: 0.4973 | Val Loss: 0.5603 | Val AUC: 0.8204 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 019/030] Train Loss: 0.4960 | Val Loss: 0.5527 | Val AUC: 0.8229 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 020/030] Train Loss: 0.4943 | Val Loss: 0.5475 | Val AUC: 0.8250 | Time: 0.05s ★ (Best Val AUC)
+    [Epoch 021/030] Train Loss: 0.4925 | Val Loss: 0.5448 | Val AUC: 0.8271 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 022/030] Train Loss: 0.4905 | Val Loss: 0.5441 | Val AUC: 0.8290 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 023/030] Train Loss: 0.4882 | Val Loss: 0.5453 | Val AUC: 0.8308 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 024/030] Train Loss: 0.4856 | Val Loss: 0.5476 | Val AUC: 0.8323 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 025/030] Train Loss: 0.4826 | Val Loss: 0.5499 | Val AUC: 0.8337 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 026/030] Train Loss: 0.4811 | Val Loss: 0.5513 | Val AUC: 0.8348 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 027/030] Train Loss: 0.4793 | Val Loss: 0.5514 | Val AUC: 0.8358 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 028/030] Train Loss: 0.4780 | Val Loss: 0.5500 | Val AUC: 0.8368 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 029/030] Train Loss: 0.4766 | Val Loss: 0.5474 | Val AUC: 0.8378 | Time: 0.03s ★ (Best Val AUC)
+    [Epoch 030/030] Train Loss: 0.4757 | Val Loss: 0.5439 | Val AUC: 0.8388 | Time: 0.03s ★ (Best Val AUC)
+  [Isolated Domain MLP] ROC-AUC: 0.8290, F1: 0.6557
+
+[REAL] === BASELINES COMPLETE ===
+Results JSON: /home/rohit/Malicious-HDG-self/results/real_gpu/tables/baselines_results.json
+Results Markdown: /home/rohit/Malicious-HDG-self/results/real_gpu/tables/baselines_results.md
+[1;32m[2026-11-17 09:39:25] Stage 5 (Baselines) PASSED.[0m
+
+[1;34m[2026-11-17 09:39:25] STAGE 6a: Training & Evaluating HeteroGNN on GPU (Random Split with Certified Calibration)...[0m
+[GPU] Device: cuda | Loading aligned graph-cohort bundle from /home/rohit/Malicious-HDG-self/data/processed/real...
+[GPU] Evaluating GNN on split: 'random' across seeds: [42, 1337, 2024, 777, 999]...
+
+================ Running Variant: SAGE ================
+
+--- Seed 42 (sage) [random] ---
+    [Epoch 001/200] Train Loss: 0.6782 | Val Loss: 0.7432 | Val AUC: 0.5960 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 002/200] Train Loss: 0.6285 | Val Loss: 0.6711 | Val AUC: 0.7216 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 003/200] Train Loss: 0.5915 | Val Loss: 0.6362 | Val AUC: 0.7626 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 004/200] Train Loss: 0.5661 | Val Loss: 0.6259 | Val AUC: 0.7755 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 005/200] Train Loss: 0.5437 | Val Loss: 0.6265 | Val AUC: 0.7843 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 006/200] Train Loss: 0.5318 | Val Loss: 0.5880 | Val AUC: 0.7966 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 007/200] Train Loss: 0.5189 | Val Loss: 0.5723 | Val AUC: 0.8047 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 008/200] Train Loss: 0.5123 | Val Loss: 0.5645 | Val AUC: 0.8136 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 009/200] Train Loss: 0.5063 | Val Loss: 0.5493 | Val AUC: 0.8264 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 010/200] Train Loss: 0.4919 | Val Loss: 0.5520 | Val AUC: 0.8321 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 011/200] Train Loss: 0.4814 | Val Loss: 0.5549 | Val AUC: 0.8355 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 012/200] Train Loss: 0.4771 | Val Loss: 0.5501 | Val AUC: 0.8386 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 013/200] Train Loss: 0.4698 | Val Loss: 0.5262 | Val AUC: 0.8426 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 014/200] Train Loss: 0.4628 | Val Loss: 0.5103 | Val AUC: 0.8456 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 015/200] Train Loss: 0.4598 | Val Loss: 0.5241 | Val AUC: 0.8465 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 016/200] Train Loss: 0.4569 | Val Loss: 0.5134 | Val AUC: 0.8505 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 017/200] Train Loss: 0.4512 | Val Loss: 0.5042 | Val AUC: 0.8530 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 018/200] Train Loss: 0.4504 | Val Loss: 0.5151 | Val AUC: 0.8558 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 019/200] Train Loss: 0.4437 | Val Loss: 0.5090 | Val AUC: 0.8579 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 020/200] Train Loss: 0.4392 | Val Loss: 0.5063 | Val AUC: 0.8602 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 021/200] Train Loss: 0.4373 | Val Loss: 0.5002 | Val AUC: 0.8626 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 022/200] Train Loss: 0.4313 | Val Loss: 0.4921 | Val AUC: 0.8649 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 023/200] Train Loss: 0.4306 | Val Loss: 0.4847 | Val AUC: 0.8671 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 024/200] Train Loss: 0.4271 | Val Loss: 0.4893 | Val AUC: 0.8688 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 025/200] Train Loss: 0.4237 | Val Loss: 0.4904 | Val AUC: 0.8703 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 026/200] Train Loss: 0.4212 | Val Loss: 0.4761 | Val AUC: 0.8714 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 027/200] Train Loss: 0.4207 | Val Loss: 0.4835 | Val AUC: 0.8732 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 028/200] Train Loss: 0.4173 | Val Loss: 0.4952 | Val AUC: 0.8748 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 029/200] Train Loss: 0.4185 | Val Loss: 0.4707 | Val AUC: 0.8758 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 030/200] Train Loss: 0.4143 | Val Loss: 0.4752 | Val AUC: 0.8774 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 031/200] Train Loss: 0.4102 | Val Loss: 0.4823 | Val AUC: 0.8787 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 032/200] Train Loss: 0.4065 | Val Loss: 0.4663 | Val AUC: 0.8801 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 033/200] Train Loss: 0.4044 | Val Loss: 0.4665 | Val AUC: 0.8815 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 034/200] Train Loss: 0.4030 | Val Loss: 0.4644 | Val AUC: 0.8830 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 035/200] Train Loss: 0.3990 | Val Loss: 0.4606 | Val AUC: 0.8845 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 036/200] Train Loss: 0.3974 | Val Loss: 0.4649 | Val AUC: 0.8860 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 037/200] Train Loss: 0.3956 | Val Loss: 0.4453 | Val AUC: 0.8875 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 038/200] Train Loss: 0.3938 | Val Loss: 0.4635 | Val AUC: 0.8886 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 039/200] Train Loss: 0.3922 | Val Loss: 0.4495 | Val AUC: 0.8905 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 040/200] Train Loss: 0.3888 | Val Loss: 0.4346 | Val AUC: 0.8918 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 041/200] Train Loss: 0.3889 | Val Loss: 0.4555 | Val AUC: 0.8928 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 042/200] Train Loss: 0.3855 | Val Loss: 0.4297 | Val AUC: 0.8941 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 043/200] Train Loss: 0.3837 | Val Loss: 0.4539 | Val AUC: 0.8956 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 044/200] Train Loss: 0.3783 | Val Loss: 0.4514 | Val AUC: 0.8966 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 045/200] Train Loss: 0.3775 | Val Loss: 0.4282 | Val AUC: 0.8977 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 046/200] Train Loss: 0.3762 | Val Loss: 0.4191 | Val AUC: 0.8980 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 047/200] Train Loss: 0.3785 | Val Loss: 0.4704 | Val AUC: 0.8981 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 048/200] Train Loss: 0.3818 | Val Loss: 0.4270 | Val AUC: 0.9001 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 049/200] Train Loss: 0.3712 | Val Loss: 0.4167 | Val AUC: 0.9005 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 050/200] Train Loss: 0.3727 | Val Loss: 0.4514 | Val AUC: 0.9008 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 051/200] Train Loss: 0.3750 | Val Loss: 0.4280 | Val AUC: 0.9022 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 052/200] Train Loss: 0.3682 | Val Loss: 0.4096 | Val AUC: 0.9026 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 053/200] Train Loss: 0.3723 | Val Loss: 0.4430 | Val AUC: 0.9028 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 054/200] Train Loss: 0.3713 | Val Loss: 0.4222 | Val AUC: 0.9040 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 056/200] Train Loss: 0.3708 | Val Loss: 0.4354 | Val AUC: 0.9049 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 057/200] Train Loss: 0.3650 | Val Loss: 0.4500 | Val AUC: 0.9051 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 058/200] Train Loss: 0.3680 | Val Loss: 0.4028 | Val AUC: 0.9061 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 059/200] Train Loss: 0.3645 | Val Loss: 0.4030 | Val AUC: 0.9067 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 060/200] Train Loss: 0.3615 | Val Loss: 0.4325 | Val AUC: 0.9073 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 061/200] Train Loss: 0.3613 | Val Loss: 0.4276 | Val AUC: 0.9080 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 062/200] Train Loss: 0.3600 | Val Loss: 0.4040 | Val AUC: 0.9087 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 063/200] Train Loss: 0.3579 | Val Loss: 0.4093 | Val AUC: 0.9092 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 064/200] Train Loss: 0.3551 | Val Loss: 0.4125 | Val AUC: 0.9097 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 065/200] Train Loss: 0.3549 | Val Loss: 0.4321 | Val AUC: 0.9098 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 066/200] Train Loss: 0.3584 | Val Loss: 0.3927 | Val AUC: 0.9103 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 067/200] Train Loss: 0.3563 | Val Loss: 0.4014 | Val AUC: 0.9112 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 069/200] Train Loss: 0.3567 | Val Loss: 0.3950 | Val AUC: 0.9123 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 070/200] Train Loss: 0.3502 | Val Loss: 0.3937 | Val AUC: 0.9127 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 071/200] Train Loss: 0.3520 | Val Loss: 0.4179 | Val AUC: 0.9131 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 072/200] Train Loss: 0.3505 | Val Loss: 0.3994 | Val AUC: 0.9136 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 074/200] Train Loss: 0.3544 | Val Loss: 0.4316 | Val AUC: 0.9141 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 075/200] Train Loss: 0.3534 | Val Loss: 0.3996 | Val AUC: 0.9148 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 077/200] Train Loss: 0.3635 | Val Loss: 0.4239 | Val AUC: 0.9150 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 080/200] Train Loss: 0.3503 | Val Loss: 0.3783 | Val AUC: 0.9141 | Time: 0.42s
+    [Epoch 081/200] Train Loss: 0.3541 | Val Loss: 0.4159 | Val AUC: 0.9157 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 083/200] Train Loss: 0.3546 | Val Loss: 0.3859 | Val AUC: 0.9163 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 085/200] Train Loss: 0.3541 | Val Loss: 0.4004 | Val AUC: 0.9171 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 087/200] Train Loss: 0.3516 | Val Loss: 0.3892 | Val AUC: 0.9174 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 089/200] Train Loss: 0.3438 | Val Loss: 0.3900 | Val AUC: 0.9178 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 091/200] Train Loss: 0.3406 | Val Loss: 0.3999 | Val AUC: 0.9185 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 093/200] Train Loss: 0.3466 | Val Loss: 0.3827 | Val AUC: 0.9186 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 095/200] Train Loss: 0.3434 | Val Loss: 0.3929 | Val AUC: 0.9190 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 097/200] Train Loss: 0.3408 | Val Loss: 0.3827 | Val AUC: 0.9196 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 098/200] Train Loss: 0.3348 | Val Loss: 0.4028 | Val AUC: 0.9199 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 099/200] Train Loss: 0.3342 | Val Loss: 0.3961 | Val AUC: 0.9203 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 100/200] Train Loss: 0.3334 | Val Loss: 0.3731 | Val AUC: 0.9206 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 101/200] Train Loss: 0.3348 | Val Loss: 0.3764 | Val AUC: 0.9211 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 102/200] Train Loss: 0.3310 | Val Loss: 0.4016 | Val AUC: 0.9212 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 103/200] Train Loss: 0.3354 | Val Loss: 0.3878 | Val AUC: 0.9214 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 104/200] Train Loss: 0.3294 | Val Loss: 0.3775 | Val AUC: 0.9215 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 105/200] Train Loss: 0.3302 | Val Loss: 0.3750 | Val AUC: 0.9217 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 107/200] Train Loss: 0.3326 | Val Loss: 0.3806 | Val AUC: 0.9223 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 108/200] Train Loss: 0.3288 | Val Loss: 0.3698 | Val AUC: 0.9226 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 110/200] Train Loss: 0.3270 | Val Loss: 0.3867 | Val AUC: 0.9229 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 112/200] Train Loss: 0.3303 | Val Loss: 0.3868 | Val AUC: 0.9230 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 113/200] Train Loss: 0.3255 | Val Loss: 0.3834 | Val AUC: 0.9231 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 114/200] Train Loss: 0.3273 | Val Loss: 0.3743 | Val AUC: 0.9236 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 115/200] Train Loss: 0.3255 | Val Loss: 0.3806 | Val AUC: 0.9241 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 116/200] Train Loss: 0.3246 | Val Loss: 0.3770 | Val AUC: 0.9242 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 120/200] Train Loss: 0.3233 | Val Loss: 0.3804 | Val AUC: 0.9243 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 121/200] Train Loss: 0.3227 | Val Loss: 0.3765 | Val AUC: 0.9246 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 122/200] Train Loss: 0.3215 | Val Loss: 0.3682 | Val AUC: 0.9251 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 123/200] Train Loss: 0.3226 | Val Loss: 0.3788 | Val AUC: 0.9254 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 124/200] Train Loss: 0.3206 | Val Loss: 0.3758 | Val AUC: 0.9255 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 125/200] Train Loss: 0.3225 | Val Loss: 0.3699 | Val AUC: 0.9257 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 126/200] Train Loss: 0.3203 | Val Loss: 0.3822 | Val AUC: 0.9258 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 127/200] Train Loss: 0.3203 | Val Loss: 0.3581 | Val AUC: 0.9263 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 129/200] Train Loss: 0.3225 | Val Loss: 0.3621 | Val AUC: 0.9264 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 133/200] Train Loss: 0.3204 | Val Loss: 0.3858 | Val AUC: 0.9271 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 134/200] Train Loss: 0.3185 | Val Loss: 0.3712 | Val AUC: 0.9273 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 140/200] Train Loss: 0.3163 | Val Loss: 0.3578 | Val AUC: 0.9275 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 144/200] Train Loss: 0.3169 | Val Loss: 0.3916 | Val AUC: 0.9280 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 145/200] Train Loss: 0.3188 | Val Loss: 0.3628 | Val AUC: 0.9285 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 152/200] Train Loss: 0.3205 | Val Loss: 0.3644 | Val AUC: 0.9290 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 154/200] Train Loss: 0.3160 | Val Loss: 0.3778 | Val AUC: 0.9293 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 160/200] Train Loss: 0.3095 | Val Loss: 0.3510 | Val AUC: 0.9296 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 161/200] Train Loss: 0.3101 | Val Loss: 0.3554 | Val AUC: 0.9300 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 163/200] Train Loss: 0.3117 | Val Loss: 0.3773 | Val AUC: 0.9301 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 164/200] Train Loss: 0.3097 | Val Loss: 0.3583 | Val AUC: 0.9302 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 169/200] Train Loss: 0.3081 | Val Loss: 0.3516 | Val AUC: 0.9303 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 170/200] Train Loss: 0.3095 | Val Loss: 0.3502 | Val AUC: 0.9306 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 173/200] Train Loss: 0.3131 | Val Loss: 0.3563 | Val AUC: 0.9309 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 178/200] Train Loss: 0.3054 | Val Loss: 0.3503 | Val AUC: 0.9310 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 180/200] Train Loss: 0.3069 | Val Loss: 0.3662 | Val AUC: 0.9311 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 182/200] Train Loss: 0.3066 | Val Loss: 0.3589 | Val AUC: 0.9313 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 184/200] Train Loss: 0.3074 | Val Loss: 0.3590 | Val AUC: 0.9314 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 186/200] Train Loss: 0.3056 | Val Loss: 0.3602 | Val AUC: 0.9316 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 192/200] Train Loss: 0.3053 | Val Loss: 0.3537 | Val AUC: 0.9320 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 193/200] Train Loss: 0.3037 | Val Loss: 0.3626 | Val AUC: 0.9321 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 199/200] Train Loss: 0.3024 | Val Loss: 0.3541 | Val AUC: 0.9323 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 200/200] Train Loss: 0.3024 | Val Loss: 0.3574 | Val AUC: 0.9324 | Time: 0.42s ★ (Best Val AUC)
+  [CO-PRIMARY SELECTION (Seed 42)] In-distribution Val pAUC (FPR<=1%): 0.0000
+  [CO-PRIMARY SELECTION (Seed 42)] Paired with Cross-Source Transfer AUC in pipeline/08_provenance_checks.py
+  ┌── [TEST METRICS: SAGE on RANDOM] ─────────────────────────
+  │  ROC-AUC:   0.9368  |  PR-AUC:   0.8923
+  │  F1-Score:  0.8094  |  Accuracy: 0.8146
+  │  Precision: 0.7494  |  Recall:   0.8799
+  │  Operating Point TPR @ 0.1% FPR: 0.1614 (Threshold: 0.2700)
+  └───────────────────────────────────────────────────────────────────
+
+--- Seed 1337 (sage) [random] ---
+    [Epoch 001/200] Train Loss: 0.7489 | Val Loss: 0.8194 | Val AUC: 0.5183 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 002/200] Train Loss: 0.6925 | Val Loss: 0.7255 | Val AUC: 0.6028 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 003/200] Train Loss: 0.6331 | Val Loss: 0.6672 | Val AUC: 0.7079 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 004/200] Train Loss: 0.6046 | Val Loss: 0.6441 | Val AUC: 0.7356 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 005/200] Train Loss: 0.5852 | Val Loss: 0.6356 | Val AUC: 0.7583 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 006/200] Train Loss: 0.5610 | Val Loss: 0.6380 | Val AUC: 0.7749 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 007/200] Train Loss: 0.5476 | Val Loss: 0.6221 | Val AUC: 0.7901 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 008/200] Train Loss: 0.5342 | Val Loss: 0.5906 | Val AUC: 0.8036 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 009/200] Train Loss: 0.5189 | Val Loss: 0.5687 | Val AUC: 0.8148 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 010/200] Train Loss: 0.5091 | Val Loss: 0.5625 | Val AUC: 0.8199 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 011/200] Train Loss: 0.5059 | Val Loss: 0.5581 | Val AUC: 0.8259 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 012/200] Train Loss: 0.5004 | Val Loss: 0.5493 | Val AUC: 0.8339 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 013/200] Train Loss: 0.4928 | Val Loss: 0.5442 | Val AUC: 0.8394 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 014/200] Train Loss: 0.4836 | Val Loss: 0.5418 | Val AUC: 0.8426 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 015/200] Train Loss: 0.4763 | Val Loss: 0.5369 | Val AUC: 0.8454 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 016/200] Train Loss: 0.4732 | Val Loss: 0.5286 | Val AUC: 0.8483 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 017/200] Train Loss: 0.4674 | Val Loss: 0.5220 | Val AUC: 0.8514 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 018/200] Train Loss: 0.4621 | Val Loss: 0.5217 | Val AUC: 0.8544 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 019/200] Train Loss: 0.4605 | Val Loss: 0.5156 | Val AUC: 0.8568 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 020/200] Train Loss: 0.4557 | Val Loss: 0.5084 | Val AUC: 0.8592 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 021/200] Train Loss: 0.4534 | Val Loss: 0.5042 | Val AUC: 0.8613 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 022/200] Train Loss: 0.4493 | Val Loss: 0.5051 | Val AUC: 0.8634 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 023/200] Train Loss: 0.4452 | Val Loss: 0.5006 | Val AUC: 0.8652 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 024/200] Train Loss: 0.4428 | Val Loss: 0.4965 | Val AUC: 0.8669 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 025/200] Train Loss: 0.4382 | Val Loss: 0.4982 | Val AUC: 0.8690 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 026/200] Train Loss: 0.4385 | Val Loss: 0.4973 | Val AUC: 0.8711 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 027/200] Train Loss: 0.4345 | Val Loss: 0.4939 | Val AUC: 0.8731 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 028/200] Train Loss: 0.4318 | Val Loss: 0.4860 | Val AUC: 0.8748 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 029/200] Train Loss: 0.4264 | Val Loss: 0.4872 | Val AUC: 0.8765 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 030/200] Train Loss: 0.4262 | Val Loss: 0.4834 | Val AUC: 0.8777 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 031/200] Train Loss: 0.4242 | Val Loss: 0.4760 | Val AUC: 0.8788 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 032/200] Train Loss: 0.4208 | Val Loss: 0.4648 | Val AUC: 0.8800 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 033/200] Train Loss: 0.4192 | Val Loss: 0.4714 | Val AUC: 0.8816 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 034/200] Train Loss: 0.4162 | Val Loss: 0.4821 | Val AUC: 0.8829 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 035/200] Train Loss: 0.4141 | Val Loss: 0.4603 | Val AUC: 0.8841 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 036/200] Train Loss: 0.4123 | Val Loss: 0.4584 | Val AUC: 0.8852 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 037/200] Train Loss: 0.4095 | Val Loss: 0.4710 | Val AUC: 0.8870 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 038/200] Train Loss: 0.4064 | Val Loss: 0.4636 | Val AUC: 0.8884 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 039/200] Train Loss: 0.4041 | Val Loss: 0.4499 | Val AUC: 0.8896 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 040/200] Train Loss: 0.4007 | Val Loss: 0.4540 | Val AUC: 0.8915 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 041/200] Train Loss: 0.3967 | Val Loss: 0.4570 | Val AUC: 0.8931 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 042/200] Train Loss: 0.3958 | Val Loss: 0.4378 | Val AUC: 0.8944 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 043/200] Train Loss: 0.3939 | Val Loss: 0.4413 | Val AUC: 0.8958 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 044/200] Train Loss: 0.3903 | Val Loss: 0.4467 | Val AUC: 0.8971 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 045/200] Train Loss: 0.3890 | Val Loss: 0.4271 | Val AUC: 0.8972 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 046/200] Train Loss: 0.3858 | Val Loss: 0.4484 | Val AUC: 0.8994 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 047/200] Train Loss: 0.3859 | Val Loss: 0.4306 | Val AUC: 0.9000 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 048/200] Train Loss: 0.3840 | Val Loss: 0.4498 | Val AUC: 0.9018 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 049/200] Train Loss: 0.3809 | Val Loss: 0.4570 | Val AUC: 0.9027 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 051/200] Train Loss: 0.3921 | Val Loss: 0.4196 | Val AUC: 0.9044 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 053/200] Train Loss: 0.3829 | Val Loss: 0.4269 | Val AUC: 0.9054 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 055/200] Train Loss: 0.3760 | Val Loss: 0.4133 | Val AUC: 0.9063 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 056/200] Train Loss: 0.3735 | Val Loss: 0.4387 | Val AUC: 0.9073 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 057/200] Train Loss: 0.3721 | Val Loss: 0.4469 | Val AUC: 0.9078 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 058/200] Train Loss: 0.3736 | Val Loss: 0.4085 | Val AUC: 0.9085 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 060/200] Train Loss: 0.3747 | Val Loss: 0.4196 | Val AUC: 0.9099 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 061/200] Train Loss: 0.3649 | Val Loss: 0.4475 | Val AUC: 0.9100 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 062/200] Train Loss: 0.3714 | Val Loss: 0.4123 | Val AUC: 0.9114 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 064/200] Train Loss: 0.3708 | Val Loss: 0.4026 | Val AUC: 0.9123 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 066/200] Train Loss: 0.3729 | Val Loss: 0.4144 | Val AUC: 0.9131 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 069/200] Train Loss: 0.3597 | Val Loss: 0.4239 | Val AUC: 0.9137 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 070/200] Train Loss: 0.3584 | Val Loss: 0.4284 | Val AUC: 0.9144 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 071/200] Train Loss: 0.3623 | Val Loss: 0.3955 | Val AUC: 0.9150 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 073/200] Train Loss: 0.3609 | Val Loss: 0.4047 | Val AUC: 0.9158 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 075/200] Train Loss: 0.3572 | Val Loss: 0.3994 | Val AUC: 0.9160 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 077/200] Train Loss: 0.3559 | Val Loss: 0.3973 | Val AUC: 0.9167 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 078/200] Train Loss: 0.3501 | Val Loss: 0.4248 | Val AUC: 0.9170 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 079/200] Train Loss: 0.3562 | Val Loss: 0.3972 | Val AUC: 0.9173 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 080/200] Train Loss: 0.3489 | Val Loss: 0.3803 | Val AUC: 0.9168 | Time: 0.42s
+    [Epoch 081/200] Train Loss: 0.3530 | Val Loss: 0.3957 | Val AUC: 0.9177 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 082/200] Train Loss: 0.3468 | Val Loss: 0.4208 | Val AUC: 0.9180 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 083/200] Train Loss: 0.3496 | Val Loss: 0.3958 | Val AUC: 0.9182 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 085/200] Train Loss: 0.3476 | Val Loss: 0.3962 | Val AUC: 0.9191 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 087/200] Train Loss: 0.3480 | Val Loss: 0.3846 | Val AUC: 0.9197 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 089/200] Train Loss: 0.3487 | Val Loss: 0.4072 | Val AUC: 0.9201 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 090/200] Train Loss: 0.3468 | Val Loss: 0.3970 | Val AUC: 0.9205 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 092/200] Train Loss: 0.3427 | Val Loss: 0.3843 | Val AUC: 0.9207 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 093/200] Train Loss: 0.3406 | Val Loss: 0.4105 | Val AUC: 0.9211 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 094/200] Train Loss: 0.3437 | Val Loss: 0.3838 | Val AUC: 0.9214 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 096/200] Train Loss: 0.3410 | Val Loss: 0.3918 | Val AUC: 0.9219 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 097/200] Train Loss: 0.3379 | Val Loss: 0.3940 | Val AUC: 0.9220 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 099/200] Train Loss: 0.3373 | Val Loss: 0.3764 | Val AUC: 0.9223 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 100/200] Train Loss: 0.3361 | Val Loss: 0.3873 | Val AUC: 0.9229 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 101/200] Train Loss: 0.3344 | Val Loss: 0.3950 | Val AUC: 0.9231 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 103/200] Train Loss: 0.3380 | Val Loss: 0.3852 | Val AUC: 0.9235 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 105/200] Train Loss: 0.3383 | Val Loss: 0.3711 | Val AUC: 0.9237 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 106/200] Train Loss: 0.3361 | Val Loss: 0.3736 | Val AUC: 0.9242 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 107/200] Train Loss: 0.3327 | Val Loss: 0.3922 | Val AUC: 0.9246 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 108/200] Train Loss: 0.3322 | Val Loss: 0.3777 | Val AUC: 0.9248 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 110/200] Train Loss: 0.3329 | Val Loss: 0.3813 | Val AUC: 0.9251 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 113/200] Train Loss: 0.3369 | Val Loss: 0.3821 | Val AUC: 0.9256 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 116/200] Train Loss: 0.3306 | Val Loss: 0.3710 | Val AUC: 0.9258 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 117/200] Train Loss: 0.3275 | Val Loss: 0.3914 | Val AUC: 0.9260 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 119/200] Train Loss: 0.3287 | Val Loss: 0.3705 | Val AUC: 0.9262 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 120/200] Train Loss: 0.3283 | Val Loss: 0.3940 | Val AUC: 0.9265 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 122/200] Train Loss: 0.3277 | Val Loss: 0.3730 | Val AUC: 0.9270 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 123/200] Train Loss: 0.3266 | Val Loss: 0.3941 | Val AUC: 0.9271 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 125/200] Train Loss: 0.3264 | Val Loss: 0.3695 | Val AUC: 0.9274 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 126/200] Train Loss: 0.3245 | Val Loss: 0.3826 | Val AUC: 0.9276 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 129/200] Train Loss: 0.3263 | Val Loss: 0.3934 | Val AUC: 0.9279 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 130/200] Train Loss: 0.3255 | Val Loss: 0.3633 | Val AUC: 0.9280 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 133/200] Train Loss: 0.3270 | Val Loss: 0.3661 | Val AUC: 0.9283 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 135/200] Train Loss: 0.3230 | Val Loss: 0.3978 | Val AUC: 0.9284 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 136/200] Train Loss: 0.3257 | Val Loss: 0.3651 | Val AUC: 0.9289 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 140/200] Train Loss: 0.3200 | Val Loss: 0.3518 | Val AUC: 0.9283 | Time: 0.42s
+    [Epoch 141/200] Train Loss: 0.3259 | Val Loss: 0.3757 | Val AUC: 0.9291 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 142/200] Train Loss: 0.3185 | Val Loss: 0.3810 | Val AUC: 0.9293 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 144/200] Train Loss: 0.3198 | Val Loss: 0.3577 | Val AUC: 0.9294 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 145/200] Train Loss: 0.3194 | Val Loss: 0.3868 | Val AUC: 0.9295 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 146/200] Train Loss: 0.3193 | Val Loss: 0.3673 | Val AUC: 0.9300 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 148/200] Train Loss: 0.3177 | Val Loss: 0.3743 | Val AUC: 0.9304 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 151/200] Train Loss: 0.3222 | Val Loss: 0.3816 | Val AUC: 0.9305 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 152/200] Train Loss: 0.3161 | Val Loss: 0.3724 | Val AUC: 0.9306 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 157/200] Train Loss: 0.3174 | Val Loss: 0.3657 | Val AUC: 0.9312 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 158/200] Train Loss: 0.3137 | Val Loss: 0.3722 | Val AUC: 0.9314 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 160/200] Train Loss: 0.3129 | Val Loss: 0.3549 | Val AUC: 0.9311 | Time: 0.42s
+    [Epoch 161/200] Train Loss: 0.3146 | Val Loss: 0.3907 | Val AUC: 0.9317 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 162/200] Train Loss: 0.3177 | Val Loss: 0.3515 | Val AUC: 0.9322 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 169/200] Train Loss: 0.3118 | Val Loss: 0.3560 | Val AUC: 0.9323 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 170/200] Train Loss: 0.3104 | Val Loss: 0.3643 | Val AUC: 0.9324 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 174/200] Train Loss: 0.3090 | Val Loss: 0.3640 | Val AUC: 0.9326 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 176/200] Train Loss: 0.3104 | Val Loss: 0.3562 | Val AUC: 0.9328 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 180/200] Train Loss: 0.3075 | Val Loss: 0.3603 | Val AUC: 0.9329 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 182/200] Train Loss: 0.3065 | Val Loss: 0.3554 | Val AUC: 0.9330 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 186/200] Train Loss: 0.3079 | Val Loss: 0.3607 | Val AUC: 0.9331 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 187/200] Train Loss: 0.3063 | Val Loss: 0.3720 | Val AUC: 0.9335 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 188/200] Train Loss: 0.3093 | Val Loss: 0.3526 | Val AUC: 0.9337 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 192/200] Train Loss: 0.3106 | Val Loss: 0.3537 | Val AUC: 0.9339 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 193/200] Train Loss: 0.3063 | Val Loss: 0.3506 | Val AUC: 0.9341 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 200/200] Train Loss: 0.3056 | Val Loss: 0.3624 | Val AUC: 0.9341 | Time: 0.42s
+  ┌── [TEST METRICS: SAGE on RANDOM] ─────────────────────────
+  │  ROC-AUC:   0.9369  |  PR-AUC:   0.8896
+  │  F1-Score:  0.8106  |  Accuracy: 0.8138
+  │  Precision: 0.7625  |  Recall:   0.8651
+  │  Operating Point TPR @ 0.1% FPR: 0.2392 (Threshold: 0.3400)
+  └───────────────────────────────────────────────────────────────────
+
+--- Seed 2024 (sage) [random] ---
+    [Epoch 001/200] Train Loss: 0.7750 | Val Loss: 0.7465 | Val AUC: 0.4922 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 002/200] Train Loss: 0.6764 | Val Loss: 0.7473 | Val AUC: 0.5541 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 003/200] Train Loss: 0.6438 | Val Loss: 0.7043 | Val AUC: 0.6813 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 004/200] Train Loss: 0.6111 | Val Loss: 0.6657 | Val AUC: 0.7435 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 005/200] Train Loss: 0.5841 | Val Loss: 0.6383 | Val AUC: 0.7706 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 006/200] Train Loss: 0.5599 | Val Loss: 0.6238 | Val AUC: 0.7886 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 007/200] Train Loss: 0.5421 | Val Loss: 0.6217 | Val AUC: 0.7995 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 008/200] Train Loss: 0.5296 | Val Loss: 0.6166 | Val AUC: 0.8078 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 009/200] Train Loss: 0.5204 | Val Loss: 0.5980 | Val AUC: 0.8146 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 010/200] Train Loss: 0.5141 | Val Loss: 0.5747 | Val AUC: 0.8196 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 011/200] Train Loss: 0.5077 | Val Loss: 0.5606 | Val AUC: 0.8240 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 012/200] Train Loss: 0.5053 | Val Loss: 0.5585 | Val AUC: 0.8279 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 013/200] Train Loss: 0.4976 | Val Loss: 0.5572 | Val AUC: 0.8329 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 014/200] Train Loss: 0.4896 | Val Loss: 0.5458 | Val AUC: 0.8387 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 015/200] Train Loss: 0.4812 | Val Loss: 0.5322 | Val AUC: 0.8431 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 016/200] Train Loss: 0.4745 | Val Loss: 0.5255 | Val AUC: 0.8465 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 017/200] Train Loss: 0.4708 | Val Loss: 0.5287 | Val AUC: 0.8505 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 018/200] Train Loss: 0.4665 | Val Loss: 0.5275 | Val AUC: 0.8534 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 019/200] Train Loss: 0.4616 | Val Loss: 0.5127 | Val AUC: 0.8561 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 020/200] Train Loss: 0.4579 | Val Loss: 0.5017 | Val AUC: 0.8583 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 021/200] Train Loss: 0.4546 | Val Loss: 0.5016 | Val AUC: 0.8602 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 022/200] Train Loss: 0.4494 | Val Loss: 0.5112 | Val AUC: 0.8616 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 023/200] Train Loss: 0.4455 | Val Loss: 0.5007 | Val AUC: 0.8628 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 024/200] Train Loss: 0.4429 | Val Loss: 0.5008 | Val AUC: 0.8638 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 025/200] Train Loss: 0.4382 | Val Loss: 0.4997 | Val AUC: 0.8654 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 026/200] Train Loss: 0.4376 | Val Loss: 0.4943 | Val AUC: 0.8676 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 027/200] Train Loss: 0.4332 | Val Loss: 0.4965 | Val AUC: 0.8701 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 028/200] Train Loss: 0.4329 | Val Loss: 0.4863 | Val AUC: 0.8722 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 029/200] Train Loss: 0.4277 | Val Loss: 0.4803 | Val AUC: 0.8740 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 030/200] Train Loss: 0.4257 | Val Loss: 0.4846 | Val AUC: 0.8758 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 031/200] Train Loss: 0.4251 | Val Loss: 0.4723 | Val AUC: 0.8770 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 032/200] Train Loss: 0.4224 | Val Loss: 0.4698 | Val AUC: 0.8784 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 033/200] Train Loss: 0.4186 | Val Loss: 0.4724 | Val AUC: 0.8799 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 034/200] Train Loss: 0.4174 | Val Loss: 0.4591 | Val AUC: 0.8809 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 035/200] Train Loss: 0.4132 | Val Loss: 0.4729 | Val AUC: 0.8827 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 036/200] Train Loss: 0.4101 | Val Loss: 0.4674 | Val AUC: 0.8842 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 037/200] Train Loss: 0.4081 | Val Loss: 0.4492 | Val AUC: 0.8853 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 038/200] Train Loss: 0.4066 | Val Loss: 0.4634 | Val AUC: 0.8877 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 039/200] Train Loss: 0.4039 | Val Loss: 0.4572 | Val AUC: 0.8896 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 040/200] Train Loss: 0.4002 | Val Loss: 0.4414 | Val AUC: 0.8913 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 041/200] Train Loss: 0.3985 | Val Loss: 0.4494 | Val AUC: 0.8931 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 042/200] Train Loss: 0.3966 | Val Loss: 0.4522 | Val AUC: 0.8947 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 043/200] Train Loss: 0.3935 | Val Loss: 0.4339 | Val AUC: 0.8964 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 044/200] Train Loss: 0.3906 | Val Loss: 0.4349 | Val AUC: 0.8979 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 045/200] Train Loss: 0.3898 | Val Loss: 0.4668 | Val AUC: 0.8986 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 046/200] Train Loss: 0.3905 | Val Loss: 0.4182 | Val AUC: 0.9001 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 047/200] Train Loss: 0.3861 | Val Loss: 0.4144 | Val AUC: 0.9011 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 049/200] Train Loss: 0.3898 | Val Loss: 0.4440 | Val AUC: 0.9030 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 051/200] Train Loss: 0.3898 | Val Loss: 0.4052 | Val AUC: 0.9040 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 052/200] Train Loss: 0.3825 | Val Loss: 0.4554 | Val AUC: 0.9042 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 053/200] Train Loss: 0.3840 | Val Loss: 0.4501 | Val AUC: 0.9048 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 054/200] Train Loss: 0.3785 | Val Loss: 0.4104 | Val AUC: 0.9054 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 056/200] Train Loss: 0.3788 | Val Loss: 0.4179 | Val AUC: 0.9062 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 057/200] Train Loss: 0.3712 | Val Loss: 0.4540 | Val AUC: 0.9064 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 058/200] Train Loss: 0.3780 | Val Loss: 0.4365 | Val AUC: 0.9073 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 059/200] Train Loss: 0.3733 | Val Loss: 0.4028 | Val AUC: 0.9080 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 060/200] Train Loss: 0.3700 | Val Loss: 0.3997 | Val AUC: 0.9089 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 061/200] Train Loss: 0.3691 | Val Loss: 0.4231 | Val AUC: 0.9098 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 062/200] Train Loss: 0.3675 | Val Loss: 0.4320 | Val AUC: 0.9100 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 063/200] Train Loss: 0.3704 | Val Loss: 0.4009 | Val AUC: 0.9110 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 065/200] Train Loss: 0.3670 | Val Loss: 0.3996 | Val AUC: 0.9118 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 066/200] Train Loss: 0.3619 | Val Loss: 0.4209 | Val AUC: 0.9121 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 067/200] Train Loss: 0.3638 | Val Loss: 0.4110 | Val AUC: 0.9127 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 069/200] Train Loss: 0.3733 | Val Loss: 0.4049 | Val AUC: 0.9136 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 071/200] Train Loss: 0.3624 | Val Loss: 0.4066 | Val AUC: 0.9141 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 072/200] Train Loss: 0.3588 | Val Loss: 0.3866 | Val AUC: 0.9142 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 073/200] Train Loss: 0.3597 | Val Loss: 0.3903 | Val AUC: 0.9147 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 074/200] Train Loss: 0.3579 | Val Loss: 0.4266 | Val AUC: 0.9150 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 075/200] Train Loss: 0.3599 | Val Loss: 0.4143 | Val AUC: 0.9154 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 076/200] Train Loss: 0.3541 | Val Loss: 0.3886 | Val AUC: 0.9156 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 077/200] Train Loss: 0.3540 | Val Loss: 0.3829 | Val AUC: 0.9157 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 078/200] Train Loss: 0.3528 | Val Loss: 0.3994 | Val AUC: 0.9168 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 079/200] Train Loss: 0.3519 | Val Loss: 0.4002 | Val AUC: 0.9173 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 080/200] Train Loss: 0.3531 | Val Loss: 0.3890 | Val AUC: 0.9176 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 081/200] Train Loss: 0.3505 | Val Loss: 0.3836 | Val AUC: 0.9179 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 082/200] Train Loss: 0.3508 | Val Loss: 0.4010 | Val AUC: 0.9183 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 083/200] Train Loss: 0.3487 | Val Loss: 0.3975 | Val AUC: 0.9184 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 085/200] Train Loss: 0.3518 | Val Loss: 0.3973 | Val AUC: 0.9188 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 086/200] Train Loss: 0.3474 | Val Loss: 0.4010 | Val AUC: 0.9193 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 087/200] Train Loss: 0.3467 | Val Loss: 0.3854 | Val AUC: 0.9195 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 088/200] Train Loss: 0.3454 | Val Loss: 0.3856 | Val AUC: 0.9198 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 089/200] Train Loss: 0.3460 | Val Loss: 0.3853 | Val AUC: 0.9202 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 090/200] Train Loss: 0.3427 | Val Loss: 0.3862 | Val AUC: 0.9206 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 091/200] Train Loss: 0.3451 | Val Loss: 0.3820 | Val AUC: 0.9209 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 092/200] Train Loss: 0.3432 | Val Loss: 0.3879 | Val AUC: 0.9212 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 093/200] Train Loss: 0.3434 | Val Loss: 0.3841 | Val AUC: 0.9213 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 095/200] Train Loss: 0.3414 | Val Loss: 0.3915 | Val AUC: 0.9218 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 096/200] Train Loss: 0.3397 | Val Loss: 0.3836 | Val AUC: 0.9220 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 099/200] Train Loss: 0.3442 | Val Loss: 0.3693 | Val AUC: 0.9221 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 100/200] Train Loss: 0.3380 | Val Loss: 0.3774 | Val AUC: 0.9229 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 104/200] Train Loss: 0.3376 | Val Loss: 0.4047 | Val AUC: 0.9233 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 105/200] Train Loss: 0.3398 | Val Loss: 0.3695 | Val AUC: 0.9238 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 107/200] Train Loss: 0.3356 | Val Loss: 0.4022 | Val AUC: 0.9240 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 108/200] Train Loss: 0.3363 | Val Loss: 0.3757 | Val AUC: 0.9241 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 110/200] Train Loss: 0.3341 | Val Loss: 0.3861 | Val AUC: 0.9245 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 111/200] Train Loss: 0.3341 | Val Loss: 0.3749 | Val AUC: 0.9247 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 113/200] Train Loss: 0.3334 | Val Loss: 0.3951 | Val AUC: 0.9255 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 115/200] Train Loss: 0.3320 | Val Loss: 0.3783 | Val AUC: 0.9261 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 120/200] Train Loss: 0.3278 | Val Loss: 0.3635 | Val AUC: 0.9263 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 121/200] Train Loss: 0.3264 | Val Loss: 0.3630 | Val AUC: 0.9265 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 122/200] Train Loss: 0.3289 | Val Loss: 0.4011 | Val AUC: 0.9267 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 123/200] Train Loss: 0.3315 | Val Loss: 0.3654 | Val AUC: 0.9272 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 128/200] Train Loss: 0.3249 | Val Loss: 0.3703 | Val AUC: 0.9276 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 129/200] Train Loss: 0.3244 | Val Loss: 0.3714 | Val AUC: 0.9278 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 130/200] Train Loss: 0.3244 | Val Loss: 0.3688 | Val AUC: 0.9280 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 132/200] Train Loss: 0.3223 | Val Loss: 0.3716 | Val AUC: 0.9284 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 133/200] Train Loss: 0.3212 | Val Loss: 0.3772 | Val AUC: 0.9285 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 135/200] Train Loss: 0.3284 | Val Loss: 0.3867 | Val AUC: 0.9287 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 136/200] Train Loss: 0.3236 | Val Loss: 0.3649 | Val AUC: 0.9290 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 140/200] Train Loss: 0.3196 | Val Loss: 0.3520 | Val AUC: 0.9288 | Time: 0.42s
+    [Epoch 141/200] Train Loss: 0.3213 | Val Loss: 0.3747 | Val AUC: 0.9296 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 142/200] Train Loss: 0.3196 | Val Loss: 0.3604 | Val AUC: 0.9297 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 143/200] Train Loss: 0.3201 | Val Loss: 0.3575 | Val AUC: 0.9298 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 148/200] Train Loss: 0.3191 | Val Loss: 0.3468 | Val AUC: 0.9299 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 149/200] Train Loss: 0.3197 | Val Loss: 0.3736 | Val AUC: 0.9304 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 150/200] Train Loss: 0.3154 | Val Loss: 0.3687 | Val AUC: 0.9305 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 160/200] Train Loss: 0.3135 | Val Loss: 0.3607 | Val AUC: 0.9308 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 162/200] Train Loss: 0.3122 | Val Loss: 0.3559 | Val AUC: 0.9313 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 163/200] Train Loss: 0.3120 | Val Loss: 0.3665 | Val AUC: 0.9315 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 171/200] Train Loss: 0.3107 | Val Loss: 0.3574 | Val AUC: 0.9317 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 172/200] Train Loss: 0.3106 | Val Loss: 0.3631 | Val AUC: 0.9318 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 177/200] Train Loss: 0.3090 | Val Loss: 0.3553 | Val AUC: 0.9319 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 180/200] Train Loss: 0.3092 | Val Loss: 0.3593 | Val AUC: 0.9319 | Time: 0.42s
+    [Epoch 182/200] Train Loss: 0.3090 | Val Loss: 0.3557 | Val AUC: 0.9320 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 183/200] Train Loss: 0.3081 | Val Loss: 0.3581 | Val AUC: 0.9321 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 184/200] Train Loss: 0.3084 | Val Loss: 0.3571 | Val AUC: 0.9322 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 193/200] Train Loss: 0.3073 | Val Loss: 0.3557 | Val AUC: 0.9323 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 197/200] Train Loss: 0.3077 | Val Loss: 0.3561 | Val AUC: 0.9324 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 200/200] Train Loss: 0.3089 | Val Loss: 0.3523 | Val AUC: 0.9323 | Time: 0.42s
+  ┌── [TEST METRICS: SAGE on RANDOM] ─────────────────────────
+  │  ROC-AUC:   0.9327  |  PR-AUC:   0.8816
+  │  F1-Score:  0.8058  |  Accuracy: 0.8101
+  │  Precision: 0.7512  |  Recall:   0.8691
+  │  Operating Point TPR @ 0.1% FPR: 0.1634 (Threshold: 0.3000)
+  └───────────────────────────────────────────────────────────────────
+
+--- Seed 777 (sage) [random] ---
+    [Epoch 001/200] Train Loss: 0.7042 | Val Loss: 0.8162 | Val AUC: 0.5267 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 002/200] Train Loss: 0.6678 | Val Loss: 0.6889 | Val AUC: 0.7131 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 003/200] Train Loss: 0.6032 | Val Loss: 0.6475 | Val AUC: 0.7575 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 004/200] Train Loss: 0.5832 | Val Loss: 0.6337 | Val AUC: 0.7592 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 005/200] Train Loss: 0.5662 | Val Loss: 0.6300 | Val AUC: 0.7637 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 006/200] Train Loss: 0.5507 | Val Loss: 0.6269 | Val AUC: 0.7742 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 007/200] Train Loss: 0.5413 | Val Loss: 0.6033 | Val AUC: 0.7873 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 008/200] Train Loss: 0.5250 | Val Loss: 0.5764 | Val AUC: 0.7997 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 009/200] Train Loss: 0.5171 | Val Loss: 0.5600 | Val AUC: 0.8107 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 010/200] Train Loss: 0.5109 | Val Loss: 0.5586 | Val AUC: 0.8189 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 011/200] Train Loss: 0.5013 | Val Loss: 0.5630 | Val AUC: 0.8250 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 012/200] Train Loss: 0.4974 | Val Loss: 0.5458 | Val AUC: 0.8322 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 013/200] Train Loss: 0.4878 | Val Loss: 0.5363 | Val AUC: 0.8360 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 014/200] Train Loss: 0.4855 | Val Loss: 0.5368 | Val AUC: 0.8389 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 015/200] Train Loss: 0.4746 | Val Loss: 0.5396 | Val AUC: 0.8419 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 016/200] Train Loss: 0.4720 | Val Loss: 0.5355 | Val AUC: 0.8447 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 017/200] Train Loss: 0.4674 | Val Loss: 0.5215 | Val AUC: 0.8476 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 018/200] Train Loss: 0.4627 | Val Loss: 0.5087 | Val AUC: 0.8505 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 019/200] Train Loss: 0.4583 | Val Loss: 0.5029 | Val AUC: 0.8535 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 020/200] Train Loss: 0.4555 | Val Loss: 0.5054 | Val AUC: 0.8561 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 021/200] Train Loss: 0.4509 | Val Loss: 0.5119 | Val AUC: 0.8582 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 022/200] Train Loss: 0.4477 | Val Loss: 0.5069 | Val AUC: 0.8601 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 023/200] Train Loss: 0.4461 | Val Loss: 0.4945 | Val AUC: 0.8614 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 024/200] Train Loss: 0.4444 | Val Loss: 0.4980 | Val AUC: 0.8644 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 025/200] Train Loss: 0.4394 | Val Loss: 0.5065 | Val AUC: 0.8666 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 026/200] Train Loss: 0.4371 | Val Loss: 0.4893 | Val AUC: 0.8690 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 027/200] Train Loss: 0.4337 | Val Loss: 0.4739 | Val AUC: 0.8709 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 028/200] Train Loss: 0.4306 | Val Loss: 0.4769 | Val AUC: 0.8731 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 029/200] Train Loss: 0.4275 | Val Loss: 0.4911 | Val AUC: 0.8749 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 030/200] Train Loss: 0.4252 | Val Loss: 0.4858 | Val AUC: 0.8763 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 031/200] Train Loss: 0.4213 | Val Loss: 0.4688 | Val AUC: 0.8771 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 032/200] Train Loss: 0.4205 | Val Loss: 0.4632 | Val AUC: 0.8781 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 033/200] Train Loss: 0.4202 | Val Loss: 0.4743 | Val AUC: 0.8803 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 034/200] Train Loss: 0.4161 | Val Loss: 0.4820 | Val AUC: 0.8819 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 035/200] Train Loss: 0.4182 | Val Loss: 0.4647 | Val AUC: 0.8833 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 036/200] Train Loss: 0.4112 | Val Loss: 0.4488 | Val AUC: 0.8842 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 037/200] Train Loss: 0.4110 | Val Loss: 0.4572 | Val AUC: 0.8862 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 038/200] Train Loss: 0.4054 | Val Loss: 0.4779 | Val AUC: 0.8871 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 039/200] Train Loss: 0.4070 | Val Loss: 0.4482 | Val AUC: 0.8886 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 040/200] Train Loss: 0.4012 | Val Loss: 0.4473 | Val AUC: 0.8899 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 041/200] Train Loss: 0.4009 | Val Loss: 0.4623 | Val AUC: 0.8912 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 042/200] Train Loss: 0.4043 | Val Loss: 0.4352 | Val AUC: 0.8924 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 043/200] Train Loss: 0.3975 | Val Loss: 0.4422 | Val AUC: 0.8939 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 044/200] Train Loss: 0.3917 | Val Loss: 0.4507 | Val AUC: 0.8951 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 045/200] Train Loss: 0.3907 | Val Loss: 0.4447 | Val AUC: 0.8961 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 046/200] Train Loss: 0.3894 | Val Loss: 0.4315 | Val AUC: 0.8966 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 047/200] Train Loss: 0.3872 | Val Loss: 0.4402 | Val AUC: 0.8979 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 048/200] Train Loss: 0.3818 | Val Loss: 0.4601 | Val AUC: 0.8989 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 049/200] Train Loss: 0.3899 | Val Loss: 0.4159 | Val AUC: 0.8994 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 050/200] Train Loss: 0.3852 | Val Loss: 0.4247 | Val AUC: 0.9011 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 051/200] Train Loss: 0.3795 | Val Loss: 0.4505 | Val AUC: 0.9017 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 052/200] Train Loss: 0.3805 | Val Loss: 0.4245 | Val AUC: 0.9026 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 054/200] Train Loss: 0.3863 | Val Loss: 0.4449 | Val AUC: 0.9037 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 055/200] Train Loss: 0.3760 | Val Loss: 0.4651 | Val AUC: 0.9042 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 056/200] Train Loss: 0.3830 | Val Loss: 0.4117 | Val AUC: 0.9043 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 057/200] Train Loss: 0.3742 | Val Loss: 0.4050 | Val AUC: 0.9046 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 058/200] Train Loss: 0.3751 | Val Loss: 0.4224 | Val AUC: 0.9061 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 059/200] Train Loss: 0.3694 | Val Loss: 0.4409 | Val AUC: 0.9067 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 060/200] Train Loss: 0.3765 | Val Loss: 0.4111 | Val AUC: 0.9075 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 062/200] Train Loss: 0.3675 | Val Loss: 0.4161 | Val AUC: 0.9087 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 063/200] Train Loss: 0.3638 | Val Loss: 0.4402 | Val AUC: 0.9093 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 064/200] Train Loss: 0.3657 | Val Loss: 0.4169 | Val AUC: 0.9099 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 066/200] Train Loss: 0.3628 | Val Loss: 0.4055 | Val AUC: 0.9110 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 067/200] Train Loss: 0.3613 | Val Loss: 0.4197 | Val AUC: 0.9116 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 068/200] Train Loss: 0.3586 | Val Loss: 0.4181 | Val AUC: 0.9121 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 069/200] Train Loss: 0.3593 | Val Loss: 0.3934 | Val AUC: 0.9127 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 070/200] Train Loss: 0.3589 | Val Loss: 0.4021 | Val AUC: 0.9133 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 071/200] Train Loss: 0.3576 | Val Loss: 0.4261 | Val AUC: 0.9134 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 072/200] Train Loss: 0.3595 | Val Loss: 0.3950 | Val AUC: 0.9139 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 073/200] Train Loss: 0.3564 | Val Loss: 0.3947 | Val AUC: 0.9142 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 074/200] Train Loss: 0.3562 | Val Loss: 0.4176 | Val AUC: 0.9147 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 075/200] Train Loss: 0.3541 | Val Loss: 0.4073 | Val AUC: 0.9152 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 077/200] Train Loss: 0.3508 | Val Loss: 0.3991 | Val AUC: 0.9157 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 078/200] Train Loss: 0.3527 | Val Loss: 0.3909 | Val AUC: 0.9159 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 079/200] Train Loss: 0.3500 | Val Loss: 0.3944 | Val AUC: 0.9162 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 080/200] Train Loss: 0.3494 | Val Loss: 0.4119 | Val AUC: 0.9166 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 081/200] Train Loss: 0.3511 | Val Loss: 0.3844 | Val AUC: 0.9170 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 082/200] Train Loss: 0.3491 | Val Loss: 0.3865 | Val AUC: 0.9171 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 083/200] Train Loss: 0.3480 | Val Loss: 0.4224 | Val AUC: 0.9176 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 084/200] Train Loss: 0.3501 | Val Loss: 0.3884 | Val AUC: 0.9186 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 087/200] Train Loss: 0.3472 | Val Loss: 0.3878 | Val AUC: 0.9192 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 089/200] Train Loss: 0.3450 | Val Loss: 0.3922 | Val AUC: 0.9197 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 090/200] Train Loss: 0.3411 | Val Loss: 0.4006 | Val AUC: 0.9199 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 091/200] Train Loss: 0.3425 | Val Loss: 0.3879 | Val AUC: 0.9204 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 092/200] Train Loss: 0.3408 | Val Loss: 0.3823 | Val AUC: 0.9207 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 093/200] Train Loss: 0.3397 | Val Loss: 0.3869 | Val AUC: 0.9213 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 094/200] Train Loss: 0.3383 | Val Loss: 0.3860 | Val AUC: 0.9216 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 095/200] Train Loss: 0.3400 | Val Loss: 0.3785 | Val AUC: 0.9220 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 098/200] Train Loss: 0.3388 | Val Loss: 0.4027 | Val AUC: 0.9223 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 100/200] Train Loss: 0.3380 | Val Loss: 0.3849 | Val AUC: 0.9225 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 103/200] Train Loss: 0.3403 | Val Loss: 0.3890 | Val AUC: 0.9233 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 106/200] Train Loss: 0.3387 | Val Loss: 0.3902 | Val AUC: 0.9235 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 107/200] Train Loss: 0.3338 | Val Loss: 0.3891 | Val AUC: 0.9240 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 108/200] Train Loss: 0.3326 | Val Loss: 0.3684 | Val AUC: 0.9244 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 109/200] Train Loss: 0.3318 | Val Loss: 0.3779 | Val AUC: 0.9251 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 115/200] Train Loss: 0.3308 | Val Loss: 0.3935 | Val AUC: 0.9254 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 116/200] Train Loss: 0.3315 | Val Loss: 0.3741 | Val AUC: 0.9260 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 118/200] Train Loss: 0.3288 | Val Loss: 0.3773 | Val AUC: 0.9266 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 119/200] Train Loss: 0.3241 | Val Loss: 0.3852 | Val AUC: 0.9269 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 120/200] Train Loss: 0.3254 | Val Loss: 0.3610 | Val AUC: 0.9269 | Time: 0.42s
+    [Epoch 123/200] Train Loss: 0.3273 | Val Loss: 0.3785 | Val AUC: 0.9274 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 126/200] Train Loss: 0.3266 | Val Loss: 0.3790 | Val AUC: 0.9276 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 127/200] Train Loss: 0.3228 | Val Loss: 0.3805 | Val AUC: 0.9279 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 129/200] Train Loss: 0.3239 | Val Loss: 0.3760 | Val AUC: 0.9281 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 130/200] Train Loss: 0.3213 | Val Loss: 0.3808 | Val AUC: 0.9282 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 131/200] Train Loss: 0.3204 | Val Loss: 0.3609 | Val AUC: 0.9284 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 134/200] Train Loss: 0.3384 | Val Loss: 0.3606 | Val AUC: 0.9285 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 139/200] Train Loss: 0.3274 | Val Loss: 0.3611 | Val AUC: 0.9286 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 140/200] Train Loss: 0.3198 | Val Loss: 0.4183 | Val AUC: 0.9282 | Time: 0.42s
+    [Epoch 142/200] Train Loss: 0.3235 | Val Loss: 0.3536 | Val AUC: 0.9287 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 143/200] Train Loss: 0.3193 | Val Loss: 0.3771 | Val AUC: 0.9291 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 146/200] Train Loss: 0.3236 | Val Loss: 0.3649 | Val AUC: 0.9295 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 147/200] Train Loss: 0.3165 | Val Loss: 0.3862 | Val AUC: 0.9296 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 148/200] Train Loss: 0.3205 | Val Loss: 0.3574 | Val AUC: 0.9297 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 149/200] Train Loss: 0.3156 | Val Loss: 0.3602 | Val AUC: 0.9298 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 150/200] Train Loss: 0.3150 | Val Loss: 0.3683 | Val AUC: 0.9300 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 151/200] Train Loss: 0.3138 | Val Loss: 0.3748 | Val AUC: 0.9301 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 153/200] Train Loss: 0.3144 | Val Loss: 0.3589 | Val AUC: 0.9302 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 154/200] Train Loss: 0.3126 | Val Loss: 0.3878 | Val AUC: 0.9307 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 155/200] Train Loss: 0.3169 | Val Loss: 0.3525 | Val AUC: 0.9309 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 156/200] Train Loss: 0.3134 | Val Loss: 0.3527 | Val AUC: 0.9311 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 160/200] Train Loss: 0.3123 | Val Loss: 0.3878 | Val AUC: 0.9308 | Time: 0.42s
+    [Epoch 161/200] Train Loss: 0.3145 | Val Loss: 0.3546 | Val AUC: 0.9313 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 163/200] Train Loss: 0.3119 | Val Loss: 0.3777 | Val AUC: 0.9314 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 166/200] Train Loss: 0.3122 | Val Loss: 0.3799 | Val AUC: 0.9316 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 167/200] Train Loss: 0.3118 | Val Loss: 0.3658 | Val AUC: 0.9318 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 176/200] Train Loss: 0.3084 | Val Loss: 0.3591 | Val AUC: 0.9319 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 177/200] Train Loss: 0.3063 | Val Loss: 0.3727 | Val AUC: 0.9320 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 178/200] Train Loss: 0.3085 | Val Loss: 0.3676 | Val AUC: 0.9321 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 179/200] Train Loss: 0.3065 | Val Loss: 0.3540 | Val AUC: 0.9322 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 180/200] Train Loss: 0.3061 | Val Loss: 0.3478 | Val AUC: 0.9322 | Time: 0.42s
+    [Epoch 181/200] Train Loss: 0.3087 | Val Loss: 0.3615 | Val AUC: 0.9325 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 186/200] Train Loss: 0.3062 | Val Loss: 0.3682 | Val AUC: 0.9326 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 187/200] Train Loss: 0.3060 | Val Loss: 0.3712 | Val AUC: 0.9327 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 188/200] Train Loss: 0.3061 | Val Loss: 0.3571 | Val AUC: 0.9328 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 190/200] Train Loss: 0.3039 | Val Loss: 0.3593 | Val AUC: 0.9329 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 194/200] Train Loss: 0.3041 | Val Loss: 0.3552 | Val AUC: 0.9331 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 195/200] Train Loss: 0.3028 | Val Loss: 0.3638 | Val AUC: 0.9332 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 200/200] Train Loss: 0.3017 | Val Loss: 0.3556 | Val AUC: 0.9334 | Time: 0.42s ★ (Best Val AUC)
+  ┌── [TEST METRICS: SAGE on RANDOM] ─────────────────────────
+  │  ROC-AUC:   0.9312  |  PR-AUC:   0.8811
+  │  F1-Score:  0.7880  |  Accuracy: 0.7991
+  │  Precision: 0.7050  |  Recall:   0.8931
+  │  Operating Point TPR @ 0.1% FPR: 0.1915 (Threshold: 0.2100)
+  └───────────────────────────────────────────────────────────────────
+
+--- Seed 999 (sage) [random] ---
+    [Epoch 001/200] Train Loss: 0.7377 | Val Loss: 0.7736 | Val AUC: 0.4914 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 002/200] Train Loss: 0.6788 | Val Loss: 0.7353 | Val AUC: 0.5409 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 003/200] Train Loss: 0.6423 | Val Loss: 0.6749 | Val AUC: 0.6923 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 004/200] Train Loss: 0.6086 | Val Loss: 0.6360 | Val AUC: 0.7425 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 005/200] Train Loss: 0.5791 | Val Loss: 0.6206 | Val AUC: 0.7674 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 006/200] Train Loss: 0.5570 | Val Loss: 0.5991 | Val AUC: 0.7911 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 007/200] Train Loss: 0.5355 | Val Loss: 0.5659 | Val AUC: 0.8104 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 008/200] Train Loss: 0.5199 | Val Loss: 0.5429 | Val AUC: 0.8242 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 009/200] Train Loss: 0.5094 | Val Loss: 0.5468 | Val AUC: 0.8299 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 010/200] Train Loss: 0.5012 | Val Loss: 0.5554 | Val AUC: 0.8331 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 011/200] Train Loss: 0.5037 | Val Loss: 0.5308 | Val AUC: 0.8415 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 012/200] Train Loss: 0.4984 | Val Loss: 0.5249 | Val AUC: 0.8473 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 013/200] Train Loss: 0.4835 | Val Loss: 0.5318 | Val AUC: 0.8514 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 014/200] Train Loss: 0.4769 | Val Loss: 0.5334 | Val AUC: 0.8546 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 015/200] Train Loss: 0.4716 | Val Loss: 0.5233 | Val AUC: 0.8573 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 016/200] Train Loss: 0.4663 | Val Loss: 0.5156 | Val AUC: 0.8594 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 017/200] Train Loss: 0.4607 | Val Loss: 0.5071 | Val AUC: 0.8617 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 018/200] Train Loss: 0.4573 | Val Loss: 0.5018 | Val AUC: 0.8639 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 019/200] Train Loss: 0.4524 | Val Loss: 0.4950 | Val AUC: 0.8661 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 020/200] Train Loss: 0.4488 | Val Loss: 0.4818 | Val AUC: 0.8681 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 021/200] Train Loss: 0.4474 | Val Loss: 0.4890 | Val AUC: 0.8688 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 022/200] Train Loss: 0.4456 | Val Loss: 0.4849 | Val AUC: 0.8705 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 023/200] Train Loss: 0.4404 | Val Loss: 0.4761 | Val AUC: 0.8726 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 024/200] Train Loss: 0.4394 | Val Loss: 0.4876 | Val AUC: 0.8745 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 025/200] Train Loss: 0.4354 | Val Loss: 0.4894 | Val AUC: 0.8764 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 026/200] Train Loss: 0.4344 | Val Loss: 0.4704 | Val AUC: 0.8783 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 027/200] Train Loss: 0.4327 | Val Loss: 0.4669 | Val AUC: 0.8798 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 028/200] Train Loss: 0.4300 | Val Loss: 0.4798 | Val AUC: 0.8807 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 029/200] Train Loss: 0.4296 | Val Loss: 0.4679 | Val AUC: 0.8822 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 030/200] Train Loss: 0.4255 | Val Loss: 0.4522 | Val AUC: 0.8835 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 031/200] Train Loss: 0.4215 | Val Loss: 0.4637 | Val AUC: 0.8846 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 032/200] Train Loss: 0.4194 | Val Loss: 0.4704 | Val AUC: 0.8856 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 033/200] Train Loss: 0.4190 | Val Loss: 0.4614 | Val AUC: 0.8873 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 034/200] Train Loss: 0.4151 | Val Loss: 0.4477 | Val AUC: 0.8887 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 035/200] Train Loss: 0.4118 | Val Loss: 0.4599 | Val AUC: 0.8906 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 036/200] Train Loss: 0.4099 | Val Loss: 0.4566 | Val AUC: 0.8922 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 037/200] Train Loss: 0.4107 | Val Loss: 0.4401 | Val AUC: 0.8937 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 038/200] Train Loss: 0.4072 | Val Loss: 0.4293 | Val AUC: 0.8948 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 039/200] Train Loss: 0.4038 | Val Loss: 0.4499 | Val AUC: 0.8958 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 040/200] Train Loss: 0.4044 | Val Loss: 0.4417 | Val AUC: 0.8974 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 041/200] Train Loss: 0.3960 | Val Loss: 0.4268 | Val AUC: 0.8991 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 042/200] Train Loss: 0.3983 | Val Loss: 0.4387 | Val AUC: 0.9004 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 043/200] Train Loss: 0.3930 | Val Loss: 0.4341 | Val AUC: 0.9019 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 044/200] Train Loss: 0.3932 | Val Loss: 0.4137 | Val AUC: 0.9030 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 045/200] Train Loss: 0.3908 | Val Loss: 0.4315 | Val AUC: 0.9039 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 046/200] Train Loss: 0.3866 | Val Loss: 0.4226 | Val AUC: 0.9049 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 047/200] Train Loss: 0.3858 | Val Loss: 0.4035 | Val AUC: 0.9052 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 048/200] Train Loss: 0.3885 | Val Loss: 0.4355 | Val AUC: 0.9069 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 049/200] Train Loss: 0.3844 | Val Loss: 0.4137 | Val AUC: 0.9081 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 050/200] Train Loss: 0.3784 | Val Loss: 0.3994 | Val AUC: 0.9085 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 051/200] Train Loss: 0.3809 | Val Loss: 0.4147 | Val AUC: 0.9096 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 053/200] Train Loss: 0.3871 | Val Loss: 0.3909 | Val AUC: 0.9101 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 054/200] Train Loss: 0.3785 | Val Loss: 0.3893 | Val AUC: 0.9105 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 055/200] Train Loss: 0.3827 | Val Loss: 0.4474 | Val AUC: 0.9113 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 056/200] Train Loss: 0.3814 | Val Loss: 0.4281 | Val AUC: 0.9124 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 057/200] Train Loss: 0.3717 | Val Loss: 0.3882 | Val AUC: 0.9128 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 058/200] Train Loss: 0.3766 | Val Loss: 0.3871 | Val AUC: 0.9133 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 059/200] Train Loss: 0.3746 | Val Loss: 0.4143 | Val AUC: 0.9140 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 060/200] Train Loss: 0.3675 | Val Loss: 0.4244 | Val AUC: 0.9141 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 061/200] Train Loss: 0.3708 | Val Loss: 0.3937 | Val AUC: 0.9151 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 062/200] Train Loss: 0.3646 | Val Loss: 0.3866 | Val AUC: 0.9156 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 063/200] Train Loss: 0.3642 | Val Loss: 0.3958 | Val AUC: 0.9165 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 064/200] Train Loss: 0.3619 | Val Loss: 0.4010 | Val AUC: 0.9170 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 065/200] Train Loss: 0.3615 | Val Loss: 0.3854 | Val AUC: 0.9175 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 066/200] Train Loss: 0.3621 | Val Loss: 0.3890 | Val AUC: 0.9181 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 067/200] Train Loss: 0.3597 | Val Loss: 0.4067 | Val AUC: 0.9183 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 068/200] Train Loss: 0.3598 | Val Loss: 0.3852 | Val AUC: 0.9191 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 069/200] Train Loss: 0.3574 | Val Loss: 0.3750 | Val AUC: 0.9194 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 071/200] Train Loss: 0.3578 | Val Loss: 0.3952 | Val AUC: 0.9199 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 072/200] Train Loss: 0.3555 | Val Loss: 0.3692 | Val AUC: 0.9203 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 073/200] Train Loss: 0.3627 | Val Loss: 0.3916 | Val AUC: 0.9204 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 075/200] Train Loss: 0.3549 | Val Loss: 0.3764 | Val AUC: 0.9212 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 076/200] Train Loss: 0.3523 | Val Loss: 0.3739 | Val AUC: 0.9214 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 077/200] Train Loss: 0.3528 | Val Loss: 0.3987 | Val AUC: 0.9217 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 078/200] Train Loss: 0.3547 | Val Loss: 0.3760 | Val AUC: 0.9221 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 079/200] Train Loss: 0.3493 | Val Loss: 0.3715 | Val AUC: 0.9224 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 080/200] Train Loss: 0.3497 | Val Loss: 0.3821 | Val AUC: 0.9227 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 081/200] Train Loss: 0.3492 | Val Loss: 0.3822 | Val AUC: 0.9231 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 082/200] Train Loss: 0.3484 | Val Loss: 0.3655 | Val AUC: 0.9232 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 083/200] Train Loss: 0.3471 | Val Loss: 0.3825 | Val AUC: 0.9237 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 084/200] Train Loss: 0.3491 | Val Loss: 0.3770 | Val AUC: 0.9241 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 085/200] Train Loss: 0.3452 | Val Loss: 0.3642 | Val AUC: 0.9243 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 086/200] Train Loss: 0.3450 | Val Loss: 0.3847 | Val AUC: 0.9245 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 087/200] Train Loss: 0.3449 | Val Loss: 0.3744 | Val AUC: 0.9250 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 088/200] Train Loss: 0.3441 | Val Loss: 0.3669 | Val AUC: 0.9251 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 089/200] Train Loss: 0.3421 | Val Loss: 0.3834 | Val AUC: 0.9254 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 090/200] Train Loss: 0.3438 | Val Loss: 0.3665 | Val AUC: 0.9258 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 091/200] Train Loss: 0.3424 | Val Loss: 0.3789 | Val AUC: 0.9260 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 092/200] Train Loss: 0.3398 | Val Loss: 0.3785 | Val AUC: 0.9262 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 093/200] Train Loss: 0.3394 | Val Loss: 0.3625 | Val AUC: 0.9266 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 096/200] Train Loss: 0.3393 | Val Loss: 0.3774 | Val AUC: 0.9270 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 099/200] Train Loss: 0.3489 | Val Loss: 0.3589 | Val AUC: 0.9279 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 100/200] Train Loss: 0.3368 | Val Loss: 0.3534 | Val AUC: 0.9275 | Time: 0.42s
+    [Epoch 102/200] Train Loss: 0.3443 | Val Loss: 0.3691 | Val AUC: 0.9281 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 104/200] Train Loss: 0.3355 | Val Loss: 0.3760 | Val AUC: 0.9283 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 105/200] Train Loss: 0.3358 | Val Loss: 0.3741 | Val AUC: 0.9288 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 106/200] Train Loss: 0.3356 | Val Loss: 0.3504 | Val AUC: 0.9290 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 107/200] Train Loss: 0.3366 | Val Loss: 0.3661 | Val AUC: 0.9293 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 109/200] Train Loss: 0.3323 | Val Loss: 0.3527 | Val AUC: 0.9295 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 110/200] Train Loss: 0.3335 | Val Loss: 0.3795 | Val AUC: 0.9298 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 111/200] Train Loss: 0.3348 | Val Loss: 0.3514 | Val AUC: 0.9300 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 112/200] Train Loss: 0.3304 | Val Loss: 0.3544 | Val AUC: 0.9303 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 114/200] Train Loss: 0.3374 | Val Loss: 0.3481 | Val AUC: 0.9304 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 115/200] Train Loss: 0.3336 | Val Loss: 0.3611 | Val AUC: 0.9305 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 117/200] Train Loss: 0.3316 | Val Loss: 0.3475 | Val AUC: 0.9311 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 118/200] Train Loss: 0.3293 | Val Loss: 0.3589 | Val AUC: 0.9312 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 119/200] Train Loss: 0.3300 | Val Loss: 0.3649 | Val AUC: 0.9313 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 120/200] Train Loss: 0.3274 | Val Loss: 0.3585 | Val AUC: 0.9317 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 121/200] Train Loss: 0.3261 | Val Loss: 0.3564 | Val AUC: 0.9318 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 123/200] Train Loss: 0.3277 | Val Loss: 0.3543 | Val AUC: 0.9321 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 124/200] Train Loss: 0.3269 | Val Loss: 0.3526 | Val AUC: 0.9325 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 126/200] Train Loss: 0.3252 | Val Loss: 0.3490 | Val AUC: 0.9328 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 127/200] Train Loss: 0.3228 | Val Loss: 0.3551 | Val AUC: 0.9331 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 130/200] Train Loss: 0.3239 | Val Loss: 0.3516 | Val AUC: 0.9336 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 131/200] Train Loss: 0.3231 | Val Loss: 0.3585 | Val AUC: 0.9340 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 134/200] Train Loss: 0.3209 | Val Loss: 0.3404 | Val AUC: 0.9341 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 136/200] Train Loss: 0.3209 | Val Loss: 0.3414 | Val AUC: 0.9344 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 138/200] Train Loss: 0.3230 | Val Loss: 0.3403 | Val AUC: 0.9346 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 139/200] Train Loss: 0.3195 | Val Loss: 0.3511 | Val AUC: 0.9347 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 140/200] Train Loss: 0.3187 | Val Loss: 0.3605 | Val AUC: 0.9345 | Time: 0.42s
+    [Epoch 141/200] Train Loss: 0.3196 | Val Loss: 0.3383 | Val AUC: 0.9348 | Time: 0.42s ★ (Best Val AUC)
+Traceback (most recent call last):
+  File "/home/rohit/miniconda3/envs/zeekGNN/lib/python3.10/runpy.py", line 196, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/home/rohit/miniconda3/envs/zeekGNN/lib/python3.10/runpy.py", line 86, in _run_code
+    exec(code, run_globals)
+  File "/home/rohit/Malicious-HDG-self/pipeline/04_train_gnn.py", line 538, in <module>
+    main()
+  File "/home/rohit/Malicious-HDG-self/pipeline/04_train_gnn.py", line 335, in main
+    test_eval, y_test, y_probs, _ = train_eval_gnn(
+  File "/home/rohit/Malicious-HDG-self/src/hdg/training/train.py", line 153, in train_eval_gnn
+    out_c = m_copy(data.x_dict, data.edge_index_dict)
+  File "/home/rohit/miniconda3/envs/zeekGNN/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/rohit/miniconda3/envs/zeekGNN/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/rohit/Malicious-HDG-self/src/hdg/models/hetero_gnn.py", line 233, in forward
+    h_new = conv(h_dict, edge_index_dict)
+  File "/home/rohit/miniconda3/envs/zeekGNN/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/rohit/miniconda3/envs/zeekGNN/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/rohit/miniconda3/envs/zeekGNN/lib/python3.10/site-packages/torch_geometric/nn/conv/hgt_conv.py", line 199, in forward
+    out = self.propagate(edge_index, k=k, q=q, v=v, edge_attr=edge_attr)
+  File "/tmp/torch_geometric.nn.conv.hgt_conv_HGTConv_propagate_fvaj6001.py", line 288, in propagate
+    out = self.aggregate(
+  File "/home/rohit/miniconda3/envs/zeekGNN/lib/python3.10/site-packages/torch_geometric/nn/conv/message_passing.py", line 594, in aggregate
+    return self.aggr_module(inputs, index, ptr=ptr, dim_size=dim_size,
+  File "/home/rohit/miniconda3/envs/zeekGNN/lib/python3.10/site-packages/torch_geometric/experimental.py", line 117, in wrapper
+    return func(*args, **kwargs)
+  File "/home/rohit/miniconda3/envs/zeekGNN/lib/python3.10/site-packages/torch_geometric/nn/aggr/base.py", line 139, in __call__
+    raise e
+  File "/home/rohit/miniconda3/envs/zeekGNN/lib/python3.10/site-packages/torch_geometric/nn/aggr/base.py", line 131, in __call__
+    return super().__call__(x, index=index, ptr=ptr, dim_size=dim_size,
+  File "/home/rohit/miniconda3/envs/zeekGNN/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/home/rohit/miniconda3/envs/zeekGNN/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/home/rohit/miniconda3/envs/zeekGNN/lib/python3.10/site-packages/torch_geometric/nn/aggr/basic.py", line 22, in forward
+    return self.reduce(x, index, ptr, dim_size, dim, reduce='sum')
+  File "/home/rohit/miniconda3/envs/zeekGNN/lib/python3.10/site-packages/torch_geometric/nn/aggr/base.py", line 185, in reduce
+    return scatter(x, index, dim, dim_size, reduce)
+  File "/home/rohit/miniconda3/envs/zeekGNN/lib/python3.10/site-packages/torch_geometric/utils/_scatter.py", line 70, in scatter
+    return src.new_zeros(size).scatter_add_(dim, index, src)
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 1.33 GiB. GPU 0 has a total capacity of 79.25 GiB of which 654.62 MiB is free. Process 57310 has 70.31 GiB memory in use. Including non-PyTorch memory, this process has 8.27 GiB memory in use. 27.74 GiB allowed; Of the allocated memory 7.51 GiB is allocated by PyTorch, and 221.28 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+    [Epoch 142/200] Train Loss: 0.3206 | Val Loss: 0.3540 | Val AUC: 0.9349 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 143/200] Train Loss: 0.3179 | Val Loss: 0.3630 | Val AUC: 0.9350 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 144/200] Train Loss: 0.3184 | Val Loss: 0.3392 | Val AUC: 0.9354 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 146/200] Train Loss: 0.3168 | Val Loss: 0.3516 | Val AUC: 0.9357 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 147/200] Train Loss: 0.3168 | Val Loss: 0.3462 | Val AUC: 0.9359 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 152/200] Train Loss: 0.3240 | Val Loss: 0.3451 | Val AUC: 0.9365 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 158/200] Train Loss: 0.3173 | Val Loss: 0.3428 | Val AUC: 0.9367 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 160/200] Train Loss: 0.3154 | Val Loss: 0.3734 | Val AUC: 0.9362 | Time: 0.42s
+    [Epoch 163/200] Train Loss: 0.3127 | Val Loss: 0.3482 | Val AUC: 0.9368 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 164/200] Train Loss: 0.3118 | Val Loss: 0.3372 | Val AUC: 0.9370 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 165/200] Train Loss: 0.3145 | Val Loss: 0.3553 | Val AUC: 0.9372 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 166/200] Train Loss: 0.3118 | Val Loss: 0.3423 | Val AUC: 0.9373 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 167/200] Train Loss: 0.3119 | Val Loss: 0.3344 | Val AUC: 0.9375 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 170/200] Train Loss: 0.3154 | Val Loss: 0.3517 | Val AUC: 0.9380 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 177/200] Train Loss: 0.3104 | Val Loss: 0.3377 | Val AUC: 0.9381 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 179/200] Train Loss: 0.3108 | Val Loss: 0.3351 | Val AUC: 0.9382 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 180/200] Train Loss: 0.3070 | Val Loss: 0.3532 | Val AUC: 0.9381 | Time: 0.42s
+    [Epoch 181/200] Train Loss: 0.3085 | Val Loss: 0.3538 | Val AUC: 0.9383 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 182/200] Train Loss: 0.3096 | Val Loss: 0.3334 | Val AUC: 0.9385 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 183/200] Train Loss: 0.3085 | Val Loss: 0.3311 | Val AUC: 0.9388 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 184/200] Train Loss: 0.3082 | Val Loss: 0.3456 | Val AUC: 0.9389 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 186/200] Train Loss: 0.3108 | Val Loss: 0.3372 | Val AUC: 0.9391 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 188/200] Train Loss: 0.3094 | Val Loss: 0.3351 | Val AUC: 0.9392 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 190/200] Train Loss: 0.3089 | Val Loss: 0.3451 | Val AUC: 0.9393 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 191/200] Train Loss: 0.3058 | Val Loss: 0.3288 | Val AUC: 0.9394 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 195/200] Train Loss: 0.3068 | Val Loss: 0.3278 | Val AUC: 0.9396 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 199/200] Train Loss: 0.3081 | Val Loss: 0.3249 | Val AUC: 0.9398 | Time: 0.42s ★ (Best Val AUC)
+    [Epoch 200/200] Train Loss: 0.3088 | Val Loss: 0.3289 | Val AUC: 0.9398 | Time: 0.42s
+  ┌── [TEST METRICS: SAGE on RANDOM] ─────────────────────────
+  │  ROC-AUC:   0.9353  |  PR-AUC:   0.8894
+  │  F1-Score:  0.8019  |  Accuracy: 0.8100
+  │  Precision: 0.7291  |  Recall:   0.8909
+  │  Operating Point TPR @ 0.1% FPR: 0.1512 (Threshold: 0.2900)
+  └───────────────────────────────────────────────────────────────────
+
+================ Running Variant: ATTN ================
+
+--- Seed 42 (attn) [random] ---
+[1;31m[2026-11-17 09:47:52] ERROR: Pipeline aborted prematurely at line 187![0m

@@ -1,0 +1,16 @@
+{
+  "status": "BLOCKED_UNCERTIFIED_FPR",
+  "reason": "95% confidence upper bound (0.262%) exceeds operational target FPR (0.100%).",
+  "target_fpr": 0.001,
+  "calibrated_threshold": 0.9989,
+  "n_calibration_negs": 1144,
+  "n_certification_negs": 1144,
+  "min_required_certification_negs": 2995,
+  "observed_fps_on_certification": 0,
+  "realized_cert_fpr": 0.0,
+  "realized_val_fpr": 0.0,
+  "fpr_95_upper_bound": 0.00262,
+  "confidence_bound_type": "Exact Binomial (1 - 0.05^(1/N_cert))",
+  "rules_emitted": 0,
+  "timestamp": "2026-11-17T12:57:33.907990+00:00"
+}
