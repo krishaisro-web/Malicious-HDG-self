@@ -1210,8 +1210,24 @@
     "roc_auc": 0.5994,
     "pr_auc": 0.0616,
     "f1": 0.0936,
-    "accuracy": null,
+    "accuracy": 0.212,
     "precision": 0.0494,
     "recall": 0.8962
+  },
+  "provenance": {
+    "device": "cuda",
+    "device_type": "cuda",
+    "torch_version": "2.5.1+cu121",
+    "cuda_available": true,
+    "cuda_version": "12.1",
+    "git_commit": "670ff28039d32f0ecd2b28cd0298af12d4ccd9b5",
+    "hostname": "odpd-lcws-a100-2024-01",
+    "platform": "Linux-5.14.0-427.13.1.el9_4.x86_64-x86_64-with-glibc2.34",
+    "precision": "FP32",
+    "tf32_matmul_enabled": false,
+    "tf32_cudnn_enabled": false,
+    "device_name": "NVIDIA A100 80GB PCIe",
+    "vram_free_gb": 8.051,
+    "vram_total_gb": 79.254
   }
 }
