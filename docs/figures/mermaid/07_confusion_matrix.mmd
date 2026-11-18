@@ -1,0 +1,30 @@
+flowchart LR
+    subgraph TEST_SET["Test Set: 15,001 Unseen Domains (Seed 42)"]
+        MAL["<b>4,988 Actually Malicious</b><br/>(33.25% Prevalence)"]
+        BEN["<b>10,013 Actually Safe</b><br/>(66.75% Prevalence)"]
+    end
+
+    subgraph DETECTIONS["AI Predictions at Operational Threshold (0.50)"]
+        TP["<b>True Positives (TP): 4,331</b><br/>Malware Detected Correctly<br/><b>Detection Rate / Recall: 86.83%</b>"]
+        FN["<b>False Negatives (FN): 657</b><br/>Malware Missed (13.17%)"]
+        FP["<b>False Positives (FP): 1,330</b><br/>Safe Domains Flagged (13.28%)"]
+        TN["<b>True Negatives (TN): 8,683</b><br/>Safe Domains Passed Correctly<br/><b>Specificity: 86.72%</b>"]
+    end
+
+    subgraph SUMMARY["Final Overall Benchmark Scores"]
+        ACC["<b>Overall Accuracy: 86.75%</b><br/>(13,014 of 15,001 Correct)"]
+        F1["<b>F1-Score: 0.8134</b><br/>(5-Seed Mean: 0.8034)"]
+        PREC["<b>Precision: 76.51%</b><br/>(99.37% at 0.1% FPR Threshold)"]
+    end
+
+    MAL --> TP & FN
+    BEN --> FP & TN
+    TP & TN --> ACC
+    TP & FP & FN --> F1 & PREC
+
+    style TEST_SET fill:#0f172a,stroke:#3b82f6,color:#ffffff
+    style TP fill:#064e3b,stroke:#10b981,stroke-width:2px,color:#ffffff
+    style TN fill:#064e3b,stroke:#10b981,stroke-width:2px,color:#ffffff
+    style FN fill:#7f1d1d,stroke:#ef4444,color:#ffffff
+    style FP fill:#7f1d1d,stroke:#ef4444,color:#ffffff
+    style SUMMARY fill:#1e1b4b,stroke:#818cf8,stroke-width:2px,color:#ffffff

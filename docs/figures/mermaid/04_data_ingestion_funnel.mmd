@@ -1,0 +1,23 @@
+flowchart LR
+    subgraph S1["1. Raw Zenodo Feeds (12.96 GB)"]
+        RAW_MAL["<b>malware.json</b> (1.03 GB)<br/>100,809 domains"]
+        RAW_CIS["<b>benign_umbrella.json</b> (5.79 GB)<br/>368,956 domains"]
+        RAW_CES["<b>benign_cesnet.json</b> (6.14 GB)<br/>461,388 domains"]
+    end
+
+    subgraph S2["2. Filtering & Clean Cohort"]
+        DEDUP["<b>Deduplication</b><br/>Remove 212 overlaps"]
+        PARQUET["<b>domains.parquet (51.5 MB)</b><br/>250,062 clean domains<br/>(166k safe, 83k malware, 2:1 ratio)"]
+    end
+
+    subgraph S3["3. Graph Synthesis (1 Lakh / 1L)"]
+        BUILD["<b>pipeline/02_build_graph.py</b><br/>6 node types, 12 edge types"]
+        GRAPH["<b>heterodata.pt (53.7 MB)</b><br/><b>100,000 domains</b><br/>348,237 nodes | 1,369,520 edges"]
+    end
+
+    RAW_MAL & RAW_CIS & RAW_CES --> DEDUP --> PARQUET --> BUILD --> GRAPH
+
+    style S1 fill:#0f172a,stroke:#3b82f6,color:#ffffff
+    style S2 fill:#1e293b,stroke:#94a3b8,color:#ffffff
+    style S3 fill:#064e3b,stroke:#10b981,color:#ffffff
+    style GRAPH fill:#047857,stroke:#34d399,stroke-width:2px,color:#ffffff

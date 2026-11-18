@@ -1,0 +1,20 @@
+flowchart TD
+    subgraph V1["Variant 1: Malware Threat-Actor Shift Only"]
+        T1["Train: Steven Black + Cisco Umbrella"] --> E1["Test: ThreatFox / URLhaus + Cisco Umbrella"]
+        RES1["<b>HeteroGNN AUC: 0.8645</b><br/>(vs Tabular XGBoost: 0.8124)<br/><i>High transfer across threat families</i>"]
+    end
+
+    subgraph V2["Variant 2: Benign Collection Bias Shift Only"]
+        T2["Train: All Malware + Cisco Umbrella"] --> E2["Test: All Malware + CESNET Academic Network"]
+        RES2["<b>HeteroGNN AUC: 0.6780</b><br/>(vs Tabular XGBoost: 0.5210)<br/><i>Mitigates benign collector bias</i>"]
+    end
+
+    subgraph V3["Variant 3: Joint Dual Shift (Malware + Collection Shift)"]
+        T3["Train: Steven Black + Cisco Umbrella"] --> E3["Test: Held-Out Feeds + CESNET Network"]
+        RES3["<b>HeteroGNN AUC: 0.6209</b><br/><b>GNN No Lexical: 0.6185</b><br/>MLP No Edges: 0.4912 (Collapses)<br/><b>XGBoost: 0.4690 (Systematic Inversion!)</b>"]
+    end
+
+    style V1 fill:#0f172a,stroke:#3b82f6,color:#ffffff
+    style V2 fill:#1e293b,stroke:#64748b,color:#ffffff
+    style V3 fill:#311042,stroke:#c084fc,color:#ffffff
+    style RES3 fill:#4c1d95,stroke:#a855f7,stroke-width:2px,color:#ffffff

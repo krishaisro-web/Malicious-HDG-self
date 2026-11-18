@@ -1,0 +1,48 @@
+flowchart TD
+    subgraph ROW1["PHASE A: Pre-Flight Verification & Graph Ingestion"]
+        direction LR
+        subgraph P1["Stage 0: Pre-Flight Audits"]
+            S0A["<b>0a. Host Audit</b><br/>Hardware, VRAM, daemons"]
+            S0B["<b>0b. Graph Profiling</b><br/>VRAM allocation cap"]
+            S0C["<b>0c. Parity Check</b><br/>|Δ| = 0.00210 <= 0.005"]
+            S0A --> S0B --> S0C
+        end
+        subgraph P2["Stages 1-2: Data Pipeline"]
+            S1["<b>1. Ingest & Parse</b><br/>931k raw -> 250k cohort"]
+            S2["<b>2. Build Graph</b><br/>100k domains (348k nodes)"]
+            S1 --> S2
+        end
+        P1 --> P2
+    end
+
+    subgraph ROW2["PHASE B: Multi-Seed GPU Training & Production Certification"]
+        direction LR
+        subgraph P3["Stages 5-6: Model Training (A100 GPU)"]
+            S3["<b>5. Baselines</b><br/>TF-IDF, XGBoost, MLP"]
+            S4["<b>6a. Random Split</b><br/>SAGE & ATTN (0.9343 AUC)"]
+            S5["<b>6b. Temporal Split</b><br/>Time-holdout (0.6226 AUC)"]
+            S6["<b>6c. Group Split</b><br/>Disjoint holdout (0.8077 AUC)"]
+            S7["<b>6d. Stop Rules</b><br/>pAUC evaluation"]
+            S3 --> S4 --> S5 --> S6 --> S7
+        end
+        subgraph P4["Stages 7-13: Robustness & Certification"]
+            S8["<b>7. Ablations</b> (11 variants)"]
+            S9["<b>8. Attacks</b> (GNNGuard 82%)"]
+            S10["<b>9. Latency</b> (2.78 ms SLA)"]
+            S11["<b>10. Provenance</b> (CESNET)"]
+            S12["<b>11. Streaming</b> (Continual)"]
+            S13["<b>12. RPZ Zone</b> (Fail-closed)"]
+            S14["<b>13. Master Report</b> (REPORT.md)"]
+            S8 --> S9 --> S10 --> S11 --> S12 --> S13 --> S14
+        end
+        P3 --> P4
+    end
+
+    ROW1 --> ROW2
+
+    style ROW1 fill:#0f172a,stroke:#3b82f6,color:#ffffff
+    style ROW2 fill:#022c22,stroke:#10b981,color:#ffffff
+    style P1 fill:#1e1e38,stroke:#6366f1,color:#ffffff
+    style P2 fill:#1c2d37,stroke:#0ea5e9,color:#ffffff
+    style P3 fill:#064e3b,stroke:#10b981,color:#ffffff
+    style P4 fill:#312e81,stroke:#a855f7,color:#ffffff

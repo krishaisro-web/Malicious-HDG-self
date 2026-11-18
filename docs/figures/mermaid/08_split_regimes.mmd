@@ -1,0 +1,23 @@
+flowchart TD
+    subgraph S1["1. Random Split Benchmark (Standard Evaluation)"]
+        R_DESC["70k Train / 15k Val / 15k Test<br/>Shared infrastructure allowed across splits"]
+        R_RES["<b>GraphSAGE: 0.9343 ROC-AUC</b><br/><b>HGT Attn: 0.9337 ROC-AUC</b><br/>Threat Recall @ 0.1% FPR: <b>17.86%</b>"]
+    end
+
+    subgraph S2["2. Group Split Benchmark (Disjoint Network Generalization)"]
+        G_DESC["Hold out entire ASNs and Nameservers<br/>AI has zero prior knowledge of test infrastructure"]
+        G_RES["<b>GraphSAGE: 0.7994 ROC-AUC</b><br/><b>HGT Attn: 0.8077 ROC-AUC</b><br/><b>~81% AUC proves robust structural learning!</b>"]
+    end
+
+    subgraph S3["3. Temporal Split Benchmark (Time-Holdout Drift)"]
+        T_DESC["Train on past months, test on future months<br/>Only 1 calendar month in Zenodo had shared overlap"]
+        T_RES["<b>GraphSAGE: 0.6226 ROC-AUC</b><br/><b>Identified Key Limitation:</b> Feed mix drifted across months.<br/>Proves streaming data ingestion is essential!"]
+    end
+
+    R_DESC --> R_RES
+    G_DESC --> G_RES
+    T_DESC --> T_RES
+
+    style S1 fill:#064e3b,stroke:#10b981,color:#ffffff
+    style S2 fill:#1e293b,stroke:#64748b,color:#ffffff
+    style S3 fill:#451a03,stroke:#d97706,color:#ffffff

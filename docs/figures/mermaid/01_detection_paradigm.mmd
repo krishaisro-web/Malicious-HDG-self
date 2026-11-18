@@ -1,0 +1,19 @@
+flowchart TD
+    subgraph OLD["Traditional Approach: Lexical Text Filters (Easily Bypassed)"]
+        D1["Domain String: apple-support-update.com"] --> F1["Check Character Length, Digits, Hyphens"]
+        F1 --> RES1["Looks Legitimate! Zero strange characters<br/><b>VERDICT: ALLOWED (Attack Succeeds)</b>"]
+    end
+
+    subgraph NEW["Malicious-HDG: Relational Neighborhood (Guilt by Association)"]
+        D2["Target Domain: apple-support-update.com"] --> REL["Extract Multi-Hop Neighborhood"]
+        REL --> N1["IP Address: 185.220.101.5 (Known Bulletproof Host)"]
+        REL --> N2["Nameserver: ns1.shady-dns.ru (Hosts 80% Phishing)"]
+        REL --> N3["Registrar: Shady Offshore Entity"]
+        N1 & N2 & N3 --> GNN["Heterogeneous Graph Neural Network"]
+        GNN --> RES2["Neighborhood Abuse Score: 0.9989<br/><b>VERDICT: BLOCKED (Attack Neutralized)</b>"]
+    end
+
+    style OLD fill:#450a0a,stroke:#ef4444,stroke-width:1.5px,color:#fef2f2
+    style RES1 fill:#7f1d1d,stroke:#b91c1c,color:#ffffff
+    style NEW fill:#064e3b,stroke:#10b981,stroke-width:1.5px,color:#ecfdf5
+    style RES2 fill:#047857,stroke:#34d399,stroke-width:2px,color:#ffffff

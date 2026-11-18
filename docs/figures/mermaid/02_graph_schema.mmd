@@ -1,0 +1,21 @@
+flowchart TD
+    NS["<b>Nameservers (DNS)</b><br/>47,092 nodes (1 feature)"]
+    DOM["<b>Domain Nodes (Targets)</b><br/>100,000 nodes (17 features)"]
+    IP["<b>IP Addresses</b><br/>131,084 nodes (1 feature)"]
+    REG["<b>Domain Registrars</b><br/>2,796 nodes (1 feature)"]
+    ASN["<b>Network Providers (ASNs)</b><br/>5,263 nodes (1 feature)"]
+    CERT["<b>Certificates (SSL/TLS)</b><br/>62,002 nodes (1 feature)"]
+
+    NS <-->|"uses_ns / ns_of<br/>479,864 edges"| DOM
+    DOM <-->|"resolves_to / ip_for<br/>317,156 edges"| IP
+    DOM <-->|"registered_by / reg_for<br/>133,804 edges"| REG
+    IP <-->|"belongs_to_asn / asn_has<br/>175,940 edges"| ASN
+    DOM <-->|"uses_cert / cert_for<br/>149,418 edges"| CERT
+    NS <-->|"ns_ip / ip_ns<br/>113,338 edges"| IP
+
+    style DOM fill:#1e3a8a,stroke:#60a5fa,stroke-width:2.5px,color:#ffffff
+    style NS fill:#1f2937,stroke:#9ca3af,stroke-width:1.5px,color:#f9fafb
+    style IP fill:#1f2937,stroke:#9ca3af,stroke-width:1.5px,color:#f9fafb
+    style REG fill:#1f2937,stroke:#9ca3af,stroke-width:1.5px,color:#f9fafb
+    style ASN fill:#1f2937,stroke:#9ca3af,stroke-width:1.5px,color:#f9fafb
+    style CERT fill:#1f2937,stroke:#9ca3af,stroke-width:1.5px,color:#f9fafb

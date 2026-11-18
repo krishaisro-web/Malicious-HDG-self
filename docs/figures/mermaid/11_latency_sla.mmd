@@ -1,0 +1,26 @@
+flowchart LR
+    subgraph QUERY["Live DNS Recursive Query"]
+        Q["Inbound Domain Query<br/>e.g. <code>threat-example.com</code>"]
+    end
+
+    subgraph PATH_A["OUR METHOD: Bounded Neighbor Sampling [5, 2] (Passed SLA!)"]
+        L1["<b>1. Feature Lookup</b><br/>0.20 ms"]
+        L2["<b>2. Bounded Ego Build</b><br/>Prunes to max [5, 2] links<br/>(Subgraphs <= 16 nodes)<br/>0.80 ms"]
+        L3["<b>3. CPU HeteroConv</b><br/>2-layer forward pass on Xeon<br/>1.78 ms"]
+        OUT_A["<b>PASS: 2.78 ms Total Response</b><br/>P95: 4.70 ms | SLA < 10 ms<br/><b>197x Faster than Old Interns!</b>"]
+    end
+
+    subgraph PATH_B["OLD METHOD: Unconstrained 2-Hop Search (Failed SLA)"]
+        R1["<b>1. Unconstrained Build</b><br/>Traverses giant hubs (>1000 links)<br/>Expands to 10,000+ edges<br/>414.59 ms"]
+        R2["<b>2. Giant Tensor Forward</b><br/>Massive memory allocation<br/>126.05 ms"]
+        OUT_B["<b>FAIL: 548.90 ms Total Response</b><br/>P95: 1,292.50 ms | Severe Timeout"]
+    end
+
+    Q --> L1 --> L2 --> L3 --> OUT_A
+    Q -.-> R1 -.-> R2 -.-> OUT_B
+
+    style QUERY fill:#0f172a,stroke:#3b82f6,color:#ffffff
+    style PATH_A fill:#064e3b,stroke:#10b981,stroke-width:2px,color:#ecfdf5
+    style OUT_A fill:#047857,stroke:#34d399,stroke-width:2px,color:#ffffff
+    style PATH_B fill:#450a0a,stroke:#ef4444,stroke-width:1.5px,color:#fef2f2
+    style OUT_B fill:#7f1d1d,stroke:#b91c1c,stroke-width:2px,color:#ffffff

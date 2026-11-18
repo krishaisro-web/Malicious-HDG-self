@@ -1,0 +1,34 @@
+flowchart TD
+    subgraph F1["Fix 1: PyG Scatter Memory Spike"]
+        E1["Missing torch_scatter caused 701 MB index broadcast + 1.33 GB workspace buffer"]
+        P1["<b>Custom Scatter Patch in device.py</b><br/>Native index_add_ and index_reduce_ replacement<br/><b>Saved 1.33 GB VRAM (0.0 math diff)</b>"]
+    end
+
+    subgraph F2["Fix 2: Activation Checkpointing Memory Trap"]
+        E2["checkpoint() recomputed Layer 1 during backward, accumulating 7.52 GB VRAM (OOM by 7.38 MB)"]
+        P2["<b>Removed Checkpointing & Enforced set_to_none=True</b><br/>Direct layer execution frees tensors during backward<br/><b>Peak memory dropped from 7.52 GB to 4.43 GB</b>"]
+    end
+
+    subgraph F3["Fix 3: Cross-Split Broadcast Dimension Guard"]
+        E3["Paired McNemar test compared 15,001 random test elements with 53,943 temporal elements"]
+        P3["<b>Defensive Dimension Guards in metrics.py</b><br/>Bypasses mismatched evaluation splits without crashing"]
+    end
+
+    subgraph F4["Fix 4: Pre-flight Profiling Variable Binding"]
+        E4["Variable real_data_dev bound to underscore (_) raised NameError on del in verify_gpu_graph.py"]
+        P4["<b>Bound real_data_dev properly & permitted WARNING status</b><br/>Guaranteed clean pre-flight verification pass"]
+    end
+
+    E1 --> P1
+    E2 --> P2
+    E3 --> P3
+    E4 --> P4
+
+    style F1 fill:#0f172a,stroke:#3b82f6,color:#ffffff
+    style P1 fill:#064e3b,stroke:#10b981,stroke-width:2px,color:#ffffff
+    style F2 fill:#0f172a,stroke:#3b82f6,color:#ffffff
+    style P2 fill:#064e3b,stroke:#10b981,stroke-width:2px,color:#ffffff
+    style F3 fill:#0f172a,stroke:#3b82f6,color:#ffffff
+    style P3 fill:#064e3b,stroke:#10b981,stroke-width:2px,color:#ffffff
+    style F4 fill:#0f172a,stroke:#3b82f6,color:#ffffff
+    style P4 fill:#064e3b,stroke:#10b981,stroke-width:2px,color:#ffffff

@@ -1,0 +1,20 @@
+flowchart LR
+    subgraph S1["1. Adversarial Link Injection Attack"]
+        HACKER["Hacker targets trusted hub<br/>(e.g. Cloudflare / Google NS)"] --> INJECT["Inject k=2 fake edges"]
+    end
+
+    subgraph S2["2. Undefended Baseline"]
+        INJECT --> U_SAGE["Standard Message Passing"]
+        U_SAGE --> U_RES["<b>Severe False Alarm Spike!</b><br/>FPR jumps 0.09% -> 0.38% (4x increase)"]
+    end
+
+    subgraph S3["3. Malicious-HDG + GNNGuard"]
+        INJECT --> GUARD["<b>Cosine Edge Pruning</b><br/>Compute feature similarity"]
+        GUARD --> PRUNE["Similarity < eps:<br/><b>Fake Edge Pruned!</b>"]
+        PRUNE --> G_RES["<b>82.1% Recovery (Goal O5 PASSED!)</b><br/>FPR restored to <b>0.000%</b>"]
+    end
+
+    style S1 fill:#450a0a,stroke:#ef4444,color:#ffffff
+    style S2 fill:#7f1d1d,stroke:#b91c1c,color:#ffffff
+    style S3 fill:#064e3b,stroke:#10b981,stroke-width:2px,color:#ffffff
+    style G_RES fill:#047857,stroke:#34d399,stroke-width:2px,color:#ffffff
