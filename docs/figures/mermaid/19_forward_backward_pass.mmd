@@ -1,0 +1,124 @@
+flowchart TB
+    %% Styling Classes
+    classDef inputClass fill:#f8fafc,stroke:#475569,stroke-width:2px,color:#0f172a,font-family:ui-monospace;
+    classDef projClass fill:#eff6ff,stroke:#2563eb,stroke-width:2.5px,color:#1e3a8a,font-family:ui-monospace;
+    classDef convClass fill:#f5f3ff,stroke:#7c3aed,stroke-width:2.5px,color:#4c1d95,font-family:ui-monospace;
+    classDef headClass fill:#fdf4ff,stroke:#c026d3,stroke-width:2.5px,color:#701a75,font-family:ui-monospace;
+    classDef predClass fill:#fffbeb,stroke:#d97706,stroke-width:2px,color:#78350f,font-family:ui-monospace;
+    classDef lossClass fill:#fef2f2,stroke:#dc2626,stroke-width:2.5px,color:#991b1b,font-family:ui-monospace;
+    classDef backClass fill:#fff1f2,stroke:#e11d48,stroke-width:2.5px,stroke-dasharray: 4 4,color:#881337,font-family:ui-monospace;
+    classDef optClass fill:#ecfdf5,stroke:#059669,stroke-width:2.5px,color:#064e3b,font-family:ui-monospace;
+
+    subgraph SECTION_INPUT["1. MULTI-MODAL INPUT MATRICES (x_dict) & TOPOLOGY (edge_index_dict)"]
+        direction LR
+        X_DOM["🌐 Domain Feature Matrix
+x_dict['domain'] ∈ ℝ^(5 × 17)
+[All 17 Features per Domain]"]:::inputClass
+
+        X_INFRA["🖥️ Infrastructure Feature Matrices
+x_dict['ip'] ∈ ℝ^(N_ip × 1)
+x_dict['ns'] ∈ ℝ^(N_ns × 1)
+x_dict['asn'] ∈ ℝ^(N_asn × 1)"]:::inputClass
+
+        TOPOLOGY["🔗 Bidirectional Adjacency Tensors
+edge_index_dict ∈ ℤ^(2 × |E|)
+(resolves_to, uses_ns, belongs_to_asn, etc.)"]:::inputClass
+    end
+
+    subgraph SECTION_FORWARD["2. NEURAL NETWORK FORWARD PASS (Mathematical Tensor Transformation)"]
+        direction TB
+
+        subgraph PROJECTION["Layer 0: Entity-Specific Linear Projections (self.proj)"]
+            P_DOM["Linear Projection (Domain):
+W_dom ∈ ℝ^(17 × 64), b ∈ ℝ^64
+h_dom^(0) = ReLU( X_dom · W_dom + b )
+Shape: [5 × 64]"]:::projClass
+
+            P_INFRA["Linear Projection (Infrastructure):
+W_infra ∈ ℝ^(1 × 64), b ∈ ℝ^64
+h_infra^(0) = ReLU( X_infra · W_infra + b )
+Shape: [N_infra × 64]"]:::projClass
+        end
+
+        subgraph CONV_L1["Layer 1: 1-Hop Relational Message Passing (HeteroConv)"]
+            L1_MSG["• Model 1 (SAGE): Mean neighbor aggregation per edge type
+• Model 2 (HGT): Query-Key-Value Attention weights α_uv
+• Model 3 (GNNGuard): Cosine edge pruning (cutoff < 0.10)
+────────────────────────────────────────────────────────
+Residual Connection (Preserves 17 Domain Features):
+h_dom^(1) = ReLU( Message_Agg(h_infra^(0)) + h_dom^(0) )
+Shape: [5 × 64] (Enriched with 1-Hop IPs, NS, Regs)"]:::convClass
+        end
+
+        subgraph CONV_L2["Layer 2: 2-Hop Relational Message Passing (HeteroConv)"]
+            L2_MSG["• Aggregates upstream infrastructure (BGP ASNs, Cert Issuers)
+• Second Residual Connection:
+h_dom^(2) = ReLU( Message_Agg(h_infra^(1)) + h_dom^(1) )
+Shape: [5 × 64] (Global Topological Context)"]:::convClass
+        end
+
+        subgraph CLASSIFIER_HEAD["Layer 3: Domain Classifier Head (Two-Layer MLP)"]
+            MLP_L1["Linear Layer 1: W1 ∈ ℝ^(64 × 32)
+z1 = ReLU( h_dom^(2) · W1 + b1 )
+Dropout(p = 0.20) for Regularization"]:::headClass
+
+            MLP_L2["Linear Layer 2: W2 ∈ ℝ^(32 × 2)
+Raw Logits: z2 = z1 · W2 + b2 ∈ ℝ^(5 × 2)
+Softmax Normalization:
+p(Class) = exp(z2_c) / Σ exp(z2)"]:::headClass
+        end
+    end
+
+    subgraph SECTION_SUPERVISION["3. SUPERVISED LOSS CALCULATION (How the Model Knows Right from Wrong)"]
+        direction LR
+        PREDICTIONS["📊 Predicted Probabilities (y_hat):
+D1: [0.99, 0.01] (p=0.01)
+D2: [0.98, 0.02] (p=0.02)
+D3: [0.96, 0.04] (p=0.04)
+D4: [0.12, 0.88] (p=0.88)
+D5: [0.03, 0.97] (p=0.97)"]:::predClass
+
+        GROUND_TRUTH["🎯 Ground Truth Labels (y):
+data['domain'].y
+D1: 0 (Safe)
+D2: 0 (Safe)
+D3: 0 (Safe)
+D4: 1 (Malware)
+D5: 1 (Malware)"]:::predClass
+
+        BCE_LOSS["💥 Binary Cross-Entropy Loss (L_BCE):
+L = - 1/N · Σ [ y_i · log(y_hat_i) + (1 - y_i) · log(1 - y_hat_i) ]
+Generates scalar error penalty driving optimization"]:::lossClass
+    end
+
+    subgraph SECTION_BACKWARD["4. BACKWARD PASS & PARAMETER OPTIMIZATION"]
+        direction TB
+        GRADIENTS["🔄 Backpropagation (Chain Rule):
+Computes exact gradients for all ~390k parameters:
+∂L/∂W_head, ∂L/∂W_conv2, ∂L/∂W_conv1, ∂L/∂W_proj"]:::backClass
+
+        OPTIMIZER["⚡ Adam Optimizer Weight Update:
+W ← W - η · ( m_t / [√(v_t) + ε] )
+Updates weights to minimize prediction error
+Memory Safety: optimizer.zero_grad(set_to_none=True)"]:::optClass
+    end
+
+    %% Wiring Connections
+    X_DOM ==> P_DOM
+    X_INFRA ==> P_INFRA
+    P_DOM ==> L1_MSG
+    P_INFRA ==> L1_MSG
+    TOPOLOGY ==> L1_MSG
+    L1_MSG ==> L2_MSG
+    TOPOLOGY ==> L2_MSG
+    L2_MSG ==> MLP_L1
+    MLP_L1 ==> MLP_L2
+    MLP_L2 ==> PREDICTIONS
+    PREDICTIONS ==> BCE_LOSS
+    GROUND_TRUTH ==> BCE_LOSS
+    BCE_LOSS ==>|"Trigger Backward Pass"| GRADIENTS
+    GRADIENTS ==>|"Gradient Flow"| OPTIMIZER
+    OPTIMIZER -.->|"Updates W_proj"| PROJECTION
+    OPTIMIZER -.->|"Updates W_conv1"| CONV_L1
+    OPTIMIZER -.->|"Updates W_conv2"| CONV_L2
+    OPTIMIZER -.->|"Updates W_head"| CLASSIFIER_HEAD

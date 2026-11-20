@@ -1,0 +1,30 @@
+flowchart TD
+    %% Styling
+    classDef modelBox fill:#1e293b,stroke:#0f172a,stroke-width:2px,color:#ffffff,font-weight:bold;
+    classDef stepCard fill:#ffffff,stroke:#3b82f6,stroke-width:1.5px,color:#1e293b;
+    classDef outputCard fill:#f0fdf4,stroke:#22c55e,stroke-width:2px,color:#14532d,font-weight:bold;
+
+    MODEL["💾 Trained HeteroGNN Model Weights<br/>(Random / Temporal / Group Holdout Checkpoints)"]:::modelBox
+
+    subgraph TrackA["Track A: Operational & Defense Engineering"]
+        STEP1["<b>1. Operational Threshold Tuning</b><br/>• Calibrate &tau; on validation benign cohort<br/>• Enforce False Positive Rate &le; 0.1%<br/>• Zero disruption to legitimate enterprise DNS"]:::stepCard
+        STEP3["<b>3. Adversarial Stress-Testing</b><br/>• Simulate attacker camouflage & fake edges<br/>• Cosine similarity evaluation (&epsilon; = 10⁻⁸)<br/>• GNNGuard automatic edge pruning (&tau; = 0.1)"]:::stepCard
+        STEP5["<b>5. Continual Streaming Drift Audit</b><br/>• Evaluate on rolling chronological monthly batches<br/>• Measure accuracy decay rate over time<br/>• Quantify incremental retraining schedule"]:::stepCard
+    end
+
+    subgraph TrackB["Track B: Scientific & Performance Validation"]
+        STEP2["<b>2. Statistical Significance Testing</b><br/>• Paired McNemar test (p < 0.01)<br/>• 1,000-fold Bootstrap 95% Confidence Intervals<br/>• Validate pre-committed stop rules"]:::stepCard
+        STEP4["<b>4. Production Latency Audit</b><br/>• Dedicated CPU-only benchmark (1,000 queries)<br/>• Feature (0.2ms) + Graph (0.8ms) + Forward (1.78ms)<br/>• <b>Total: 2.78 ms</b> (Strictly below 5.0 ms budget)"]:::stepCard
+        STEP6["<b>6. BIND RPZ Rule Emission</b><br/>• Filter high-confidence predictions (p &ge; &tau;)<br/>• Format IETF DNS RPZ syntax: <code>domain CNAME .</code><br/>• Direct automated drop-in for BIND9 / Unbound"]:::stepCard
+    end
+
+    FINAL["📄 7. Executive Audit Report & Certification<br/>Autonomous Generation of REPORT.md & Formal Verification PDF"]:::outputCard
+
+    MODEL --> STEP1
+    MODEL --> STEP2
+    STEP1 --> STEP3
+    STEP3 --> STEP5
+    STEP2 --> STEP4
+    STEP4 --> STEP6
+    STEP5 --> FINAL
+    STEP6 --> FINAL

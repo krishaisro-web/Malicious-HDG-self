@@ -1,0 +1,103 @@
+flowchart TB
+    %% Styling Classes
+    classDef clientBox fill:#e0f2fe,stroke:#0284c7,stroke-width:2.5px,color:#0369a1,font-family:ui-monospace;
+    classDef testDomMal fill:#ffe4e6,stroke:#e11d48,stroke-width:3px,color:#9f1239,font-family:ui-monospace;
+    classDef testDomSafe fill:#ecfdf5,stroke:#059669,stroke-width:3px,color:#064e3b,font-family:ui-monospace;
+    classDef infraBad fill:#fef2f2,stroke:#dc2626,stroke-width:2px,color:#7f1d1d,font-family:ui-monospace;
+    classDef infraSafe fill:#eff6ff,stroke:#2563eb,stroke-width:2px,color:#1e3a8a,font-family:ui-monospace;
+    classDef engineBox fill:#f8fafc,stroke:#475569,stroke-width:2px,color:#0f172a,font-family:ui-monospace;
+    classDef decisionBlock fill:#7f1d1d,stroke:#dc2626,stroke-width:2.5px,color:#ffffff,font-family:ui-monospace;
+    classDef decisionAllow fill:#064e3b,stroke:#059669,stroke-width:2.5px,color:#ffffff,font-family:ui-monospace;
+
+    subgraph CLIENT_ZONE["1. CLIENT QUERY ARRIVAL AT DNS RESOLVER (Total Budget: < 5.0 ms)"]
+        CLIENT["💻 Enterprise Client / Victim Machine
+Query: 'login-account-verify-bank.ru'
+Time: T = 0.00 ms"]:::clientBox
+    end
+
+    subgraph INFERENCE_EGO_GRAPH["2. DYNAMICALLY EXTRACTED 16-NODE BOUNDED EGO-GRAPH (Extracted in 0.80 ms)"]
+        direction TB
+        
+        %% Unseen Test Domain
+        D_TEST["🔎 UNSEEN TARGET DOMAIN: D_test = 'login-account-verify-bank.ru'
+───────────────────────────────────────────────────────────────────
+Feature Vector x_test ∈ ℝ¹⁷ (Extracted in 0.20 ms):
+[no_ip:0, no_rdap:1, no_tls:0, mx:0, spf:0, dmarc:0, dkim:0,
+ dnssec:0, ttl_a:2.77(15s), ttl_ns:5.70, cert_cnt:1, cert_len:4.51(90d),
+ len:28, entropy:3.84, digit:0.0, vowel:0.29, max_cons_run:3]"]:::testDomMal
+
+        %% 1-Hop Neighbors
+        subgraph ONE_HOP["1-Hop Immediate Relational Neighbors (Directly Resolved via DNS)"]
+            direction LR
+            IP_SHARED["⚠️ IP: 194.26.29.112
+[Bulletproof Server]
+(Already hosted D4 & D5)"]:::infraBad
+
+            NS_SHARED["⚠️ NS: ns1.bulletproof-dns.su
+[Fast-Flux Nameserver]
+(Shared with known botnets)"]:::infraBad
+
+            CERT_TEMP["🔒 Leaf TLS Cert: Hash#92a4
+[90-Day Free Domain Validation]"]:::infraBad
+        end
+
+        %% 2-Hop Neighbors
+        subgraph TWO_HOP["2-Hop Upstream Infrastructure (Queried from Passive BGP/DNS Cache)"]
+            direction LR
+            ASN_ROUTED["🛰️ BGP ASN: AS48282
+[Sanctioned Offshore Network Provider]"]:::infraBad
+
+            NS_HOST_IP["🖥️ Nameserver Host IP: 194.26.29.1
+[Bulletproof Infrastructure Subnet]"]:::infraBad
+        end
+
+        %% Ego-Graph Bidirectional Links
+        D_TEST <==>|"1. resolves_to ⇄ rev_resolves_to"| IP_SHARED
+        D_TEST <==>|"2. uses_ns ⇄ rev_uses_ns"| NS_SHARED
+        D_TEST <==>|"3. uses_cert ⇄ rev_uses_cert"| CERT_TEMP
+        IP_SHARED <==>|"4. belongs_to_asn ⇄ rev_belongs_to_asn"| ASN_ROUTED
+        NS_SHARED <==>|"5. ns_ip ⇄ rev_ns_ip"| NS_HOST_IP
+    end
+
+    subgraph FROZEN_GNN["3. INDUCTIVE FORWARD PASS ON PRODUCTION CPU (1.78 ms, ZERO RETRAINING)"]
+        direction TB
+        CPU_EVAL["⚡ Frozen HeteroGNN Engine on Server CPU
+─────────────────────────────────────────────────────────────
+1. Linear Projection: x_test [1, 17] ──► h_test^(0) [1, 64]
+2. Layer 1 Conv: Domain pulls dirty embeddings from IP & NS
+   h_test^(1) = ReLU( Agg(h_IP, h_NS, h_Cert) + h_test^(0) )
+3. Layer 2 Conv: Domain pulls upstream context from ASN & NS-IP
+   h_test^(2) = ReLU( Agg(h_ASN, h_NS_IP) + h_test^(1) )
+4. MLP Head: Linear(64->32) -> ReLU -> Linear(32->2) -> Softmax
+─────────────────────────────────────────────────────────────
+PREDICTED THREAT PROBABILITY:
+p(Malicious) = 0.987 | p(Benign) = 0.013"]:::engineBox
+    end
+
+    subgraph ENFORCEMENT["4. REAL-TIME POLICY ENFORCEMENT (At Operational Threshold τ = 0.9548)"]
+        direction TB
+        GATE{"Decision Gate:
+Is p(0.987) >= τ(0.9548)?
+(Guaranteed FPR <= 0.1%)"}:::engineBox
+
+        BLOCK["🛑 SINKHOLE & BLOCK RESOLUTION
+───────────────────────────────────
+• Intercept query at DNS Resolver
+• Return RPZ Rule: 'NXDOMAIN'
+• Threat blocked in 2.78 ms!
+• TCP/IP connection NEVER occurs"]:::decisionBlock
+
+        ALLOW["✅ ALLOW NORMAL RESOLUTION
+───────────────────────────────────
+• Return legitimate A-Record IP
+• Query resolved in 2.78 ms
+• Client browses normally"]:::decisionAllow
+    end
+
+    %% Pipeline Connections
+    CLIENT ==>|"DNS A-Record Lookup"| D_TEST
+    INFERENCE_EGO_GRAPH ==>|"16-Node Subgraph Tensor"| CPU_EVAL
+    CPU_EVAL ==>|"p = 0.987"| GATE
+    GATE ==>|"YES (Threat Confirmed)"| BLOCK
+    GATE -.->|"NO (Benign)"| ALLOW
+    BLOCK ==>|"Immediate NXDOMAIN Response"| CLIENT

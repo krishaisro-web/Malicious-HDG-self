@@ -1,0 +1,114 @@
+flowchart TB
+    %% Styling Classes
+    classDef safeDom fill:#ecfdf5,stroke:#059669,stroke-width:2.5px,color:#064e3b,font-family:ui-monospace;
+    classDef malDom fill:#fef2f2,stroke:#dc2626,stroke-width:2.5px,color:#7f1d1d,font-family:ui-monospace;
+    classDef ipNode fill:#eff6ff,stroke:#2563eb,stroke-width:2px,color:#1e3a8a,font-family:ui-monospace;
+    classDef nsNode fill:#f5f3ff,stroke:#7c3aed,stroke-width:2px,color:#4c1d95,font-family:ui-monospace;
+    classDef asnNode fill:#f0fdf4,stroke:#16a34a,stroke-width:2px,color:#166534,font-family:ui-monospace;
+    classDef certNode fill:#fffbeb,stroke:#d97706,stroke-width:2px,color:#78350f,font-family:ui-monospace;
+    classDef regNode fill:#f8fafc,stroke:#475569,stroke-width:2px,color:#0f172a,font-family:ui-monospace;
+    classDef deadNode fill:#f3f4f6,stroke:#9ca3af,stroke-width:1.5px,stroke-dasharray: 4 4,color:#4b5563,font-family:ui-monospace;
+
+    subgraph DOMAINS["1. DOMAIN NODES (Each with Exact 17-Dimensional Feature Vector x ∈ ℝ¹⁷)"]
+        direction LR
+        D1["🌐 D1: wikipedia.org [y=0: SAFE]
+──────────────────────────────────────
+x17 = [no_ip:0, no_rdap:0, no_tls:0,
+       mx:2, spf:1, dmarc:1, dkim:1,
+       dnssec:1, ttl_a:5.70, ttl_ns:11.36,
+       cert_cnt:3, cert_len:5.90(365d),
+       len:13, entropy:2.85, digit:0.0,
+       vowel:0.38, max_cons_run:2]"]:::safeDom
+
+        D2["🌐 D2: github.com [y=0: SAFE]
+──────────────────────────────────────
+x17 = [no_ip:0, no_rdap:0, no_tls:0,
+       mx:5, spf:1, dmarc:1, dkim:1,
+       dnssec:0, ttl_a:4.11, ttl_ns:11.36,
+       cert_cnt:2, cert_len:5.90(365d),
+       len:10, entropy:2.45, digit:0.0,
+       vowel:0.20, max_cons_run:3]"]:::safeDom
+
+        D3["🌐 D3: zoom.us [y=0: SAFE]
+──────────────────────────────────────
+x17 = [no_ip:0, no_rdap:0, no_tls:0,
+       mx:3, spf:1, dmarc:1, dkim:1,
+       dnssec:1, ttl_a:5.70, ttl_ns:11.36,
+       cert_cnt:3, cert_len:6.59(730d),
+       len:7, entropy:2.13, digit:0.0,
+       vowel:0.29, max_cons_run:2]"]:::safeDom
+
+        D4["⚠️ D4: paypal-security-update.top [y=1: MALWARE]
+──────────────────────────────────────────────────────
+x17 = [no_ip:0, no_rdap:1, no_tls:0,
+       mx:0, spf:0, dmarc:0, dkim:0,
+       dnssec:0, ttl_a:2.77(15s), ttl_ns:5.70,
+       cert_cnt:1, cert_len:4.51(90d),
+       len:26, entropy:3.78, digit:0.0,
+       vowel:0.31, max_cons_run:3]"]:::malDom
+
+        D5["⚠️ D5: cryptominer-pool-88.xyz [y=1: MALWARE]
+────────────────────────────────────────────────────
+x17 = [no_ip:1(NO IP!), no_rdap:0, no_tls:1(NO TLS!),
+       mx:0, spf:0, dmarc:0, dkim:0,
+       dnssec:0, ttl_a:0.00(DEAD), ttl_ns:4.79,
+       cert_cnt:0, cert_len:0.00(NONE),
+       len:22, entropy:4.12, digit:0.09('88'),
+       vowel:0.18, max_cons_run:4]"]:::malDom
+    end
+
+    subgraph INFRASTRUCTURE["2. HETEROGENEOUS INFRASTRUCTURE NODES (Bidirectional Edges ↔)"]
+        direction TB
+        %% IPs
+        IP1["🖥️ IP1: 151.101.1.140<br/>[Fastly Edge CDN]"]:::ipNode
+        IP2["🖥️ IP2: 104.16.132.229<br/>[Cloudflare Global]"]:::ipNode
+        IP_BAD["⚠️ IP_BAD: 194.26.29.112<br/>[Bulletproof Hosting Server]"]:::malDom
+
+        %% Nameservers
+        NS_CF["📡 NS: ns1.cloudflare.com<br/>[Tier-1 Anycast DNS]"]:::nsNode
+        NS_WIKI["📡 NS: ns0.wikimedia.org<br/>[Official Foundation DNS]"]:::nsNode
+        NS_BAD["⚠️ NS_BAD: ns1.bulletproof-dns.su<br/>[Bulletproof Fast-Flux DNS]"]:::malDom
+
+        %% Registrars
+        REG_SAFE["🏢 REG: MarkMonitor Inc.<br/>[Enterprise Brand Registrar]"]:::regNode
+        REG_BAD["⚠️ REG: ShadyDomains Ltd.<br/>[High-Risk Registrar]"]:::malDom
+
+        %% ASNs
+        ASN_FASTLY["🛰️ ASN: AS54113<br/>[Fastly Global Network]"]:::asnNode
+        ASN_CF["🛰️ ASN: AS13335<br/>[Cloudflare Enterprise]"]:::asnNode
+        ASN_BAD["⚠️ ASN_BAD: AS48282<br/>[Sanctioned Offshore Subnet]"]:::malDom
+
+        %% SSL Certificates
+        CERT_SAFE["🔒 CERT: DigiCert Global Root<br/>[Extended Validation TLS]"]:::certNode
+        CERT_BAD["⚠️ CERT: Free 90-Day Cert<br/>[Throwaway Ephemeral TLS]"]:::malDom
+    end
+
+    %% Bidirectional Graph Edges for D1 (wikipedia.org)
+    D1 <==>|"resolves_to ⇄ rev_resolves_to"| IP1
+    D1 <==>|"uses_ns ⇄ rev_uses_ns"| NS_WIKI
+    D1 <==>|"registered_by ⇄ rev_registered_by"| REG_SAFE
+    D1 <==>|"uses_cert ⇄ rev_uses_cert"| CERT_SAFE
+    IP1 <==>|"belongs_to_asn ⇄ rev_belongs_to_asn"| ASN_FASTLY
+
+    %% Bidirectional Graph Edges for D2 & D3 (github.com & zoom.us)
+    D2 <==>|"resolves_to ⇄ rev_resolves_to"| IP2
+    D2 <==>|"uses_ns ⇄ rev_uses_ns"| NS_CF
+    D3 <==>|"uses_ns ⇄ rev_uses_ns"| NS_CF
+    D2 <==>|"uses_cert ⇄ rev_uses_cert"| CERT_SAFE
+    D3 <==>|"uses_cert ⇄ rev_uses_cert"| CERT_SAFE
+    IP2 <==>|"belongs_to_asn ⇄ rev_belongs_to_asn"| ASN_CF
+
+    %% Bidirectional Graph Edges for D4 (paypal-security-update.top)
+    D4 <==>|"resolves_to ⇄ rev_resolves_to"| IP_BAD
+    D4 <==>|"uses_ns ⇄ rev_uses_ns"| NS_BAD
+    D4 <==>|"uses_cert ⇄ rev_uses_cert"| CERT_BAD
+    %% Notice: D4 has no_rdap=1, so NO registrar edge! (Real-world missing data handling)
+
+    %% Bidirectional Graph Edges for D5 (cryptominer-pool-88.xyz)
+    %% Notice: D5 has no_ip=1 (DEAD), no_tls=1 (NO CERT)!
+    D5 <==>|"uses_ns ⇄ rev_uses_ns"| NS_BAD
+    D5 <==>|"registered_by ⇄ rev_registered_by"| REG_BAD
+    
+    %% Infrastructure Linkage
+    IP_BAD <==>|"belongs_to_asn ⇄ rev_belongs_to_asn"| ASN_BAD
+    NS_BAD -.->|"ns_ip ⇄ rev_ns_ip"| IP_BAD
