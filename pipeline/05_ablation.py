@@ -1,19 +1,52 @@
 #!/usr/bin/env python3
 """
-CLI script to run ablation experiments on Malicious-HDG using the cached base graph.
-Ablations evaluated:
-1. Full Graph (SAGE, transductive degree, CN cert key)
-2. Without Certificate nodes & edges (no_certificates)
-3. Certificate Co-issuance Key (coissue mode without common_name)
-4. Without Nameserver edges (no_nameservers)
-5. Without Registrar edges (no_registrars)
-6. Without ASN edges (no_asn)
-7. Graph-only vs Graph + Lexical features (graph_only_no_lexical)
-8. Train-visible degree mode vs Transductive (degree_mode_train_visible)
-9. Isolated Domain MLP (mlp_no_edges, zero message passing)
-10. Attn Variant (HGTConv attention)
-11. SAGE_Guard Clean (defense cost on unattacked graph)
-Supports --smoke, --max-domains N, and --force for resumability.
+Malicious-HDG: Topological & Feature Ablation Study Orchestrator.
+
+Scientific Purpose & Workflow:
+------------------------------
+Isolates the individual marginal contributions of heterogeneous graph topological edges,
+domain lexical features, degree representation modes, and architectural components.
+Evaluates 11 pre-committed ablation configurations across 5 evaluation seeds:
+
+1. `full_sage`:
+   - Complete HeteroData graph (GraphSAGE, transductive degree mode, CN certificate key, lexical features).
+   - Serves as the primary reference baseline for all relative Delta evaluations.
+2. `no_certificates`:
+   - Drops all certificate nodes and (`domain`, `uses_cert`, `certificate`) edges.
+   - Tests hypothesis: TLS certificates provide high-precision malicious clustering.
+3. `cert_coissue_key`:
+   - Switches certificate identity key from Common Name (CN) to Co-issuance key (hash of org, country,
+     validity start/end, and valid length, omitting CN).
+   - Tests detection of certificate syndication and bulk certificate issuance without shared names.
+4. `no_nameservers`:
+   - Drops all (`domain`, `uses_ns`, `nameserver`) edges.
+   - Tests dependence on shared nameserver infrastructure (e.g. bulletproof DNS hosts).
+5. `no_registrars`:
+   - Drops all (`domain`, `registered_by`, `registrar`) edges.
+   - Tests whether malicious campaigns concentrate in specific shady registrars.
+6. `no_asn`:
+   - Drops all (`domain`, `belongs_to_asn`, `asn`) edges.
+   - Tests network-level autonomous system clustering and IP-to-ASN routing features.
+7. `graph_only_no_lexical`:
+   - Zeros out all lexical features (Shannon entropy, length, consonant ratio, digit ratio),
+     retaining purely topological infrastructure relations and DNS flags.
+   - Tests whether GNN performance relies on lexical artifacts vs relational cyber graph topology.
+8. `degree_mode_train_visible`:
+   - Scales domain node degree using train-visible degrees only, zeroing out degrees of unobserved nodes.
+   - Eliminates transductive degree leakage for inductive deployment testing.
+9. `mlp_no_edges`:
+   - Drops all edges (zero message passing) while retaining tabular and lexical node features.
+   - Quantifies the pure graph marginal value over isolated node-level deep learning.
+10. `attn_variant`:
+    - Evaluates Heterogeneous Attention (PyG HGTConv) with relational query-key-value projections.
+11. `sage_guard_clean`:
+    - Evaluates GNNGuard cosine edge pruning on unattacked clean data to measure benign defense overhead.
+
+Memory & Resumption Safeguards:
+-------------------------------
+- Co-issuance base graph (`base_graph_coissue`) is built lazily on-demand and deallocated immediately.
+- Explicit deallocation of PyTorch models, scaled graphs, and CUDA cache clearing after every run.
+- Full idempotent resumption: completed runs in `results/real_gpu/runs/` are skipped automatically.
 """
 
 import argparse
@@ -105,9 +138,8 @@ def main() -> None:
         cfg_cn = {**cfg, "graph": {**cfg.get("graph", {}), "cert_key_mode": "cn"}}
         base_graph_cn = build_base_graph(df, config=cfg_cn)
 
-    # Base graph with co-issuance cert key
-    cfg_co = {**cfg, "graph": {**cfg.get("graph", {}), "cert_key_mode": "coissue"}}
-    base_graph_coissue = build_base_graph(df, config=cfg_co)
+    # Co-issuance base graph is allocated lazily only if cert_coissue_key runs
+    base_graph_coissue = None
 
     if args.single_seed is not None:
         seeds = [args.single_seed]
@@ -131,50 +163,50 @@ def main() -> None:
         patience = 60
         min_epochs = 50
 
-    # Ablation matrix definitions
+    # Ablation matrix definitions with lazy base graph binding
     ablation_specs = {
         "full_sage": {
-            "base": base_graph_cn, "include_certs": True, "drop_edge": None, "use_lex": True,
+            "base_type": "cn", "include_certs": True, "drop_edge": None, "use_lex": True,
             "degree_mode": "transductive", "use_edges": True, "variant": "sage"
         },
         "no_certificates": {
-            "base": base_graph_cn, "include_certs": False, "drop_edge": None, "use_lex": True,
+            "base_type": "cn", "include_certs": False, "drop_edge": None, "use_lex": True,
             "degree_mode": "transductive", "use_edges": True, "variant": "sage"
         },
         "cert_coissue_key": {
-            "base": base_graph_coissue, "include_certs": True, "drop_edge": None, "use_lex": True,
+            "base_type": "coissue", "include_certs": True, "drop_edge": None, "use_lex": True,
             "degree_mode": "transductive", "use_edges": True, "variant": "sage"
         },
         "no_nameservers": {
-            "base": base_graph_cn, "include_certs": True, "drop_edge": "uses_ns", "use_lex": True,
+            "base_type": "cn", "include_certs": True, "drop_edge": "uses_ns", "use_lex": True,
             "degree_mode": "transductive", "use_edges": True, "variant": "sage"
         },
         "no_registrars": {
-            "base": base_graph_cn, "include_certs": True, "drop_edge": "registered_by", "use_lex": True,
+            "base_type": "cn", "include_certs": True, "drop_edge": "registered_by", "use_lex": True,
             "degree_mode": "transductive", "use_edges": True, "variant": "sage"
         },
         "no_asn": {
-            "base": base_graph_cn, "include_certs": True, "drop_edge": "belongs_to_asn", "use_lex": True,
+            "base_type": "cn", "include_certs": True, "drop_edge": "belongs_to_asn", "use_lex": True,
             "degree_mode": "transductive", "use_edges": True, "variant": "sage"
         },
         "graph_only_no_lexical": {
-            "base": base_graph_cn, "include_certs": True, "drop_edge": None, "use_lex": False,
+            "base_type": "cn", "include_certs": True, "drop_edge": None, "use_lex": False,
             "degree_mode": "transductive", "use_edges": True, "variant": "sage"
         },
         "degree_mode_train_visible": {
-            "base": base_graph_cn, "include_certs": True, "drop_edge": None, "use_lex": True,
+            "base_type": "cn", "include_certs": True, "drop_edge": None, "use_lex": True,
             "degree_mode": "train_visible", "use_edges": True, "variant": "sage"
         },
         "mlp_no_edges": {
-            "base": base_graph_cn, "include_certs": True, "drop_edge": None, "use_lex": True,
+            "base_type": "cn", "include_certs": True, "drop_edge": None, "use_lex": True,
             "degree_mode": "transductive", "use_edges": False, "variant": "sage"
         },
         "attn_variant": {
-            "base": base_graph_cn, "include_certs": True, "drop_edge": None, "use_lex": True,
+            "base_type": "cn", "include_certs": True, "drop_edge": None, "use_lex": True,
             "degree_mode": "transductive", "use_edges": True, "variant": "attn"
         },
         "sage_guard_clean": {
-            "base": base_graph_cn, "include_certs": True, "drop_edge": None, "use_lex": True,
+            "base_type": "cn", "include_certs": True, "drop_edge": None, "use_lex": True,
             "degree_mode": "transductive", "use_edges": True, "variant": "sage_guard"
         }
     }
@@ -183,6 +215,21 @@ def main() -> None:
 
     for name, a_spec in ablation_specs.items():
         print(f"\n=== Ablation: {name} ===")
+
+        # Resolve base graph with lazy allocation for co-issuance mode
+        if a_spec.get("base_type") == "coissue":
+            needs_coissue_run = any(
+                not should_skip_run(paths.results_dir, f"ablation_{name}_seed_{s}", force=args.force)
+                for s in seeds
+            )
+            if needs_coissue_run and base_graph_coissue is None:
+                print(f"  [MEMORY OPT] Lazily building co-issuance base graph on demand for '{name}'...")
+                cfg_co = {**cfg, "graph": {**cfg.get("graph", {}), "cert_key_mode": "coissue"}}
+                base_graph_coissue = build_base_graph(df, config=cfg_co)
+            target_base = base_graph_coissue
+        else:
+            target_base = base_graph_cn
+
         for s in seeds:
             run_name = f"ablation_{name}_seed_{s}"
             if should_skip_run(paths.results_dir, run_name, force=args.force):
@@ -196,7 +243,7 @@ def main() -> None:
 
             # Fast per-split scaling on cached base graph
             scaled_data, _ = apply_split_scaling(
-                base=a_spec["base"],
+                base=target_base,
                 train_indices=splits.train_indices,
                 val_indices=splits.val_indices,
                 degree_mode=a_spec["degree_mode"],
@@ -250,6 +297,14 @@ def main() -> None:
             gc.collect()
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
+
+        # Free lazily allocated co-issuance base graph to reclaim host RAM
+        if a_spec.get("base_type") == "coissue" and base_graph_coissue is not None:
+            print("  [MEMORY OPT] Deallocating co-issuance base graph to reclaim host RAM...")
+            del base_graph_coissue
+            base_graph_coissue = None
+            import gc
+            gc.collect()
 
     # Aggregate statistics
     aggregated_ablation: Dict[str, Any] = {}

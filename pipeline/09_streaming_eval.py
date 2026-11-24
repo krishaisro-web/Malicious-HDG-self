@@ -1,14 +1,22 @@
 #!/usr/bin/env python3
 """
-CLI script to evaluate online / streaming updates for Malicious-HDG across consecutive months.
-Compares:
-1. Retrain from scratch (upper bound, highest compute)
-2. Naive fine-tuning (online training; tests for catastrophic forgetting)
-3. Replay buffer (reservoir sample of size 1000 mixed with new data)
-Reports:
-- F1, TPR at 0.1% FPR, ROC-AUC on new month
-- Backward transfer / forgetting on Month 1 at each incremental step
-Outputs to results/tables/streaming_eval.json, streaming_eval.md, and results/runs/streaming_eval.json.
+Malicious-HDG: Continual Learning & Streaming Domain Evolution Evaluator.
+
+Scientific Purpose & Streaming Methodologies:
+---------------------------------------------
+Simulates real-world production deployment over consecutive chronological months,
+evaluating model adaptation against cyber concept drift and catastrophic forgetting:
+1. Evaluation Paradigms:
+   - `Retrain from Scratch`: Full retraining on all cumulative historical data up to month t
+     (computational upper bound on performance).
+   - `Naive Fine-Tuning`: Sequential gradient updates exclusively on incoming month t data
+     (fastest update, but susceptible to catastrophic forgetting of historical patterns).
+   - `Experience Replay Buffer`: Reservoir sampling of capacity N=1000 historical domains mixed
+     with month t data (balanced approach stabilizing plasticity and memory retention).
+2. Longitudinal Metrics:
+   - Forward Transfer: F1-score, ROC-AUC, and TPR at certified 0.1% FPR on new, unseen month t.
+   - Backward Transfer (Forgetting): Retention of classification accuracy on Month 1 holdout
+     evaluated at each subsequent incremental monthly step.
 """
 
 import argparse

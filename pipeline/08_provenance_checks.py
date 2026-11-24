@@ -1,11 +1,26 @@
 #!/usr/bin/env python3
 """
-Shortcut, provenance, and collection artifact audit for Malicious-HDG:
-1. Benign-vs-benign classifier (Cisco Umbrella vs CESNET)
-2. Cross-source generalization: Train on {primary malware source + Umbrella}, test on {other malware sources + CESNET}
-3. Feature-group sensitivity ablation (excluding null-rate & missingness features)
-4. Graph connectivity audit: Share of domains per class connected to reused infrastructure (degree >= 2)
-Outputs provenance_checks.json and provenance_checks.md with plain-language verdicts.
+Malicious-HDG: Dataset Provenance, Collection Artifact & Shortcut Learning Auditor.
+
+Scientific Purpose & Audit Suite:
+---------------------------------
+Rigorous empirical audit to ensure detection performance is driven by genuine cyber-infrastructure
+signals rather than dataset collection artifacts, publisher-specific shortcuts, or missingness bias:
+1. Benign-vs-Benign Source Divergence Audit:
+   - Trains an XGBoost classifier to distinguish between Cisco Umbrella benign domains and CESNET
+     ground-truth benign domains.
+   - Diagnoses domain distribution shift: ROC-AUC <= 0.80 indicates low/moderate source divergence;
+     higher values reflect differing domain popularity or enterprise usage patterns.
+2. Cross-Source Generalization Audit (Leave-One-Malware-Source-Out / LOMSO):
+   - Partitions training set to: {Primary malware source + Cisco Umbrella benigns}.
+   - Evaluates strictly on: {All other malware sources + CESNET benigns}.
+   - Demonstrates inductive generalization across independent malware intelligence feeds.
+3. Feature-Group Sensitivity & Missingness Ablation:
+   - Evaluates model performance when explicitly zeroing out null-rate indicators (`no_ip`, `no_rdap`,
+     `no_tls`), proving the classifier does not exploit scanner timeouts as a malicious shortcut.
+4. Infrastructure Graph Connectivity & Hub Reuse Audit:
+   - Quantifies the fraction of domains in each class that connect to multi-tenant or shared
+     infrastructure (degree >= 2 on IP, NS, ASN, registrar, certificate).
 """
 
 import argparse

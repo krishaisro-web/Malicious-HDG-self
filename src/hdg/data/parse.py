@@ -1,13 +1,37 @@
 """
-Streaming parser and normalizer for Zenodo DomainRadar v2.
-Extracts schema-faithful domain records, enforces leak-free normalization,
-resolves candidate keys for ASN and registrar, performs cross-class deduplication,
-handles dual certificate keys (CN and co-issuance), optional BGP prefix extraction,
-and supports month-matched benign sampling.
+Malicious-HDG: Streaming Dataset Parser & Multi-Source Normalization Engine.
+
+Purpose & Workflow:
+-------------------
+Provides memory-efficient streaming parsing and leak-free normalization for raw Zenodo
+DomainRadar v2 JSON records (up to 930,000 domains across 3 raw feeds: malware, Cisco Umbrella,
+and CESNET ground truth):
+1. Streaming Ingestion:
+   - Uses `ijson` iterative JSON streaming (`ijson.items(f, "item")`) to process multi-gigabyte
+     raw JSON files without reading entire files into memory.
+   - Enforces a <1% malformed record tolerance threshold (fails closed on dirty or truncated dumps).
+2. Leak-Free Normalization:
+   - Resolves effective second-level domains (e2LDs) via `tldextract` without relying on dynamic
+     Public Suffix List network fetches during test execution.
+   - Resolves timestamps via strict fallback: `sourced_on` -> `evaluated_on`. Excludes records
+     lacking valid timestamps (never imputes artificial min-dates to prevent temporal leakage).
+3. Infrastructure Key Resolution:
+   - Certificates: Extracts leaf certs using `is_root=False`. Computes dual keys:
+       * Common Name (CN) key: hash(CN, org, country, valid_start, valid_end)
+       * Co-issuance key: hash(org, country, valid_start, valid_end, valid_len) [no CN]
+   - Autonomous Systems: Traverses candidate keys (`asn`, `autonomous_system_number`, `number`).
+   - Registrars: Traverses entity records in RDAP objects (`name`, `handle`, `organization`).
+4. Cross-Class & Intra-Class Deduplication:
+   - Intra-class: Deduplicates by domain unit, retaining the chronologically earliest observation.
+   - Cross-class: Drops domains present in both clean benign and malware feeds to eliminate label ambiguity.
+5. Cohort Sampling:
+   - Time-matched: Matches benign domain counts per month against malware volume over overlapping months.
+   - Natural Scale: Preserves natural ~8.24:1 class imbalance when `benign_ratio is None`.
 """
 
 from collections import Counter
 from datetime import datetime
+import gc
 import hashlib
 import json
 import logging
@@ -442,8 +466,17 @@ def parse_and_process_dataset(
                     seen[d] = r
         return seen
 
+    mal_kept = len(malware_recs)
+    umb_kept = len(umbrella_recs)
+    ces_kept = len(cesnet_recs)
+
+    # Deduplicate within each class by retaining the earliest observation timestamp
     malware_dict = deduplicate_class(malware_recs)
+    del malware_recs  # Free raw malware records list from memory
+
     benign_pool_dict = deduplicate_class(umbrella_recs + cesnet_recs)
+    del umbrella_recs, cesnet_recs  # Free raw benign lists from memory
+    gc.collect()  # Immediately reclaim host RAM
 
     # Cross-class deduplication: DROP any domain appearing in both classes
     cross_collisions = set(malware_dict.keys()).intersection(set(benign_pool_dict.keys()))
@@ -453,7 +486,10 @@ def parse_and_process_dataset(
         benign_pool_dict.pop(d, None)
 
     clean_malware = list(malware_dict.values())
+    del malware_dict
     clean_benign = list(benign_pool_dict.values())
+    del benign_pool_dict
+    gc.collect()
 
     # Monthly distributions
     malware_by_month: Dict[str, List[Dict[str, Any]]] = {}
@@ -520,9 +556,9 @@ def parse_and_process_dataset(
         "normalize_to_e2LD": normalize_to_e2ld,
         "benign_ratio": benign_ratio,
         "raw_counts": {
-            "malware": {"total": mal_total, "excluded_no_time": mal_no_time, "malformed": mal_malformed, "kept": len(malware_recs)},
-            "umbrella": {"total": umb_total, "excluded_no_time": umb_no_time, "malformed": mal_malformed, "kept": len(umbrella_recs)},
-            "cesnet": {"total": ces_total, "excluded_no_time": ces_no_time, "malformed": ces_malformed, "kept": len(cesnet_recs)}
+            "malware": {"total": mal_total, "excluded_no_time": mal_no_time, "malformed": mal_malformed, "kept": mal_kept},
+            "umbrella": {"total": umb_total, "excluded_no_time": umb_no_time, "malformed": mal_malformed, "kept": umb_kept},
+            "cesnet": {"total": ces_total, "excluded_no_time": ces_no_time, "malformed": ces_malformed, "kept": ces_kept}
         },
         "asn_keys_used": dict(asn_key_counter),
         "registrar_keys_used": dict(reg_key_counter),

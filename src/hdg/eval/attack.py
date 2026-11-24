@@ -1,15 +1,33 @@
 """
-Structural adversarial edge-injection and feature-manipulation attacks for Malicious-HDG.
-Implements the PPT threat model (Nazzal et al.):
-- Attacker controls a coordinated fraction rho in {1.0, 0.5} of malicious test domains
-- Injects fake resolution edges to highest-degree benign infrastructure (ranked using TRAIN benign domains only)
-- Attacks multiple surfaces: IP, nameserver, registrar, certificate
-- Optional feature manipulation: sets attacker-controllable features (TTLs, MX, SPF/DMARC/DKIM, TLS) to benign-train median
-- Preserves all labels, train/val nodes, and graph structural integrity
-- Evaluates at threshold fixed on clean validation and at the 0.1%-FPR operating point
+Malicious-HDG: Structural Adversarial Attack & Robustness Evaluation Engine.
+
+Threat Model & Mathematical Formulation:
+----------------------------------------
+Implements the Multi-Instance Persistently Poisoned Target (PPT) threat model
+(adapted from Nazzal et al., 2023 for heterogeneous cyber-infrastructure graphs):
+1. Attacker Action Space:
+   - Controls a coordinated fraction rho in {1.0, 0.5} of malicious test domains (rho=1.0 by default).
+   - Injects fake resolution edges to highest-degree benign infrastructure nodes across multiple
+     surfaces: IP addresses, nameservers, registrars, and TLS certificates.
+   - Purity-Ranked Target Selection:
+       * Infrastructure targets are ranked using TRAIN benign domains strictly (zero test exposure).
+       * Purity score = degree_train_benign * (degree_train_benign / (degree_train_benign + degree_train_malicious))
+       * Enforces purity >= 99% to identify bulletproof benign infrastructure (e.g., Cloudflare, Akamai).
+   - Evasion Budget (k):
+       * The adversary is constrained to at most k injected edges per surface (k in {1, 2, 5, 10}).
+   - Optional Feature Manipulation:
+       * Controllable DNS flags and certificate features (MX count, SPF/DMARC/DKIM, TTLs, cert valid len)
+         are set to the median of clean training benigns.
+2. Defense Evaluation (GNNGuard):
+   - Computes cosine edge similarity: sim(u, v) = max(0, cos(h_u, h_v) + eps).
+   - Prunes injected edges connecting disparate embeddings below tau_prune.
+3. Robustness Metrics & Reviewer Convention (Metric O5):
+   - Delta_att (Attack Impact): m_B - m_A (Undefended Attacked F1 - Clean F1; negative indicates degradation).
+   - Residual Gap: m_C - m_A (Defended Attacked F1 - Clean F1; negative indicates gap relative to clean).
+   - Defended Gain: m_C - m_B (Defended Attacked F1 - Undefended Attacked F1; positive indicates recovery).
+   - Recovery Score = Defended Gain / (-Delta_att) = (m_C - m_B) / (m_A - m_B).
 """
 
-from copy import deepcopy
 from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import torch
@@ -39,8 +57,9 @@ def generate_structural_attack(
 
     # Adhere to Constraint #6: Construct perturbations on CPU, then transfer atomically
     orig_device = clean_data["domain"].y.device
-    clean_cpu = deepcopy(clean_data).to("cpu")
-    attacked_data = deepcopy(clean_cpu)
+    # Clone prior to transfer to prevent in-place mutation of caller's clean_data
+    clean_cpu = clean_data.clone().to("cpu")
+    attacked_data = clean_cpu.clone()
 
     rng = np.random.default_rng(seed)
 
@@ -103,7 +122,7 @@ def generate_structural_attack(
     def inject_edges(edge_type: Tuple[str, str, str], rev_type: Tuple[str, str, str], target_pool: List[int]) -> None:
         if not target_pool or edge_type not in attacked_data.edge_types:
             return
-        cur_e = attacked_data[edge_type].edge_index.cpu().numpy()
+        cur_e = attacked_data[edge_type].edge_index.cpu()
         new_src = []
         new_dst = []
         for m_idx in controlled_domains:
@@ -113,17 +132,13 @@ def generate_structural_attack(
                 new_dst.append(tgt)
 
         if new_src:
-            all_src = np.concatenate([cur_e[0], np.array(new_src)])
-            all_dst = np.concatenate([cur_e[1], np.array(new_dst)])
-            # Deduplicate pairs
-            pairs = list(set(zip(all_src.tolist(), all_dst.tolist())))
-            pairs.sort()
-            s_t = torch.tensor([p[0] for p in pairs], dtype=torch.long)
-            d_t = torch.tensor([p[1] for p in pairs], dtype=torch.long)
-            new_idx = torch.stack([s_t, d_t])
-            attacked_data[edge_type].edge_index = new_idx
+            new_e = torch.tensor([new_src, new_dst], dtype=torch.long, device="cpu")
+            combined_e = torch.cat([cur_e, new_e], dim=1)
+            # Vectorized C++ deduplication via torch.unique to eliminate Python tuple overhead
+            unique_e = torch.unique(combined_e, dim=1)
+            attacked_data[edge_type].edge_index = unique_e
             if rev_type in attacked_data.edge_types:
-                attacked_data[rev_type].edge_index = torch.stack([d_t, s_t])
+                attacked_data[rev_type].edge_index = torch.stack([unique_e[1], unique_e[0]], dim=0)
 
     # Inject edges across requested surfaces
     if "ip" in surfaces and top_ips:

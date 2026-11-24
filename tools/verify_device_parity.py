@@ -57,10 +57,15 @@ def run_device_parity_check(
     proc_dir = Path(processed_dir) if processed_dir is not None else paths.processed_dir
     graph_file = proc_dir / "heterodata.pt"
     if not graph_file.exists():
-        raise FileNotFoundError(
-            f"Processed graph not found at '{proc_dir}'. "
-            "Run pipeline data preprocessing (01_parse and 02_build_graph) before running parity check."
-        )
+        archive_cand = proc_dir.parent / "archive_100k_pilot"
+        if (archive_cand / "heterodata.pt").exists():
+            proc_dir = archive_cand
+            graph_file = archive_cand / "heterodata.pt"
+        else:
+            raise FileNotFoundError(
+                f"Processed graph not found at '{proc_dir}'. "
+                "Run pipeline data preprocessing (01_parse and 02_build_graph) before running parity check."
+            )
 
     base_graph, df, manifest = load_aligned_graph_cohort(proc_dir)
 

@@ -1,10 +1,28 @@
 #!/usr/bin/env python3
 """
-CLI script to train and evaluate HeteroGNN models (SAGE, Attn, and SAGE_Guard variants)
-across multiple evaluation seeds and split methodologies (random, time, group).
-Computes exact McNemar tests and paired bootstrap AUC differences across all seeds.
-Outputs tables and run summaries to results/runs/ and results/tables/.
-Supports --smoke, --max-domains N, and --force for resumability.
+Malicious-HDG: Multi-Seed Heterogeneous Graph Neural Network Training & Statistical Evaluation.
+
+Purpose & Workflow:
+-------------------
+Orchestrates end-to-end model training, validation calibration, and statistical evaluation
+for Malicious-HDG GNN models across evaluation splits (Random, Time, and Group) and random seeds:
+1. Architecture Variants:
+   - 'sage': Relational GraphSAGE (HeteroConv + SAGEConv with mean aggregation).
+   - 'attn': Relational Heterogeneous Attention (PyG HGTConv multi-head attention).
+   - 'sage_guard': GNNGuard-defended GraphSAGE with cosine edge pruning.
+2. Evaluation Splits:
+   - 'random': 70/15/15 stratified random split (optimistic baseline).
+   - 'time': Chronological temporal holdout with future domain edge masking.
+   - 'group': Disjoint infrastructure component holdout with hub pruning.
+3. Multi-Seed Statistical Rigor:
+   - Trains models across 5 pre-committed seeds (e.g., 42, 43, 44, 45, 46).
+   - Computes exact McNemar chi-square tests for classification agreement.
+   - Estimates paired bootstrap difference distributions for Delta ROC-AUC with 95% CIs.
+4. Co-Primary Model Selection (Seed 42):
+   - Computes in-distribution partial AUC (pAUC at FPR <= 1%) on Seed 42 for co-primary selection.
+5. Resource & Memory Safeguards:
+   - Manages dedicated GPU allocations (up to 95% VRAM on NVIDIA A100-80GB).
+   - Enforces clean deallocations of graph data, models, and eval graphs between seeds.
 """
 
 import argparse

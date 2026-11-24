@@ -1,11 +1,34 @@
 """
-Leak-free dataset split generation for Malicious-HDG.
-Implements:
-1. Random stratified split (optimistic bound only).
-2. Rolling-origin temporal split: T -> T+1 over months in which both classes exist.
-3. Stratified group split: connected components after hub pruning with greedy class-prevalence balancing.
-4. Joint-grouping option across all infrastructure types (IP, NS, registrar, certificate).
-5. Group split by primary ASN with infrastructure leakage report.
+Malicious-HDG: Leak-Free Graph Dataset Partitioning & Split Generation.
+
+Evaluation Topologies & Methodological Design:
+---------------------------------------------
+1. Random Stratified Split (`random_stratified_split`):
+   - Generates 70/15/15 train/val/test splits balanced on domain labels.
+   - Theoretical Role: Serves strictly as an OPTIMISTIC BOUND. In transductive GNNs,
+     random splits permit message-passing leakage across shared infrastructure hubs
+     (e.g., train and test domains co-hosted on identical ASNs or nameservers).
+
+2. Rolling-Origin Temporal Split (`rolling_origin_temporal_splits` & `time_split`):
+   - Evaluates pure INDUCTIVE TEMPORAL GENERALIZATION across consecutive calendar months (T -> T+1).
+   - Training graph contains strictly historical records (t <= T_cutoff). Future domains (t > T_cutoff)
+     are completely withheld from graph construction, degree calculations, and feature scaling.
+   - Evaluates cyber defense durability against attacker evasion strategies and infrastructure migration over time.
+
+3. Disjoint Bipartite Group Holdout (`group_split_bipartite`):
+   - Tests generalization to completely UNSEEN INFRASTRUCTURE CLUSTERS.
+   - Algorithms:
+     a. Hub Pruning: High-degree infrastructure nodes (e.g. Cloudflare, Akamai, GoDaddy with degree > 500)
+        are excluded from component bridging to avoid collapsing the entire graph into a single giant component.
+     b. Connected Component Discovery: Extracts independent bipartite subgraphs using SciPy CSR graph traversal.
+     c. Greedy Stratified Bin Packing: Distributes independent clusters to train/val/test so malicious class
+        prevalences in all partitions remain within +/- 5 percentage points of the global dataset prior.
+
+4. 50% Negative Certification Holdout (`cert_indices`):
+   - Validation negative domains are split 50/50 into:
+     - Model-Selection Val: Used for early stopping, learning rate grid search, and decision threshold (tau*).
+     - Certification Val: Reserved exclusively for FPR calibration (e.g., certified 0.1% FPR operating points)
+       to eliminate hyperparameter reuse bias.
 """
 
 from dataclasses import dataclass, field
@@ -22,6 +45,17 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class DataSplits:
+    """
+    Container for disjoint domain node index sets defining an evaluation split.
+    
+    Attributes:
+        train_indices: 1D NumPy array of node IDs assigned to training.
+        val_indices: 1D NumPy array of node IDs assigned to validation (early stopping / tuning).
+        test_indices: 1D NumPy array of node IDs assigned to final held-out evaluation.
+        split_type: String identifier ("random", "time", "group", "temporal_rolling_origin").
+        metadata: Supplementary split diagnostic statistics (counts, prevalences, transition months).
+        cert_indices: Optional disjoint validation negative subset for certified threshold calibration.
+    """
     train_indices: np.ndarray
     val_indices: np.ndarray
     test_indices: np.ndarray
@@ -30,7 +64,10 @@ class DataSplits:
     cert_indices: Optional[np.ndarray] = None
 
     def assert_disjoint(self) -> None:
-        """Asserts train, val, test, and cert index sets are completely disjoint."""
+        """
+        Cryptographically asserts that train, val, test, and cert index sets are strictly disjoint.
+        Raises AssertionError immediately if any domain index appears in multiple partitions.
+        """
         s_train = set(self.train_indices.tolist())
         s_val = set(self.val_indices.tolist())
         s_test = set(self.test_indices.tolist())
@@ -63,8 +100,12 @@ def random_stratified_split(
     seed: int = 42
 ) -> DataSplits:
     """
-    Random stratified split on labels.
-    Reported strictly as an optimistic bound.
+    Constructs a random stratified 70/15/15 train/val/test split.
+    
+    Includes 50% validation negative holdout partitioning (`cert_indices`) to prevent
+    threshold calibration contamination.
+    
+    Note: Reported strictly as an optimistic bound due to transductive infrastructure sharing.
     """
     n_total = len(labels)
     indices = np.arange(n_total)
@@ -409,10 +450,39 @@ def group_split_bipartite(
     seed: int = 42
 ) -> Tuple[DataSplits, Dict[str, Any]]:
     """
-    Connected components of the domain-infrastructure graph AFTER removing hub nodes.
-    - If joint_grouping=True: includes IP, nameserver, registrar, and certificate relations.
-    - Uses assign_groups_stratified to ensure class ratios in each split are within 5 percentage points.
-    - Reports giant component fraction and fallback metadata.
+    Constructs a leak-free group split using connected components of the domain-infrastructure graph.
+    
+    Guarantees inductive generalization to novel attacker infrastructure:
+    1. Relation Selection:
+       - Default: Resolves-to (IP) and uses-nameserver (NS).
+       - Joint Grouping (`joint_grouping=True`): Includes IP, NS, Registrar, and Certificate links.
+    2. Hub Pruning:
+       - Infrastructure nodes exceeding `effective_cutoff = min(hub_degree, perc_cutoff)`
+         are masked out before component extraction.
+       - Prevents mega-hubs (e.g. Cloudflare 1.1.1.1, Google DNS 8.8.8.8, AWS Route53) from bridging
+         thousands of independent domains into an intractable single giant component.
+    3. Connected Component Partitioning:
+       - Assembles a bipartite CSR adjacency matrix of size (N_domain + N_infra, N_domain + N_infra).
+       - Extracts independent disjoint graph clusters using SciPy csgraph connected_components.
+    4. Stratified Cluster Assignment:
+       - Greedily assigns component clusters to train/val/test pools using `assign_groups_stratified`
+         to maintain class prevalence within `max_discrepancy` (+/- 5 percentage points).
+       - Zero components cross between train, validation, or test sets.
+    5. Certification Holdout:
+       - Splits validation negatives 50/50 to guarantee clean operational FPR calibration.
+
+    Args:
+        df: Aligned domains DataFrame containing labels and infrastructure columns.
+        hub_degree: Maximum allowed incident degree before a node is pruned as a multi-tenant hub.
+        hub_percentile: Upper percentile cutoff for hub degree pruning (default: 99.9th percentile).
+        train_ratio: Target proportion for training set (default: 0.70).
+        val_ratio: Target proportion for validation set (default: 0.15).
+        joint_grouping: If True, bridges components across all 4 infrastructure surfaces.
+        max_discrepancy: Maximum allowed deviation between split and global class prevalence.
+        seed: Random seed for deterministic cluster tie-breaking.
+
+    Returns:
+        Tuple of (DataSplits instance, diagnostic_metadata_dictionary).
     """
     n_domains = len(df)
     labels = df["label"].to_numpy()

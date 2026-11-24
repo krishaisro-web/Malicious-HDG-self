@@ -1,13 +1,29 @@
 #!/usr/bin/env python3
 """
-CLI script to evaluate adversarial robustness of Malicious-HDG under PPT threat model:
-Generates 3-configuration table per budget over evaluation seeds:
-(A) Clean SAGE (Undefended clean)
-(B) Attacked Undefended SAGE (Edge injection + feature manipulation)
-(C) Attacked + GNNGuard (SAGE_Guard defense evaluated on attacked graph)
-(D) Clean SAGE_Guard (Defense cost on clean graph)
-Reports: F1, TPR@0.1% FPR, ROC-AUC, Recall, Evasion Rate, Robustness Delta, and Defense Recovery.
-Supports --smoke, --max-domains N, and --force for resumability.
+Malicious-HDG: Adversarial Robustness & GNNGuard Structural Defense Evaluator.
+
+Scientific Purpose & Threat Model:
+----------------------------------
+Evaluates the robustness of Malicious-HDG heterogeneous GNNs against coordinated structural
+adversarial evasion under the Persistently Poisoned Target (PPT) threat model (Nazzal et al., 2023):
+1. Attack Threat Model (4 Configurations per Evasion Budget k in {1, 2, 5, 10}):
+   - (A) `Clean SAGE`: Undefended standard Relational GraphSAGE evaluated on unattacked graph.
+   - (B) `Attacked Undefended SAGE`: SAGE evaluated under coordinated multi-surface fake edge injection
+         (IP, NS, registrar, certificate) targeted at high-degree benign infrastructure (purity >= 99%)
+         plus feature manipulation of controllable DNS/certificate fields to benign medians.
+   - (C) `Attacked + GNNGuard (SAGE_Guard)`: Defended GraphSAGE with cosine edge pruning (tau=0.1)
+         evaluated on the exact same attacked graph.
+   - (D) `Clean SAGE_Guard`: Defended model evaluated on the clean graph to quantify benign overhead.
+2. Reviewer-Aligned Robustness Metrics (Objective O5):
+   - Attack Impact (Delta_att): m_B - m_A (Undefended F1 - Clean F1; negative shows evasion degradation).
+   - Residual Gap: m_C - m_A (Defended F1 - Clean F1; gap remaining between defense and clean baseline).
+   - Defended Gain: m_C - m_B (Defended F1 - Undefended F1; positive shows defense recovery).
+   - Recovery Score: Defended Gain / (-Delta_att) = (m_C - m_B) / (m_A - m_B).
+   - Evaluates TPR at certified 0.1% FPR and realized test FPR.
+3. Memory & Hardware Protocol:
+   - Perturbations are constructed on CPU, then transferred atomically to GPU (Constraint #6).
+   - Strict FP32 precision (`allow_tf32=False`) ensures cosine edge similarities preserve epsilon margins.
+   - Deallocates models, attacked graphs, and flushes CUDA cache after each seed.
 """
 
 import argparse

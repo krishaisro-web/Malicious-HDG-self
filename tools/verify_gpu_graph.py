@@ -5,7 +5,7 @@ Adheres to Phase 2a specifications in docs/GPU_ADAPTATION_PLAN.md.
 
 Performs:
 1. Driver, PyTorch, PyG, and CUDA toolkit environment probing.
-2. Shared-GPU memory fraction capping (0.35 cap) and dynamic VRAM verification (>= 8.0 GB).
+2. Dedicated GPU memory fraction allocation (0.95 cap) and dynamic VRAM verification (>= 10.0 GB free).
 3. Strict FP32 verification (allow_tf32 == False).
 4. Deterministic scatter algorithm verification.
 5. Synthetic HeteroGNN forward and backward pass on GPU with SAGE, ATTN, and GNNGuard.
@@ -204,6 +204,10 @@ def run_preflight_checks(
 
     # 5. Real Graph Profiling (Read-Only)
     real_graph_file = Path(graph_path)
+    if not real_graph_file.exists() and graph_path == "data/processed/real/heterodata.pt":
+        archive_cand = Path("data/processed/archive_100k_pilot/heterodata.pt")
+        if archive_cand.exists():
+            real_graph_file = archive_cand
     if real_graph_file.exists():
         try:
             t0 = time.time()

@@ -1,16 +1,23 @@
 #!/usr/bin/env python3
 """
-CLI script to emit BIND Response Policy Zone (RPZ) DNS blocking rules from Malicious-HDG.
-Implements:
-1. Calibrates decision threshold on validation benign cohort to guarantee operational FPR <= 0.1%.
-2. Evaluates test set domains against calibrated threshold.
-3. Formats and writes standard BIND RPZ file (<domain> CNAME .) with detailed operational metadata comments.
-4. Generates summary statistics: emitted rule count, estimated blocking rate, distribution by source family.
-Outputs to:
-- results/rpz/malicious_domains.rpz
-- results/rpz/rpz_summary.json
-- results/tables/rpz_summary.md
-- results/runs/emit_rpz.json
+Malicious-HDG: Certified BIND Response Policy Zone (RPZ) DNS Firewall Rule Generator.
+
+Operational Purpose & Statistical Certification:
+------------------------------------------------
+Emits production-ready BIND 9 Response Policy Zone (RPZ) firewall zone files to provide
+automated, proactive blocking of malicious domains at recursive DNS resolvers:
+1. Operational FPR Guarantee (Objective O1):
+   - Calibrates decision threshold tau strictly on validation benign cohort to guarantee
+     operational False Positive Rate FPR <= 0.1% (<1 false positive per 1,000 queries).
+   - Utilizes independent certification holdout negatives (50% of validation benigns reserved
+     prior to training, never touched by early stopping or model selection).
+   - Computes exact binomial 95% confidence upper bound on population FPR.
+   - Fail-Closed Gate: Fails closed (blocks rule emission and purges stale RPZ files) if statistical
+     certification fails or if the 95% upper bound exceeds target FPR.
+2. Standard BIND RPZ Zone Formatting:
+   - Emits RFC-compliant BIND RPZ records: `<domain> CNAME .` (NXDOMAIN response to clients).
+   - Includes full operational metadata in header comments (checkpoint hash, split protocol,
+     calibrated threshold, estimated blocking rate, and timestamp).
 """
 
 import argparse
@@ -436,6 +443,7 @@ def main() -> None:
     with torch.no_grad():
         out = model(scaled_data.x_dict, scaled_data.edge_index_dict)
         all_probs = F.softmax(out, dim=-1)[:, 1].cpu().numpy()
+        del out, scaled_data  # Free intermediate tensors and graph inputs from memory
 
     if np.isnan(all_probs).any() or np.isinf(all_probs).any():
         print("[BLOCKED_INVALID_PREDICTIONS] RPZ rule generation blocked: Model output probabilities contain NaN or Inf values.")

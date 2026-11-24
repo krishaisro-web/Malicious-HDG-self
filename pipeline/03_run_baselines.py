@@ -1,14 +1,28 @@
 #!/usr/bin/env python3
 """
-CLI script to run baseline models on identical splits for Malicious-HDG.
-Evaluates across 5 seeds:
-- TF-IDF (char 2-5) + Logistic Regression on e2LD
-- XGBoost on Tabular non-lexical
-- XGBoost on Tabular + Lexical
-- Single-feature length baseline
-- Single-feature no_ip baseline
-- Isolated Domain MLP (HeteroGNN with use_edges=False)
-Supports --smoke, --max-domains N, and --force for resumability.
+Malicious-HDG: Multi-Seed Baseline Benchmarking Suite.
+
+Scientific Purpose & Baseline Architectures:
+--------------------------------------------
+Evaluates 6 classical and deep learning baselines across identical evaluation splits and random seeds
+to establish comparative performance benchmarks and quantify the marginal gain of heterogeneous graphs (Objective O3):
+1. `tfidf_logreg_e2ld`:
+   - Character n-gram (2-5) TF-IDF vectorization on effective second-level domains (e2LDs)
+     coupled with L2-regularized Logistic Regression.
+   - Tests pure lexical lexical patterns (e.g., character perplexity, typosquatting).
+2. `xgboost_tabular`:
+   - Gradient boosted trees trained on tabular network and DNS features (no lexical stats).
+   - Tests classical non-relational cyber telemetry.
+3. `xgboost_tabular_lexical`:
+   - State-of-the-art tabular baseline combining network flags, TTLs, certificates, and lexical features.
+   - Primary reference model for Objective O3 statistical superiority tests (paired McNemar & bootstrap Delta AUC).
+4. `single_feat_length`:
+   - Univariate domain character length baseline (tests if length alone explains malicious clustering).
+5. `single_feat_no_ip`:
+   - Univariate DNS resolution failure indicator (tests whether inactive/parked domains dominate).
+6. `mlp_no_edges`:
+   - Multi-layer perceptron using identical node feature projections as HeteroGNN, but with
+     zero message passing (edges dropped), strictly isolating the value of relational cyber topology.
 """
 
 import argparse
@@ -291,6 +305,7 @@ def main() -> None:
                 scaled_g, _ = apply_split_scaling(base_graph, splits.train_indices)
                 epochs_mlp = 3 if (args.smoke or args.fixture) else 30
                 res_mlp, y_test, test_probs = run_mlp_no_edges_baseline(scaled_g, splits, df, cfg, epochs=epochs_mlp, seed=s)
+                del scaled_g  # Immediately release scaled graph tensor from memory
                 y_pred = (test_probs >= res_mlp["threshold"]).astype(int)
                 res_mlp["experiment_fingerprint"] = exp_fp
                 res_mlp["predictions"] = {

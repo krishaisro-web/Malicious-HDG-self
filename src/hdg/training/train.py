@@ -1,16 +1,31 @@
 """
-Unified, leak-free training and evaluation loop for Malicious-HDG GNN models.
-Replaces legacy copy-pasted loops from scripts 07, 10, 12, 13, 14, 17, 18.
-- Validation-driven learning rate search (lr_grid)
-- Early stopping on validation ROC-AUC
-- Optional class weights and learning rate scheduler
-- Per-epoch training logging to results/logs/
-- Model checkpointing to models/checkpoints/
-- Threshold optimization strictly on validation set
-- Operating points (TPR at 1% and 0.1% FPR) with validation negative thresholds
-- Realised test FPR and prevalence-adjusted precisions
-- Bootstrap 95% confidence intervals
-- Subgroup breakdowns (resolved vs no_ip, source, malware family)
+Malicious-HDG: Unified, Leak-Free Training and Evaluation Loop for Heterogeneous GNNs.
+
+Overview & Research Protocol (Phase 2 Specifications):
+------------------------------------------------------
+This module implements the canonical training, validation, early-stopping, checkpointing,
+and multi-metric evaluation pipeline for Malicious-HDG models (HeteroGraphSAGE & HeteroHGTConv).
+
+Methodological & Operational Guarantees:
+----------------------------------------
+1. Zero Data Leakage:
+   - Data scaling statistics (mean, std) are derived strictly from training domains.
+   - Optimal classification thresholds (tau*) and operating points (tau @ 1% FPR, tau @ 0.1% FPR)
+     are selected strictly on validation sets and frozen before evaluating test sets.
+2. Production Operating Calibration:
+   - Evaluates true realised test FPR alongside TPR at certified operational thresholds.
+   - Calculates prevalence-adjusted precision for realistic DNS monitoring scenarios
+     where malicious domains represent small prior probabilities (e.g., pi = 0.01 or pi = 0.001).
+3. Robust Interruption Recovery & Atomic State Checkpointing:
+   - Checkpoints full model, optimizer, scheduler, and epoch metrics atomically after each epoch.
+   - Validates cryptographic experiment fingerprints before resuming to ensure state integrity.
+4. Memory & VRAM Safeguards:
+   - Deallocates intermediate activation tensors immediately (del out, loss, val_out).
+   - Periodically compacts CUDA allocator cache blocks (torch.cuda.empty_cache()).
+   - Enforces PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to eliminate virtual fragmentation.
+5. Strict FP32 Arithmetic:
+   - No BF16 or FP16 mixed precision is allowed during GNN forward passes, preserving
+     fine-grained margin separation and GNNGuard cosine edge pruning (eps = 1e-8).
 """
 
 from copy import deepcopy
@@ -66,10 +81,46 @@ def train_eval_gnn(
 ) -> Tuple[Dict[str, Any], np.ndarray, np.ndarray, nn.Module]:
     """
     Trains HeteroGNN with early stopping on validation ROC-AUC and validation-tuned threshold.
-    Supports atomic epoch-level checkpointing and resumption so long-running training
-    (e.g. multi-day CPU runs) can resume immediately after interrupts without starting from scratch.
-    Validates experiment_fingerprint before resumption to prevent restoring incompatible state.
-    Returns: (eval_results_dict, y_test_true, y_test_prob, trained_model)
+    
+    Execution Stages:
+    1. Hardware & Seed Initialization: Pins RNG seeds on PyTorch and NumPy for determinism.
+    2. Resumption Verification: Checks for atomic intermediate checkpoint; verifies fingerprint.
+    3. Hyperparameter Tuning: Optionally evaluates candidate learning rates via short grid passes.
+    4. Training & Validation Loop: Iterates epochs, computes cross-entropy loss, and tracks val ROC-AUC.
+    5. Early Stopping: Evaluates patience counter with an enforced minimum epoch floor (`min_epochs`).
+    6. Threshold Selection: Tunes classification threshold strictly on validation probabilities.
+    7. Test Evaluation & Operating Points: Evaluates test set; records TPR @ 1% and 0.1% FPR.
+    8. Bootstrap Confidence Intervals: Computes empirical 95% CIs via stratified resampling.
+    9. Subgroup Breakdown Audits: Analyzes performance across resolution status, source, and families.
+
+    Args:
+        model: HeteroGNN neural network architecture instance.
+        data: Scaled HeteroData graph containing train/val/test domain features and relational edges.
+        splits: DataSplits dataclass with train_indices, val_indices, test_indices.
+        df: Aligned domains DataFrame containing metadata (no_ip, source, family, label).
+        epochs: Maximum number of training epochs (default: 200).
+        lr: Base initial learning rate (default: 0.005).
+        lr_grid: Optional list of candidate learning rates to search over on validation set.
+        weight_decay: L2 regularization coefficient for Adam optimizer.
+        patience: Number of epochs without validation ROC-AUC improvement before early stopping.
+        min_epochs: Minimum epoch threshold before early stopping is allowed to trigger.
+        target_fprs: Target false positive rates for operational thresholds (e.g. 0.01, 0.001).
+        prevalence_pis: Real-world malicious prevalence rates for adjusted precision computation.
+        bootstrap_samples: Number of bootstrap iterations for 95% confidence intervals.
+        use_class_weights: Whether to weight minority (malicious) class in cross-entropy loss.
+        scheduler_type: "plateau" (ReduceLROnPlateau) or "cosine" (CosineAnnealingLR).
+        checkpoint_path: Destination path for final model weights and manifest.
+        log_file: Destination path for JSON Lines per-epoch training metrics.
+        device: Target execution device (torch.device("cuda") or torch.device("cpu")).
+        seed: Random seed for model parameter initialization.
+        resume: If True, attempts to resume from existing intermediate training state checkpoint.
+        experiment_fingerprint: Unique configuration hash ensuring checkpoint compatibility.
+        split_type: Evaluation split name ("random", "time", or "group").
+        split_metadata: Supplementary partitioning details (e.g. cutoff dates, disjoint components).
+        eval_data: Optional separate HeteroData graph for temporal inference evaluation.
+
+    Returns:
+        Tuple of (eval_results_dict, y_test_true, y_test_prob, trained_model).
     """
     from src.hdg.cache import atomic_save_torch, atomic_save_json
 
@@ -88,7 +139,7 @@ def train_eval_gnn(
 
     y_all = data["domain"].y
 
-    # Calculate class weights if requested
+    # --- Phase 1: Environment Setup & Loss Class Weighting ---
     class_weights = None
     if use_class_weights:
         y_train = y_all[train_idx]
@@ -98,7 +149,7 @@ def train_eval_gnn(
             weight_1 = float(neg_cnt / pos_cnt)
             class_weights = torch.tensor([1.0, weight_1], dtype=torch.float, device=device)
 
-    # Resolve state checkpoint path for safe resumption
+    # Resolve state checkpoint path for atomic epoch-level resumption
     state_ckpt_path = None
     if checkpoint_path is not None:
         checkpoint_path = Path(checkpoint_path)
@@ -117,7 +168,7 @@ def train_eval_gnn(
     chosen_lr = lr
     resumed_ckpt = None
 
-    # Attempt checkpoint resumption with strict fingerprint validation
+    # --- Phase 2: Atomic State Checkpoint Resumption & Fingerprint Gate ---
     if resume and state_ckpt_path is not None and state_ckpt_path.exists():
         try:
             resumed_ckpt = torch.load(state_ckpt_path, map_location=device, weights_only=False)
@@ -145,7 +196,7 @@ def train_eval_gnn(
             start_epoch = 1
             resumed_ckpt = None
 
-    # Validation learning rate search if grid provided (only if starting fresh)
+    # --- Phase 3: Validation Learning Rate Grid Search ---
     if resumed_ckpt is None and lr_grid and len(lr_grid) > 1 and epochs > 5:
         best_grid_auc = -1.0
         # Preserve pristine initial weights on CPU to avoid duplicate model in GPU VRAM
@@ -184,6 +235,7 @@ def train_eval_gnn(
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
 
+    # --- Phase 4: Optimizer and Learning Rate Scheduler Setup ---
     optimizer = torch.optim.Adam(model.parameters(), lr=chosen_lr, weight_decay=weight_decay)
 
     scheduler = None
@@ -192,7 +244,7 @@ def train_eval_gnn(
     elif scheduler_type == "cosine":
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
 
-    # Restore optimizer and scheduler state if resumed
+    # Restore optimizer and scheduler state if resumed from checkpoint
     if resumed_ckpt is not None:
         try:
             if "optimizer_state_dict" in resumed_ckpt and resumed_ckpt["optimizer_state_dict"] is not None:
@@ -205,7 +257,7 @@ def train_eval_gnn(
     # Pre-extract validation truth once to eliminate 200 redundant tensor transfers
     val_true = y_all[val_idx].cpu().numpy()
 
-    # Training loop
+    # --- Phase 5: Epoch Optimization Loop with CUDA Cache Flush & Checkpoint ---
     for epoch in range(start_epoch, epochs + 1):
         t0 = time.perf_counter()
         model.train()
@@ -308,7 +360,8 @@ def train_eval_gnn(
             for rec in log_records:
                 f.write(json.dumps(rec) + "\n")
 
-    # Load best model weights
+    # --- Phase 6: Model Evaluation & Validation Threshold Calibration ---
+    # Load best model weights found during training
     if best_weights is not None:
         model.load_state_dict(best_weights)
 
@@ -329,10 +382,10 @@ def train_eval_gnn(
         if device.type == "cuda":
             torch.cuda.empty_cache()
 
-    # Select threshold on validation set
+    # Optimal threshold selected strictly on validation set to eliminate test contamination
     optimal_th = choose_optimal_threshold(val_true, val_probs)
 
-    # Evaluate on test set
+    # Evaluate test metrics and operational operating points (TPR @ 1% and 0.1% FPR)
     test_eval = evaluate_predictions(
         y_true=test_true,
         y_prob=test_probs,
@@ -343,7 +396,7 @@ def train_eval_gnn(
         prevalence_pis=prevalence_pis
     )
 
-    # Save finalized model checkpoint and manifest
+    # --- Phase 7: Model Artifact Serialization & Manifest Generation ---
     if checkpoint_path is not None:
         checkpoint_path = Path(checkpoint_path)
         checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
@@ -412,7 +465,8 @@ def train_eval_gnn(
         except Exception:
             pass
 
-    # Bootstrap confidence intervals on test set
+    # --- Phase 8: Bootstrap Confidence Intervals & Subgroup Breakdowns ---
+    # Stratified bootstrap resampling to estimate empirical 95% confidence intervals
     test_eval["bootstrap_ci"] = compute_bootstrap_cis(
         y_true=test_true,
         y_prob=test_probs,
