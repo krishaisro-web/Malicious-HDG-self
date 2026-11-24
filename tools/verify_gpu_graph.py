@@ -204,10 +204,6 @@ def run_preflight_checks(
 
     # 5. Real Graph Profiling (Read-Only)
     real_graph_file = Path(graph_path)
-    if not real_graph_file.exists() and graph_path == "data/processed/real/heterodata.pt":
-        archive_cand = Path("data/processed/archive_100k_pilot/heterodata.pt")
-        if archive_cand.exists():
-            real_graph_file = archive_cand
     if real_graph_file.exists():
         try:
             t0 = time.time()
