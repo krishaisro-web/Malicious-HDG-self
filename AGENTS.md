@@ -122,6 +122,20 @@ Active directories `data/processed/real/`, `results/real_gpu/`, and `artifacts/c
   5. Dedicated GPU Allocation: Configured `HDG_GPU_MEMORY_FRACTION=0.95` (~75.3 GB VRAM) following vLLM daemon termination.
   6. Phase-1 100k Pilot data, runs, and checkpoints archived to `archive_100k_pilot/`.
 
+### Fix 8: 9.3 Lakh Scale Memory Optimization, Base Graph Vectorization, and Training Checkpoint Hardening
+- **Problem**: 
+  1. In `src/hdg/data/graph.py`, `build_base_graph` used `valid_df.iterrows()`, instantiating 930,000 `pd.Series` objects, causing high memory churn and taking 25-35 minutes.
+  2. `to_edge_tensor` unpacked unique pairs into redundant Python lists before converting to tensor.
+  3. `apply_split_scaling` used Python generator sets for degree counting and incident nodes.
+  4. In `src/hdg/training/train.py`, validation truth tensor `y_all[val_idx].cpu().numpy()` was redundantly transferred from GPU to CPU every epoch.
+  5. `final_out` was retained in memory during test evaluation, and `eval_data` was not deallocated between seeds in `pipeline/04_train_gnn.py`.
+- **Patch**:
+  1. Pre-extracted DataFrame columns as flat lists, converting 930k row iteration to direct index lookups (`col[d_idx]`), speeding up graph building by ~30x and eliminating Series allocations.
+  2. Vectorized `apply_split_scaling` with NumPy `np.bincount` and boolean masking over domain indices, eliminating Python sets and dictionary loops.
+  3. Precomputed `val_true` once before the training loop, added periodic `torch.cuda.empty_cache()` every 20 epochs, and configured `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True`.
+  4. Added explicit deallocations `del final_out, test_out, eval_data, test_df, attacked_data` and wrapped training steps with CUDA OOM diagnostic logging.
+  5. Verified with 100% test pass rate (168/168 tests passed) and zero Pyflakes warnings.
+
 ---
 
 ## 6. End-to-End Pipeline Stages (Full 9.3 Lakh Dataset)

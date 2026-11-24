@@ -15,6 +15,7 @@ Replaces legacy copy-pasted loops from scripts 07, 10, 12, 13, 14, 17, 18.
 
 from copy import deepcopy
 import json
+import os
 from pathlib import Path
 import time
 from typing import Any, Dict, List, Optional, Tuple
@@ -24,6 +25,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.data import HeteroData
+
+# Ensure CUDA caching allocator uses expandable segments to avoid virtual memory fragmentation
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
 from sklearn.metrics import roc_auc_score
 from src.hdg.metrics import (
@@ -198,18 +202,31 @@ def train_eval_gnn(
         except Exception as e:
             print(f"  [WARN] Could not restore optimizer/scheduler state: {e}. Continuing with fresh optimizer.")
 
+    # Pre-extract validation truth once to eliminate 200 redundant tensor transfers
+    val_true = y_all[val_idx].cpu().numpy()
+
     # Training loop
     for epoch in range(start_epoch, epochs + 1):
         t0 = time.perf_counter()
         model.train()
         optimizer.zero_grad(set_to_none=True)
 
-        out = model(data.x_dict, data.edge_index_dict)
-        loss = F.cross_entropy(out[train_idx], y_all[train_idx], weight=class_weights)
-        loss.backward()
-        optimizer.step()
-        train_loss = loss.item()
-        del out, loss
+        try:
+            out = model(data.x_dict, data.edge_index_dict)
+            loss = F.cross_entropy(out[train_idx], y_all[train_idx], weight=class_weights)
+            loss.backward()
+            optimizer.step()
+            train_loss = loss.item()
+            del out, loss
+        except (torch.cuda.OutOfMemoryError, RuntimeError) as e:
+            if "out of memory" in str(e).lower() or isinstance(e, getattr(torch.cuda, "OutOfMemoryError", ())):
+                if torch.cuda.is_available():
+                    alloc = torch.cuda.memory_allocated() / (1024**3)
+                    res = torch.cuda.memory_reserved() / (1024**3)
+                    print(f"\n[CRITICAL CUDA OOM at Epoch {epoch}] Allocated: {alloc:.2f} GB | Reserved: {res:.2f} GB")
+                    torch.cuda.empty_cache()
+                raise e
+            raise e
 
         # Validation step
         model.eval()
@@ -217,7 +234,6 @@ def train_eval_gnn(
             val_out = model(data.x_dict, data.edge_index_dict)
             val_loss = F.cross_entropy(val_out[val_idx], y_all[val_idx], weight=class_weights).item()
             val_probs = F.softmax(val_out[val_idx], dim=-1)[:, 1].cpu().numpy()
-            val_true = y_all[val_idx].cpu().numpy()
             del val_out
 
             val_metrics = evaluate_predictions(val_true, val_probs, threshold=0.5)
@@ -228,6 +244,10 @@ def train_eval_gnn(
                 scheduler.step(val_auc)
             else:
                 scheduler.step()
+
+        # Periodic cache compacting to keep CUDA allocator tidy without overhead
+        if device.type == "cuda" and (epoch % 20 == 0 or epoch == epochs):
+            torch.cuda.empty_cache()
 
         epoch_sec = time.perf_counter() - t0
 
@@ -296,15 +316,18 @@ def train_eval_gnn(
     with torch.no_grad():
         final_out = model(data.x_dict, data.edge_index_dict)
         val_probs = F.softmax(final_out[val_idx], dim=-1)[:, 1].cpu().numpy()
-        val_true = y_all[val_idx].cpu().numpy()
 
         if eval_data is not None:
             eval_data = eval_data.to(device)
             test_out = model(eval_data.x_dict, eval_data.edge_index_dict)
             test_probs = F.softmax(test_out[test_idx], dim=-1)[:, 1].cpu().numpy()
+            del test_out
         else:
             test_probs = F.softmax(final_out[test_idx], dim=-1)[:, 1].cpu().numpy()
         test_true = y_all[test_idx].cpu().numpy()
+        del final_out
+        if device.type == "cuda":
+            torch.cuda.empty_cache()
 
     # Select threshold on validation set
     optimal_th = choose_optimal_threshold(val_true, val_probs)
@@ -447,6 +470,7 @@ def train_eval_gnn(
             }
 
     test_eval["breakdowns"] = breakdowns
+    del test_df
     test_eval["training_metadata"] = {
         "chosen_lr": chosen_lr,
         "lr_grid": lr_grid,

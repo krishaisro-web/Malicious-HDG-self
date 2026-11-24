@@ -405,6 +405,8 @@ def main() -> None:
 
             # Memory cleanup for low-resource / thin client execution
             del model, scaled_data
+            if eval_data is not None:
+                del eval_data
             import gc
             gc.collect()
             if torch.cuda.is_available():

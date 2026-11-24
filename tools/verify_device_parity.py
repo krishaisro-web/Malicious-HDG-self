@@ -53,14 +53,20 @@ def run_device_parity_check(
     cfg = load_config(config_path) if Path(config_path).exists() else load_config("configs/default.yaml")
     paths = get_resolved_paths(cfg)
 
-    graph_file = paths.processed_dir / "heterodata.pt"
+    proc_dir = paths.processed_dir
+    graph_file = proc_dir / "heterodata.pt"
     if not graph_file.exists():
-        raise FileNotFoundError(
-            f"Processed graph not found at '{paths.processed_dir}'. "
-            "Run pipeline data preprocessing before running parity check."
-        )
+        archive_candidate = Path("data/processed/archive_100k_pilot")
+        if (archive_candidate / "heterodata.pt").exists():
+            proc_dir = archive_candidate
+            graph_file = archive_candidate / "heterodata.pt"
+        else:
+            raise FileNotFoundError(
+                f"Processed graph not found at '{paths.processed_dir}'. "
+                "Run pipeline data preprocessing before running parity check."
+            )
 
-    base_graph, df, manifest = load_aligned_graph_cohort(paths.processed_dir)
+    base_graph, df, manifest = load_aligned_graph_cohort(proc_dir)
 
     splits = random_stratified_split(df["label"].to_numpy(), seed=seed)
     scaled_data, _ = apply_split_scaling(

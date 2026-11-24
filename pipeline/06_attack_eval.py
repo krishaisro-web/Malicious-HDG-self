@@ -233,6 +233,7 @@ def main() -> None:
             }
             results_by_budget[k].append(b_stat)
             seed_budget_results[str(k)] = b_stat
+            del attacked_data
 
         save_dir = out_dir.parent if (args.out_dir and out_dir.name == "tables") else (Path(args.out_dir) if args.out_dir else paths.results_dir)
         save_run_result(save_dir, run_name, {

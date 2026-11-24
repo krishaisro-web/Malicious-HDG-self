@@ -86,7 +86,7 @@ def test_generate_dynamic_config_enterprise(tmp_path):
 
     assert cfg["hardware"]["profile"] == "enterprise_server"
     assert cfg["hardware"]["num_threads"] == 32
-    assert cfg["graph"]["max_domains"] == 100000
+    assert cfg["graph"]["max_domains"] is None  # Full 9.3L dataset
     assert cfg["parsing"]["max_per_class"] is None  # Full dataset
     assert cfg["model"]["training"]["batch_size"] == 1024
     assert cfg["model"]["training"]["epochs"] == 200

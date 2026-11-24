@@ -219,9 +219,22 @@ def build_base_graph(
     # Map certificate key based on mode
     cert_col = "leaf_cert_key_coissue" if cert_key_mode == "coissue" else "leaf_cert_key_cn"
 
-    for d_idx, row in valid_df.iterrows():
+    # Pre-extract dataframe columns to flat lists to eliminate 930k slow pd.Series allocations
+    col_resolved_ips = valid_df["resolved_ips"].tolist() if "resolved_ips" in valid_df.columns else [None] * n_domains
+    col_nameservers = valid_df["nameservers"].tolist() if "nameservers" in valid_df.columns else [None] * n_domains
+    col_registrar = valid_df["registrar"].tolist() if "registrar" in valid_df.columns else [None] * n_domains
+    if cert_col in valid_df.columns:
+        col_cert = valid_df[cert_col].tolist()
+    elif "leaf_cert_key" in valid_df.columns:
+        col_cert = valid_df["leaf_cert_key"].tolist()
+    else:
+        col_cert = [None] * n_domains
+    col_ip_records = valid_df["ip_records"].tolist() if "ip_records" in valid_df.columns else [None] * n_domains
+    col_ns_ip_pairs = valid_df["ns_ip_pairs"].tolist() if "ns_ip_pairs" in valid_df.columns else [None] * n_domains
+
+    for d_idx in range(n_domains):
         # Resolves_to (only A/AAAA IPs)
-        res_ips = row.get("resolved_ips")
+        res_ips = col_resolved_ips[d_idx]
         if res_ips is not None and isinstance(res_ips, (list, np.ndarray)):
             for ip in res_ips:
                 if ip not in ip_to_id:
@@ -229,7 +242,7 @@ def build_base_graph(
                 d_resolves_ip.append((d_idx, ip_to_id[ip]))
 
         # Uses_ns
-        ns_list = row.get("nameservers")
+        ns_list = col_nameservers[d_idx]
         if ns_list is not None and isinstance(ns_list, (list, np.ndarray)):
             for ns in ns_list:
                 if ns not in ns_to_id:
@@ -237,21 +250,21 @@ def build_base_graph(
                 d_uses_ns.append((d_idx, ns_to_id[ns]))
 
         # Registered_by
-        reg = row.get("registrar")
-        if reg:
+        reg = col_registrar[d_idx]
+        if reg and (not isinstance(reg, float) or not np.isnan(reg)):
             if reg not in reg_to_id:
                 reg_to_id[reg] = len(reg_to_id)
             d_registered_reg.append((d_idx, reg_to_id[reg]))
 
         # Uses_cert
-        cert = row.get(cert_col) or row.get("leaf_cert_key")
-        if cert:
+        cert = col_cert[d_idx]
+        if cert and (not isinstance(cert, float) or not np.isnan(cert)):
             if cert not in cert_to_id:
                 cert_to_id[cert] = len(cert_to_id)
             d_uses_cert.append((d_idx, cert_to_id[cert]))
 
         # IP - ASN, NS - IP, and optional BGP prefix
-        ip_recs = row.get("ip_records")
+        ip_recs = col_ip_records[d_idx]
         if ip_recs is not None and isinstance(ip_recs, (list, np.ndarray)):
             for ip_rec in ip_recs:
                 if not isinstance(ip_rec, dict):
@@ -273,7 +286,7 @@ def build_base_graph(
                         ip_in_prefix.append((ip_to_id[ip_val], prefix_to_id[prefix_val]))
                         prefix_belongs_asn.append((prefix_to_id[prefix_val], asn_to_id[asn_val]))
 
-        ns_ips = row.get("ns_ip_pairs")
+        ns_ips = col_ns_ip_pairs[d_idx]
         if ns_ips is not None and isinstance(ns_ips, (list, np.ndarray)):
             for ns_host, ns_ip in ns_ips:
                 if ns_host not in ns_to_id:
@@ -283,13 +296,17 @@ def build_base_graph(
                 ns_ns_ip.append((ns_to_id[ns_host], ip_to_id[ns_ip]))
 
     # Deduplicate edges helper
-    def to_edge_tensor(pairs: List[Tuple[int, int]]) -> torch.Tensor:
-        if not pairs:
+    def to_edge_tensor(pairs: Any) -> torch.Tensor:
+        if pairs is None or len(pairs) == 0:
             return torch.empty((2, 0), dtype=torch.long)
-        unique_pairs = sorted(list(set(pairs)))
-        src = [p[0] for p in unique_pairs]
-        dst = [p[1] for p in unique_pairs]
-        return torch.tensor([src, dst], dtype=torch.long)
+        if isinstance(pairs, np.ndarray):
+            if pairs.size == 0:
+                return torch.empty((2, 0), dtype=torch.long)
+            unique_pairs = np.unique(pairs, axis=0)
+            return torch.from_numpy(unique_pairs.T).contiguous().to(torch.long)
+        unique_pairs = sorted(set(pairs))
+        arr = np.array(unique_pairs, dtype=np.int64).T
+        return torch.from_numpy(arr).contiguous()
 
     base = HeteroData()
     base["domain"].raw_x = torch.tensor(raw_domain_feats, dtype=torch.float)
@@ -361,14 +378,14 @@ def build_base_graph(
     base.cert_key_mode = cert_key_mode
 
     # Log cert degree distribution
-    if len(cert_to_id) > 0:
-        cert_degs = [p[1] for p in d_uses_cert]
-        c_counts = list(Counter(cert_degs).values())
+    if len(cert_to_id) > 0 and len(d_uses_cert) > 0:
+        c_counts = Counter(p[1] for p in d_uses_cert)
         if c_counts:
-            p50 = float(np.percentile(c_counts, 50))
-            p90 = float(np.percentile(c_counts, 90))
-            p99 = float(np.percentile(c_counts, 99))
-            logger.info(f"Cert degree distribution ({cert_key_mode}): p50={p50:.1f}, p90={p90:.1f}, p99={p99:.1f}, max={max(c_counts)}")
+            vals = list(c_counts.values())
+            p50 = float(np.percentile(vals, 50))
+            p90 = float(np.percentile(vals, 90))
+            p99 = float(np.percentile(vals, 99))
+            logger.info(f"Cert degree distribution ({cert_key_mode}): p50={p50:.1f}, p90={p90:.1f}, p99={p99:.1f}, max={max(vals)}")
 
     return base
 
@@ -397,9 +414,6 @@ def apply_split_scaling(
     data = HeteroData()
     scaler_stats: Dict[str, Any] = {}
 
-    train_set = set(train_indices.tolist())
-    visible_set = train_set.union(set(val_indices.tolist())) if val_indices is not None else train_set
-
     # 1. Domain features scaling
     raw_domain_x = base["domain"].raw_x.numpy()
     if not use_lexical:
@@ -423,6 +437,14 @@ def apply_split_scaling(
 
     incident_pairs = getattr(base, "incident_pairs", {})
 
+    is_train_domain = np.zeros(base["domain"].num_nodes, dtype=bool)
+    is_train_domain[train_indices] = True
+    if val_indices is not None and len(val_indices) > 0:
+        is_visible_domain = is_train_domain.copy()
+        is_visible_domain[val_indices] = True
+    else:
+        is_visible_domain = is_train_domain
+
     for nt in infra_types:
         n_nodes = base[nt].num_nodes
         if n_nodes == 0:
@@ -430,29 +452,33 @@ def apply_split_scaling(
             data[nt].num_nodes = 0
             continue
 
-        pairs = incident_pairs.get(nt, [])
-
-        if degree_mode == "train_visible":
-            # Count only edges from train (and val) domains
-            visible_pairs = [p for p in pairs if p[0] in visible_set]
-            degs = Counter(p[1] for p in visible_pairs)
+        pairs_raw = incident_pairs.get(nt, [])
+        if isinstance(pairs_raw, np.ndarray):
+            pairs_arr = pairs_raw
+        elif len(pairs_raw) > 0:
+            pairs_arr = np.asarray(pairs_raw, dtype=np.int64).reshape(-1, 2)
         else:
-            # Transductive: count all graph edges
-            degs = Counter(p[1] for p in pairs)
+            pairs_arr = np.empty((0, 2), dtype=np.int64)
 
-        # Log1p degree (vectorized to eliminate slow list comprehension and memory spike)
-        deg_counts = np.zeros(n_nodes, dtype=np.float32)
-        if degs:
-            d_keys = np.fromiter(degs.keys(), dtype=np.int64)
-            d_vals = np.fromiter(degs.values(), dtype=np.float32)
-            valid_k = d_keys < n_nodes
-            deg_counts[d_keys[valid_k]] = d_vals[valid_k]
-        log_degs = np.log1p(deg_counts)[:, None]
-
-        # Identify train-incident nodes (nodes with >=1 edge from train domains)
-        train_incident = np.array(list(set(p[1] for p in pairs if p[0] in train_set)), dtype=int)
-        if len(train_incident) == 0:
+        if len(pairs_arr) == 0:
+            deg_counts = np.zeros(n_nodes, dtype=np.float32)
             train_incident = np.arange(n_nodes)
+        else:
+            if degree_mode == "train_visible":
+                # Count only edges from train (and val) domains
+                mask_vis = is_visible_domain[pairs_arr[:, 0]]
+                deg_counts = np.bincount(pairs_arr[mask_vis, 1], minlength=n_nodes).astype(np.float32)
+            else:
+                # Transductive: count all graph edges
+                deg_counts = np.bincount(pairs_arr[:, 1], minlength=n_nodes).astype(np.float32)
+
+            # Identify train-incident nodes (nodes with >=1 edge from train domains)
+            train_mask = is_train_domain[pairs_arr[:, 0]]
+            train_incident = np.unique(pairs_arr[train_mask, 1])
+            if len(train_incident) == 0:
+                train_incident = np.arange(n_nodes)
+
+        log_degs = np.log1p(deg_counts)[:, None]
 
         # Fit standardizer strictly on train-incident nodes
         infra_scaler = TrainOnlyStandardizer().fit(log_degs, train_incident)

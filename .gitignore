@@ -40,6 +40,8 @@ results_paper_ready.zip
 
 # Dynamic hardware configuration (generated per-machine at runtime)
 configs/active_config.yaml
+*.lock
+uv.lock
 
 # Historical folders
 data_raw/
