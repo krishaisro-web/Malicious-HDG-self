@@ -55,11 +55,16 @@ class TestGpuTools(unittest.TestCase):
         tmp_dir = Path("results/mac/test_parity_tmp")
         tmp_dir.mkdir(parents=True, exist_ok=True)
 
+        proc_dir = "data/processed/real"
+        if not (Path(proc_dir) / "heterodata.pt").exists() and (Path("data/processed/archive_100k_pilot") / "heterodata.pt").exists():
+            proc_dir = "data/processed/archive_100k_pilot"
+
         res = run_device_parity_check(
             seed=42,
             config_path="configs/active_config.yaml",
             out_dir=str(tmp_dir),
             max_delta=0.002,
+            processed_dir=proc_dir,
         )
 
         self.assertTrue(res["parity_verified"])

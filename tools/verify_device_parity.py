@@ -36,6 +36,7 @@ def run_device_parity_check(
     max_delta: float = 0.005,
     device_override: str = "cuda",
     epochs: Optional[int] = None,
+    processed_dir: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Execute device parity check for Seed 42."""
     out_path = Path(out_dir)
@@ -53,18 +54,13 @@ def run_device_parity_check(
     cfg = load_config(config_path) if Path(config_path).exists() else load_config("configs/default.yaml")
     paths = get_resolved_paths(cfg)
 
-    proc_dir = paths.processed_dir
+    proc_dir = Path(processed_dir) if processed_dir is not None else paths.processed_dir
     graph_file = proc_dir / "heterodata.pt"
     if not graph_file.exists():
-        archive_candidate = Path("data/processed/archive_100k_pilot")
-        if (archive_candidate / "heterodata.pt").exists():
-            proc_dir = archive_candidate
-            graph_file = archive_candidate / "heterodata.pt"
-        else:
-            raise FileNotFoundError(
-                f"Processed graph not found at '{paths.processed_dir}'. "
-                "Run pipeline data preprocessing before running parity check."
-            )
+        raise FileNotFoundError(
+            f"Processed graph not found at '{proc_dir}'. "
+            "Run pipeline data preprocessing (01_parse and 02_build_graph) before running parity check."
+        )
 
     base_graph, df, manifest = load_aligned_graph_cohort(proc_dir)
 
@@ -207,6 +203,7 @@ def main() -> None:
     parser.add_argument("--max-delta", type=float, default=0.005, help="Maximum allowed AUC delta (default: 0.005)")
     parser.add_argument("--device", type=str, default="cuda", help="Target GPU device (default: cuda)")
     parser.add_argument("--epochs", type=int, default=20, help="Epochs for parity check (default: 20)")
+    parser.add_argument("--processed-dir", type=str, default=None, help="Directory containing processed graph cohort (default: config paths.processed_dir)")
 
     args = parser.parse_args()
     print("==================================================================")
@@ -216,6 +213,7 @@ def main() -> None:
     print(f"Config:             {args.config}")
     print(f"Tolerance:          |AUC_gpu - AUC_cpu| <= {args.max_delta}")
     print(f"Epochs:             {args.epochs}")
+    print(f"Processed Dir:      {args.processed_dir or 'Default (from config)'}")
     print(f"Output Directory:   {args.out_dir}")
     print("------------------------------------------------------------------")
 
@@ -226,6 +224,7 @@ def main() -> None:
         max_delta=args.max_delta,
         device_override=args.device,
         epochs=args.epochs,
+        processed_dir=args.processed_dir,
     )
 
     print("==================================================================")
