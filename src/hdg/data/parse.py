@@ -365,7 +365,8 @@ def parse_and_process_dataset(
     output_dir.mkdir(parents=True, exist_ok=True)
     p_cfg = config.get("parsing", {})
     normalize_to_e2ld = p_cfg.get("normalize_to_e2LD", True)
-    benign_ratio = float(p_cfg.get("benign_ratio", 2.0))
+    raw_benign_ratio = p_cfg.get("benign_ratio")
+    benign_ratio = float(raw_benign_ratio) if raw_benign_ratio is not None else None
     max_per_class = limit if limit is not None else p_cfg.get("max_per_class")
     asn_candidate_keys = p_cfg.get("asn_candidate_keys", ["asn", "autonomous_system_number", "number"])
     reg_candidate_keys = p_cfg.get("registrar_candidate_keys", ["name", "handle", "organization"])
@@ -475,20 +476,26 @@ def parse_and_process_dataset(
         m_list = malware_by_month[mo]
         b_list = benign_by_month[mo]
         time_matched_malware.extend(m_list)
-        n_target = int(round(len(m_list) * benign_ratio))
-        if len(b_list) <= n_target:
+        if benign_ratio is None:
             time_matched_benign.extend(b_list)
         else:
-            idx = rng.choice(len(b_list), size=n_target, replace=False)
-            time_matched_benign.extend([b_list[i] for i in idx])
+            n_target = int(round(len(m_list) * benign_ratio))
+            if len(b_list) <= n_target:
+                time_matched_benign.extend(b_list)
+            else:
+                idx = rng.choice(len(b_list), size=n_target, replace=False)
+                time_matched_benign.extend([b_list[i] for i in idx])
 
     # 2. Uniform benign sampling (for random / group splits across the entire benign pool)
-    n_uniform_target = min(len(clean_benign), int(round(len(clean_malware) * benign_ratio)))
-    if len(clean_benign) <= n_uniform_target:
+    if benign_ratio is None:
         uniform_benign = clean_benign
     else:
-        idx = rng.choice(len(clean_benign), size=n_uniform_target, replace=False)
-        uniform_benign = [clean_benign[i] for i in idx]
+        n_uniform_target = min(len(clean_benign), int(round(len(clean_malware) * benign_ratio)))
+        if len(clean_benign) <= n_uniform_target:
+            uniform_benign = clean_benign
+        else:
+            idx = rng.choice(len(clean_benign), size=n_uniform_target, replace=False)
+            uniform_benign = [clean_benign[i] for i in idx]
 
     # Combine all unique sampled domains
     time_matched_domain_names = {r["domain"] for r in (time_matched_malware + time_matched_benign)}

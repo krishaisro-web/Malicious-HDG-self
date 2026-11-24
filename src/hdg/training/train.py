@@ -209,6 +209,7 @@ def train_eval_gnn(
         loss.backward()
         optimizer.step()
         train_loss = loss.item()
+        del out, loss
 
         # Validation step
         model.eval()
@@ -217,6 +218,7 @@ def train_eval_gnn(
             val_loss = F.cross_entropy(val_out[val_idx], y_all[val_idx], weight=class_weights).item()
             val_probs = F.softmax(val_out[val_idx], dim=-1)[:, 1].cpu().numpy()
             val_true = y_all[val_idx].cpu().numpy()
+            del val_out
 
             val_metrics = evaluate_predictions(val_true, val_probs, threshold=0.5)
             val_auc = val_metrics["roc_auc"]

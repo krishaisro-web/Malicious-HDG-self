@@ -32,7 +32,7 @@ profiling:
 parsing:
   normalize_to_e2LD: true
   include_has_subdomain: false # Default false: only enable if shortcut audit proves not a proxy
-  benign_ratio: 2.0 # Negative-to-positive sampling ratio (1:1 to 3:1)
+  benign_ratio: null # null keeps all ~830k benign records (ratio ~8.24:1 against 100k malware), set to 2.0 or 3.0 for smaller negative-to-positive sampling
   max_per_class: null # null keeps all records
   asn_candidate_keys: ["asn", "autonomous_system_number", "number"]
   registrar_candidate_keys: ["name", "handle", "organization"]
@@ -40,7 +40,7 @@ parsing:
 graph:
   hub_degree: 500
   hub_percentile: 99.9
-  max_domains: 100000
+  max_domains: null # null preserves all 9.3 Lakh domains (set to 100000 for capped quick experiments)
   node_types:
     - domain
     - ip

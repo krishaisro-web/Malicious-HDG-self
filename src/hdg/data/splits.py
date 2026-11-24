@@ -421,9 +421,15 @@ def group_split_bipartite(
     edges_domain: List[int] = []
     edges_infra: List[int] = []
 
-    for d_idx, row in df.iterrows():
+    res_ips_list = df["resolved_ips"].tolist() if "resolved_ips" in df.columns else [None] * n_domains
+    ns_list_list = df["nameservers"].tolist() if "nameservers" in df.columns else [None] * n_domains
+    reg_list = df["registrar"].tolist() if "registrar" in df.columns else [None] * n_domains
+    cert_list = (df["leaf_cert_key_coissue"].tolist() if "leaf_cert_key_coissue" in df.columns
+                 else (df["leaf_cert_key"].tolist() if "leaf_cert_key" in df.columns else [None] * n_domains))
+
+    for d_idx in range(n_domains):
         # Resolves_to (IP)
-        res_ips = row.get("resolved_ips")
+        res_ips = res_ips_list[d_idx]
         if res_ips is not None and isinstance(res_ips, (list, np.ndarray)):
             for ip in res_ips:
                 k = f"ip:{ip}"
@@ -433,7 +439,7 @@ def group_split_bipartite(
                 edges_infra.append(infra_to_id[k])
 
         # Nameservers
-        ns_list = row.get("nameservers")
+        ns_list = ns_list_list[d_idx]
         if ns_list is not None and isinstance(ns_list, (list, np.ndarray)):
             for ns in ns_list:
                 k = f"ns:{ns}"
@@ -444,7 +450,7 @@ def group_split_bipartite(
 
         if joint_grouping:
             # Registrar
-            reg = row.get("registrar")
+            reg = reg_list[d_idx]
             if reg:
                 k = f"reg:{reg}"
                 if k not in infra_to_id:
@@ -453,7 +459,7 @@ def group_split_bipartite(
                 edges_infra.append(infra_to_id[k])
 
             # Leaf Certificate
-            cert = row.get("leaf_cert_key_coissue") or row.get("leaf_cert_key")
+            cert = cert_list[d_idx]
             if cert:
                 k = f"cert:{cert}"
                 if k not in infra_to_id:
@@ -471,9 +477,11 @@ def group_split_bipartite(
     perc_cutoff = np.percentile(infra_degrees, hub_percentile)
     effective_cutoff = min(hub_degree, perc_cutoff)
 
-    valid_mask = np.array([infra_degrees[i] <= effective_cutoff for i in edges_infra])
-    f_d = np.array(edges_domain)[valid_mask]
-    f_i = np.array(edges_infra)[valid_mask]
+    edges_infra_arr = np.array(edges_infra, dtype=np.int64)
+    edges_domain_arr = np.array(edges_domain, dtype=np.int64)
+    valid_mask = infra_degrees[edges_infra_arr] <= effective_cutoff
+    f_d = edges_domain_arr[valid_mask]
+    f_i = edges_infra_arr[valid_mask]
 
     # Build bipartite adjacency
     row_idx = np.concatenate([f_d, f_i + n_domains])

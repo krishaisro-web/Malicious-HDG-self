@@ -189,8 +189,10 @@ def setup_shared_gpu_environment(
             f"Minimum required: {effective_min_free:.2f} GB. Aborting to avoid OOM collision."
         )
 
-    # 4. Cap per-process memory allocation
-    set_gpu_memory_limits(memory_fraction, dev_idx)
+    # 4. Cap per-process memory allocation (allow environment override for dedicated servers)
+    env_mem_frac = os.environ.get("HDG_GPU_MEMORY_FRACTION")
+    effective_mem_frac = float(env_mem_frac) if env_mem_frac is not None else memory_fraction
+    set_gpu_memory_limits(effective_mem_frac, dev_idx)
 
     # 5. Apply PyG memory-efficient scatter patch
     apply_memory_efficient_scatter_patch()
@@ -198,7 +200,7 @@ def setup_shared_gpu_environment(
     return {
         "device_index": dev_idx,
         "device_name": torch.cuda.get_device_name(dev_idx),
-        "memory_fraction_cap": memory_fraction,
+        "memory_fraction_cap": effective_mem_frac,
         "free_vram_gb": round(free_gb, 3),
         "total_vram_gb": round(total_gb, 3),
         "tf32_disabled": True,

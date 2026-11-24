@@ -440,8 +440,14 @@ def apply_split_scaling(
             # Transductive: count all graph edges
             degs = Counter(p[1] for p in pairs)
 
-        # Log1p degree
-        log_degs = np.array([[math.log1p(degs.get(i, 0))] for i in range(n_nodes)], dtype=np.float32)
+        # Log1p degree (vectorized to eliminate slow list comprehension and memory spike)
+        deg_counts = np.zeros(n_nodes, dtype=np.float32)
+        if degs:
+            d_keys = np.fromiter(degs.keys(), dtype=np.int64)
+            d_vals = np.fromiter(degs.values(), dtype=np.float32)
+            valid_k = d_keys < n_nodes
+            deg_counts[d_keys[valid_k]] = d_vals[valid_k]
+        log_degs = np.log1p(deg_counts)[:, None]
 
         # Identify train-incident nodes (nodes with >=1 edge from train domains)
         train_incident = np.array(list(set(p[1] for p in pairs if p[0] in train_set)), dtype=int)
@@ -457,6 +463,10 @@ def apply_split_scaling(
 
     # 3. Relational Edges with Topology Isolation
     test_set = set(test_indices.tolist()) if test_indices is not None else set()
+    is_domain_test: Optional[torch.Tensor] = None
+    if len(test_set) > 0 and (mask_future_domains or mask_disjoint_groups):
+        is_domain_test = torch.zeros(base["domain"].num_nodes, dtype=torch.bool)
+        is_domain_test[torch.tensor(list(test_set), dtype=torch.long)] = True
 
     for edge_type in base.edge_types:
         src_t, rel, dst_t = edge_type
@@ -473,20 +483,13 @@ def apply_split_scaling(
         # - mask_future_domains: remove edges incident to future (test) domains
         # - mask_disjoint_groups: enforce genuine infrastructure boundary: remove any edge between
         #   test domains and infrastructure nodes connected to train/val, preventing leakage through hubs
-        if mask_future_domains and len(test_set) > 0:
+        # Vectorized boolean indexing on edge endpoints eliminates millions of slow Python calls and avoids OOM
+        if is_domain_test is not None:
             if src_t == "domain":
-                mask = torch.tensor([idx.item() not in test_set for idx in edge_tensor[0]], dtype=torch.bool)
+                mask = ~is_domain_test[edge_tensor[0]]
                 edge_tensor = edge_tensor[:, mask]
             elif dst_t == "domain":
-                mask = torch.tensor([idx.item() not in test_set for idx in edge_tensor[1]], dtype=torch.bool)
-                edge_tensor = edge_tensor[:, mask]
-        elif mask_disjoint_groups and len(test_set) > 0:
-            # Mask test domain edges during training so train/val representations cannot cross-pollinate with test
-            if src_t == "domain":
-                mask = torch.tensor([idx.item() not in test_set for idx in edge_tensor[0]], dtype=torch.bool)
-                edge_tensor = edge_tensor[:, mask]
-            elif dst_t == "domain":
-                mask = torch.tensor([idx.item() not in test_set for idx in edge_tensor[1]], dtype=torch.bool)
+                mask = ~is_domain_test[edge_tensor[1]]
                 edge_tensor = edge_tensor[:, mask]
 
         data[edge_type].edge_index = edge_tensor
