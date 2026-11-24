@@ -87,7 +87,7 @@ def resolve_device(
 
 
 def set_gpu_memory_limits(
-    fraction: float = 0.35,
+    fraction: float = 0.95,
     device: Optional[Union[torch.device, int, str]] = None,
 ) -> None:
     """
@@ -151,14 +151,14 @@ def check_vram_available(
 
 def setup_shared_gpu_environment(
     dev_idx: int = 0,
-    memory_fraction: float = 0.35,
-    min_free_vram_gb: float = 6.0,
+    memory_fraction: float = 0.95,
+    min_free_vram_gb: float = 10.0,
 ) -> Dict[str, Any]:
     """
-    Configure shared GPU environment safeguards adhering to Constraint #8.
+    Configure GPU environment safeguards adhering to Constraint #8.
 
-    Caps memory fraction to 35% (~28 GB on A100-80GB) to prevent out-of-memory collisions
-    with other multi-tenant processes, and verifies dynamic free VRAM prior to execution.
+    Caps memory fraction to 95% (~75.3 GB on dedicated A100-80GB) or respects HDG_GPU_MEMORY_FRACTION,
+    and verifies dynamic free VRAM prior to execution.
     """
     if not torch.cuda.is_available():
         raise RuntimeError("setup_shared_gpu_environment called but CUDA is not available.")

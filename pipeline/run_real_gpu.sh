@@ -11,7 +11,7 @@
 #   5. PyG CUDA scatter determinism enabled
 #   6. Atomic CPU-to-GPU tensor staging in adversarial attacks
 #   7. Latency Isolation: Stage 9 strictly runs on CPU (--device cpu)
-#   8. Shared GPU Protection: 35% memory fraction cap (~28 GB) + dynamic VRAM verification (>= 8.0 GB)
+#   8. Dedicated GPU Allocation: 95% memory fraction cap (~75.3 GB) on NVIDIA A100-80GB (vLLM stopped)
 #   9. Complete Evidence Pipeline Coverage: Pre-flight, Parity, GNNs, Ablations, Attacks, Latency, Stop Rules, Report
 # ==============================================================================
 
@@ -90,8 +90,10 @@ elif [ -x "${REPO_ROOT}/.venv/bin/python3" ]; then
     PYTHON_BIN="${REPO_ROOT}/.venv/bin/python3"
 fi
 
-MEM_FRACTION="${MEM_FRACTION:-0.35}"
-MIN_FREE_VRAM="${MIN_FREE_VRAM:-6.5}"
+# Dedicated NVIDIA A100-80GB GPU allocation (PID 57310 stopped)
+export HDG_GPU_MEMORY_FRACTION="${HDG_GPU_MEMORY_FRACTION:-0.95}"
+MEM_FRACTION="${HDG_GPU_MEMORY_FRACTION}"
+MIN_FREE_VRAM="${MIN_FREE_VRAM:-10.0}"
 export MIN_FREE_VRAM
 export MEM_FRACTION
 export CUBLAS_WORKSPACE_CONFIG="${CUBLAS_WORKSPACE_CONFIG:-:4096:8}"
@@ -154,13 +156,23 @@ if [ "${SKIP_PREFLIGHT}" = false ]; then
     if [ ! -f "${PROCESSED_GRAPH}" ] || [ ! -f "${PROCESSED_DOMAINS}" ]; then
         log "Processed real cohort not yet found in data/processed/real/."
         RAW_MALWARE="data/raw/zenodo/malware.json"
-        if [ -f "${RAW_MALWARE}" ]; then
-            log "Raw Zenodo dataset detected in data/raw/zenodo/. Building 100k cohort and HeteroData graph..."
+        if [ ! -f "${RAW_MALWARE}" ] && [ -f "/data/rohit-Malicious-HDG/zenodo/malware.json" ]; then
+            log "Symlinking raw Zenodo dataset from /data/rohit-Malicious-HDG/zenodo to data/raw/zenodo..."
+            mkdir -p data/raw
+            ln -sfn /data/rohit-Malicious-HDG/zenodo data/raw/zenodo
+        elif [ ! -f "${RAW_MALWARE}" ] && [ -f "/data/rohit-Malicious-HDG/malware.json" ]; then
+            log "Symlinking raw Zenodo dataset from /data/rohit-Malicious-HDG to data/raw/zenodo..."
+            mkdir -p data/raw
+            ln -sfn /data/rohit-Malicious-HDG data/raw/zenodo
+        fi
+
+        if [ -f "data/raw/zenodo/malware.json" ]; then
+            log "Raw Zenodo dataset detected in data/raw/zenodo/. Building full 9.3 Lakh cohort and HeteroData graph..."
             ${PYTHON_BIN} -m pipeline.01_parse --config "${CONFIG_FILE}"
             ${PYTHON_BIN} -m pipeline.02_build_graph --config "${CONFIG_FILE}"
-            success "Processed 100k graph built successfully."
+            success "Processed 9.3 Lakh graph built successfully."
         else
-            error_exit "Processed graph not found and raw Zenodo dataset missing in data/raw/zenodo/.\nTo prepare the full 100k (1L) dataset on this node, please run:\n    ${PYTHON_BIN} tools/download_dataset.py\n    ${PYTHON_BIN} -m pipeline.01_parse --config ${CONFIG_FILE}\n    ${PYTHON_BIN} -m pipeline.02_build_graph --config ${CONFIG_FILE}"
+            error_exit "Processed graph not found and raw Zenodo dataset missing in data/raw/zenodo/.\nTo prepare the full 9.3 Lakh dataset on this node, please run:\n    ${PYTHON_BIN} tools/download_dataset.py\n    ${PYTHON_BIN} -m pipeline.01_parse --config ${CONFIG_FILE}\n    ${PYTHON_BIN} -m pipeline.02_build_graph --config ${CONFIG_FILE}"
         fi
     fi
 

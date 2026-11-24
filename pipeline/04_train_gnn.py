@@ -9,6 +9,7 @@ Supports --smoke, --max-domains N, and --force for resumability.
 
 import argparse
 import json
+import os
 import random
 import sys
 from pathlib import Path
@@ -73,7 +74,9 @@ def main() -> None:
     is_cuda = (device.type == "cuda")
     if is_cuda:
         dev_idx = device.index if device.index is not None else 0
-        setup_shared_gpu_environment(dev_idx=dev_idx, memory_fraction=0.35, min_free_vram_gb=6.0)
+        mem_frac = float(os.environ.get("HDG_GPU_MEMORY_FRACTION", "0.95"))
+        min_vram = float(os.environ.get("MIN_FREE_VRAM", "10.0"))
+        setup_shared_gpu_environment(dev_idx=dev_idx, memory_fraction=mem_frac, min_free_vram_gb=min_vram)
 
     # Route results and checkpoints: GPU outputs write strictly to real_gpu
     if args.out_dir is not None:

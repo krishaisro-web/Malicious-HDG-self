@@ -213,9 +213,9 @@ def generate_dynamic_config(
     # Classify hardware tier
     if ram_gb >= 64.0:
         profile_name = "enterprise_server"
-        profile_desc = f"Enterprise Multi-Core Server (~{round(ram_gb)} GB RAM Mode, Full Dataset)"
+        profile_desc = f"Enterprise Multi-Core Server (~{round(ram_gb)} GB RAM Mode, Full 9.3L Dataset)"
         num_threads = min(32, max(4, cpu_cores))
-        max_domains = 100000
+        max_domains = None  # Preserves all 9.3 Lakh domains
         max_per_class = None  # None becomes null in YAML, taking all records
         hub_degree = 500
         hub_percentile = 99.9
@@ -498,7 +498,15 @@ def get_resolved_paths(
         results_dir = root_dir / p.get("smoke_results_dir", "results/smoke")
         checkpoints_dir = root_dir / p.get("smoke_checkpoints_dir", "artifacts/checkpoints/smoke")
     else:
-        raw_dir = root_dir / p.get("raw_data_dir", "data/raw/zenodo")
+        env_raw = os.environ.get("HDG_RAW_DATA_DIR")
+        if env_raw and Path(env_raw).exists():
+            raw_dir = Path(env_raw)
+        elif not (root_dir / p.get("raw_data_dir", "data/raw/zenodo") / "malware.json").exists() and Path("/data/rohit-Malicious-HDG/zenodo/malware.json").exists():
+            raw_dir = Path("/data/rohit-Malicious-HDG/zenodo")
+        elif not (root_dir / p.get("raw_data_dir", "data/raw/zenodo") / "malware.json").exists() and Path("/data/rohit-Malicious-HDG/malware.json").exists():
+            raw_dir = Path("/data/rohit-Malicious-HDG")
+        else:
+            raw_dir = root_dir / p.get("raw_data_dir", "data/raw/zenodo")
         processed_dir = root_dir / p.get("processed_data_dir", "data/processed/real")
         results_dir = root_dir / p.get("results_dir", "results/real")
         checkpoints_dir = root_dir / p.get("checkpoints_dir", "artifacts/checkpoints/real")

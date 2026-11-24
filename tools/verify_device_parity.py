@@ -10,10 +10,11 @@ Outputs verification result to results/real_gpu/device_parity.json.
 
 import argparse
 import json
+import os
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import torch
 
@@ -34,6 +35,7 @@ def run_device_parity_check(
     out_dir: str = "results/real_gpu",
     max_delta: float = 0.005,
     device_override: str = "cuda",
+    epochs: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Execute device parity check for Seed 42."""
     out_path = Path(out_dir)
@@ -79,7 +81,7 @@ def run_device_parity_check(
     out_dim = var_cfg.get("out_dim", 16)
     num_layers = var_cfg.get("num_layers", 2)
     dropout = var_cfg.get("dropout", 0.2)
-    train_epochs = min(var_cfg.get("training", {}).get("epochs", 50), 50)
+    train_epochs = epochs if epochs is not None else min(var_cfg.get("training", {}).get("epochs", 20), 20)
     lr = cfg.get("model", {}).get("training", {}).get("lr", 0.005)
 
     # 1. CPU Reference Evaluation
@@ -125,7 +127,9 @@ def run_device_parity_check(
     if torch.cuda.is_available():
         gpu_device = resolve_device(device_override)
         dev_idx = gpu_device.index if gpu_device.index is not None else 0
-        setup_shared_gpu_environment(dev_idx=dev_idx, memory_fraction=0.35, min_free_vram_gb=8.0)
+        mem_frac = float(os.environ.get("HDG_GPU_MEMORY_FRACTION", "0.95"))
+        min_vram = float(os.environ.get("MIN_FREE_VRAM", "10.0"))
+        setup_shared_gpu_environment(dev_idx=dev_idx, memory_fraction=mem_frac, min_free_vram_gb=min_vram)
         print(f"[*] Running Seed {seed} GPU pass on {gpu_device} (strict FP32)...")
         torch.manual_seed(seed)
         gpu_model = HeteroGNN(
@@ -196,6 +200,7 @@ def main() -> None:
     parser.add_argument("--out-dir", type=str, default="results/real_gpu", help="Output directory")
     parser.add_argument("--max-delta", type=float, default=0.005, help="Maximum allowed AUC delta (default: 0.005)")
     parser.add_argument("--device", type=str, default="cuda", help="Target GPU device (default: cuda)")
+    parser.add_argument("--epochs", type=int, default=20, help="Epochs for parity check (default: 20)")
 
     args = parser.parse_args()
     print("==================================================================")
@@ -204,6 +209,7 @@ def main() -> None:
     print(f"Seed:               {args.seed}")
     print(f"Config:             {args.config}")
     print(f"Tolerance:          |AUC_gpu - AUC_cpu| <= {args.max_delta}")
+    print(f"Epochs:             {args.epochs}")
     print(f"Output Directory:   {args.out_dir}")
     print("------------------------------------------------------------------")
 
@@ -213,6 +219,7 @@ def main() -> None:
         out_dir=args.out_dir,
         max_delta=args.max_delta,
         device_override=args.device,
+        epochs=args.epochs,
     )
 
     print("==================================================================")

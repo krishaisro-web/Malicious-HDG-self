@@ -366,6 +366,8 @@ def main() -> None:
         REPO_ROOT / "data" / "raw" / "zenodo",
         REPO_ROOT / "data" / "raw",
         REPO_ROOT / "data",
+        Path("/data/rohit-Malicious-HDG/zenodo"),
+        Path("/data/rohit-Malicious-HDG"),
     ]
 
     # Dynamic disk space calculation: check bytes remaining for incomplete/missing files

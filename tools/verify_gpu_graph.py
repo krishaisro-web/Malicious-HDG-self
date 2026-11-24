@@ -15,6 +15,7 @@ Performs:
 
 import argparse
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -75,8 +76,8 @@ def run_preflight_checks(
     device_str: str = "cpu",
     out_dir: str = "results/real_gpu",
     graph_path: str = "data/processed/real/heterodata.pt",
-    mem_fraction: float = 0.35,
-    min_free_vram_gb: float = 8.0,
+    mem_fraction: float = 0.95,
+    min_free_vram_gb: float = 10.0,
 ) -> Dict[str, Any]:
     """Execute complete suite of pre-flight checks."""
     out_path = Path(out_dir)
@@ -269,8 +270,8 @@ def main() -> None:
     parser.add_argument("--device", type=str, default="cpu", help="Device to verify ('cpu' or 'cuda')")
     parser.add_argument("--out-dir", type=str, default="results/real_gpu", help="Directory for verification report")
     parser.add_argument("--graph-path", type=str, default="data/processed/real/heterodata.pt", help="Path to real graph")
-    parser.add_argument("--mem-fraction", type=float, default=0.35, help="Shared GPU memory fraction cap (default: 0.35)")
-    parser.add_argument("--min-free-vram", type=float, default=8.0, help="Minimum required free VRAM in GB (default: 8.0)")
+    parser.add_argument("--mem-fraction", type=float, default=float(os.environ.get("HDG_GPU_MEMORY_FRACTION", "0.95")), help="GPU memory fraction cap (default: 0.95)")
+    parser.add_argument("--min-free-vram", type=float, default=float(os.environ.get("MIN_FREE_VRAM", "10.0")), help="Minimum required free VRAM in GB (default: 10.0)")
 
     args = parser.parse_args()
 

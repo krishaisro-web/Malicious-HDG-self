@@ -13,6 +13,8 @@ env*/
 data/raw/
 data/processed/real/*
 !data/processed/real/.gitkeep
+data/processed/archive_100k_pilot/*
+!data/processed/archive_100k_pilot/.gitkeep
 data/processed/smoke/*
 !data/processed/smoke/.gitkeep
 
