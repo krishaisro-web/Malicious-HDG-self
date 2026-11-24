@@ -485,6 +485,8 @@ def apply_split_scaling(
         #   test domains and infrastructure nodes connected to train/val, preventing leakage through hubs
         # Vectorized boolean indexing on edge endpoints eliminates millions of slow Python calls and avoids OOM
         if is_domain_test is not None:
+            if is_domain_test.device != edge_tensor.device:
+                is_domain_test = is_domain_test.to(edge_tensor.device)
             if src_t == "domain":
                 mask = ~is_domain_test[edge_tensor[0]]
                 edge_tensor = edge_tensor[:, mask]
