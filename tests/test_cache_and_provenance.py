@@ -178,7 +178,8 @@ def test_incident_pairs_and_train_visible_ip_degrees():
         test_indices=splits.test_indices,
         degree_mode="train_visible"
     )
-    assert scaled_train_vis["ip"].x.shape == (base["ip"].num_nodes, 1)
+    from src.hdg.data.features import INFRA_TOTAL_DIMS
+    assert scaled_train_vis["ip"].x.shape == (base["ip"].num_nodes, INFRA_TOTAL_DIMS["ip"])
 
     # Pick an IP connected to at least one test domain and check that its train-visible count excludes test
     ip_pairs = base.incident_pairs["ip"]

@@ -8,7 +8,7 @@ Baseline models evaluated on identical splits for Malicious-HDG:
 All hyperparameters and thresholds tuned strictly on validation splits.
 """
 
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Optional, Tuple
 import numpy as np
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -17,6 +17,14 @@ import xgboost as xgb
 
 from src.hdg.models.hetero_gnn import HeteroGNN
 from src.hdg.data.graph import extract_domain_features_vectorized
+from src.hdg.data.features import (
+    _CLOUD_CDN_KW,
+    _FREE_AUTO_CA_KW,
+    _HOSTING_VPS_KW,
+    _MAJOR_DNS_CDN_KW,
+    _PAID_EV_CA_KW,
+    get_feature_indices,
+)
 from src.hdg.metrics import (
     compute_bootstrap_cis,
     choose_optimal_threshold,
@@ -24,6 +32,82 @@ from src.hdg.metrics import (
 )
 from src.hdg.data.splits import DataSplits
 from src.hdg.training.train import train_eval_gnn
+
+
+def extract_1hop_infra_features_for_tabular(df: pd.DataFrame) -> np.ndarray:
+    """
+    Extracts 10 flattened 1-hop infrastructure summary features per domain (zero label leakage)
+    for fair tabular XGBoost comparison (RFC-003 Section 2.4, Objective O3).
+    """
+    n = len(df)
+    if n == 0:
+        return np.empty((0, 10), dtype=np.float32)
+
+    mat = np.zeros((n, 10), dtype=np.float32)
+    col_asns = df["asns"].tolist() if "asns" in df.columns else [None] * n
+    col_ip_recs = df["ip_records"].tolist() if "ip_records" in df.columns else [None] * n
+    col_ns = df["nameservers"].tolist() if "nameservers" in df.columns else [None] * n
+    col_cert_org = df["cert_org"].tolist() if "cert_org" in df.columns else [None] * n
+    col_cert_self = df["cert_is_self_signed"].tolist() if "cert_is_self_signed" in df.columns else [False] * n
+    col_reg_w = df["reg_has_whois"].tolist() if "reg_has_whois" in df.columns else [False] * n
+    col_reg_e = df["reg_has_email"].tolist() if "reg_has_email" in df.columns else [False] * n
+    col_reg_u = df["reg_has_url"].tolist() if "reg_has_url" in df.columns else [False] * n
+    col_reg_t = df["reg_has_tel"].tolist() if "reg_has_tel" in df.columns else [False] * n
+
+    for i in range(n):
+        asns_i = col_asns[i]
+        asn_cnt = float(len(asns_i)) if isinstance(asns_i, (list, np.ndarray)) else 0.0
+
+        ip_recs = col_ip_recs[i]
+        cloud_hits = 0
+        host_hits = 0
+        geo_miss = 0
+        plen_sum = 0.0
+        plen_cnt = 0
+        rec_cnt = 0
+        if isinstance(ip_recs, (list, np.ndarray)):
+            for r in ip_recs:
+                if not isinstance(r, dict):
+                    continue
+                rec_cnt += 1
+                org_s = str(r.get("asn_org") or "").lower()
+                if any(k in org_s for k in _CLOUD_CDN_KW):
+                    cloud_hits += 1
+                if any(k in org_s for k in _HOSTING_VPS_KW):
+                    host_hits += 1
+                if not (r.get("country_code") or r.get("country")):
+                    geo_miss += 1
+                if r.get("prefix_len") is not None:
+                    plen_sum += float(r["prefix_len"]) / 32.0
+                    plen_cnt += 1
+
+        ns_list = col_ns[i]
+        ns_major_share = 0.0
+        if isinstance(ns_list, (list, np.ndarray)) and len(ns_list) > 0:
+            maj = sum(1 for ns in ns_list if any(k in str(ns).lower() for k in _MAJOR_DNS_CDN_KW))
+            ns_major_share = float(maj / len(ns_list))
+
+        c_org = str(col_cert_org[i] or "").lower()
+        c_free = 1.0 if any(k in c_org for k in _FREE_AUTO_CA_KW) else 0.0
+        c_paid = 1.0 if any(k in c_org for k in _PAID_EV_CA_KW) else 0.0
+        c_self = 1.0 if bool(col_cert_self[i]) else 0.0
+        reg_comp = float(
+            int(bool(col_reg_w[i])) + int(bool(col_reg_e[i])) + int(bool(col_reg_u[i])) + int(bool(col_reg_t[i]))
+        ) / 4.0
+
+        mat[i] = [
+            np.log1p(asn_cnt),
+            float(cloud_hits / max(1, rec_cnt)),
+            float(host_hits / max(1, rec_cnt)),
+            float(geo_miss / max(1, rec_cnt)) if rec_cnt > 0 else 1.0,
+            float(plen_sum / max(1, plen_cnt)),
+            c_free,
+            c_paid,
+            c_self,
+            reg_comp,
+            ns_major_share,
+        ]
+    return mat
 
 
 def run_tfidf_lexical_baseline(
@@ -43,18 +127,23 @@ def run_tfidf_lexical_baseline(
     val_df = df.iloc[splits.val_indices]
     test_df = df.iloc[splits.test_indices]
 
-    x_train_text = train_df["e2LD"].tolist()
-    x_val_text = val_df["e2LD"].tolist()
-    x_test_text = test_df["e2LD"].tolist()
+    train_col = "e2LD" if "e2LD" in train_df.columns else "domain"
+    val_col = "e2LD" if "e2LD" in val_df.columns else "domain"
+    test_col = "e2LD" if "e2LD" in test_df.columns else "domain"
+
+    x_train_text = train_df[train_col].astype(str).tolist()
+    x_val_text = val_df[val_col].astype(str).tolist()
+    x_test_text = test_df[test_col].astype(str).tolist()
 
     y_train = train_df["label"].to_numpy()
     y_val = val_df["label"].to_numpy()
     y_test = test_df["label"].to_numpy()
 
+    effective_min_df = min(min_df, max(1, len(x_train_text) // 2)) if len(x_train_text) < 10 else min_df
     vec = TfidfVectorizer(
         analyzer="char",
         ngram_range=ngram_range,
-        min_df=min_df,
+        min_df=effective_min_df,
         max_features=max_features
     )
     x_train_vec = vec.fit_transform(x_train_text)
@@ -93,9 +182,10 @@ def run_xgboost_baseline(
     use_lexical: bool = False,
     drop_tld: bool = False,
     drop_null_rates: bool = False,
+    include_1hop_infra: Optional[bool] = None,
     seed: int = 42
 ) -> Tuple[Dict[str, Any], np.ndarray, np.ndarray]:
-    """XGBoost classifier on tabular features (with or without lexical stats and feature-group ablations)."""
+    """XGBoost classifier on tabular features (with optional lexical stats and fair 1-hop infra attrs)."""
     xgb_cfg = cfg.get("baselines", {}).get("xgboost", {})
     n_estimators = int(xgb_cfg.get("n_estimators", 100))
     max_depth = int(xgb_cfg.get("max_depth", 6))
@@ -110,10 +200,20 @@ def run_xgboost_baseline(
         include_has_subdomain=include_sub
     )
 
-    # Optional feature group ablation
+    # Optional feature group ablation resolved dynamically via registry
     if drop_null_rates:
-        # Zero out no_ip, no_rdap, no_tls (indices 0, 1, 2)
-        X_all[:, :3] = 0.0
+        miss_indices = get_feature_indices(
+            "domain", group="missingness", include_has_subdomain=include_sub, dim=X_all.shape[1]
+        )
+        if miss_indices:
+            X_all[:, miss_indices] = 0.0
+
+    # Fair 1-hop flattened infrastructure alignment for xgboost_tabular_lexical (RFC-003 Section 2.4)
+    if include_1hop_infra is None:
+        include_1hop_infra = use_lexical
+    if include_1hop_infra:
+        X_infra_1hop = extract_1hop_infra_features_for_tabular(df)
+        X_all = np.hstack([X_all, X_infra_1hop]).astype(np.float32)
 
     y_all = df["label"].to_numpy().astype(int)
 
@@ -210,13 +310,17 @@ def run_mlp_no_edges_baseline(
 ) -> Tuple[Dict[str, Any], np.ndarray, np.ndarray]:
     """Isolated Domain MLP baseline (HeteroGNN with use_edges=False)."""
     in_channels = {nt: scaled_data[nt].x.shape[1] for nt in scaled_data.node_types}
+    m_cfg = cfg.get("model", {})
+    has_cb = hasattr(scaled_data["domain"], "char_bytes") and scaled_data["domain"].char_bytes is not None
     model = HeteroGNN(
         metadata=scaled_data.metadata(),
         in_channels_dict=in_channels,
         hidden_dim=64,
         out_dim=32,
         num_layers=2,
-        use_edges=False
+        use_edges=False,
+        use_char_cnn=bool(m_cfg.get("use_char_cnn", False) and has_cb),
+        char_cnn_dim=int(m_cfg.get("char_cnn_dim", 16)),
     )
 
     test_eval, y_test, test_probs, _ = train_eval_gnn(

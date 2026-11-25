@@ -54,10 +54,18 @@ def main() -> None:
                 prev_summary = json.load(f)
             # Verify configuration parameters match
             prev_e2ld = prev_summary.get("normalize_to_e2LD")
-            curr_e2ld = cfg.get("parsing", {}).get("normalize_to_e2LD", True)
+            prev_sub = prev_summary.get("preserve_subdomains", False)
+            curr_sub = bool(cfg.get("parsing", {}).get("preserve_subdomains", False))
+            curr_e2ld = False if curr_sub else bool(cfg.get("parsing", {}).get("normalize_to_e2LD", True))
             prev_ratio = prev_summary.get("benign_ratio")
             curr_ratio = cfg.get("parsing", {}).get("benign_ratio", 2.0)
-            if prev_e2ld == curr_e2ld and prev_ratio == curr_ratio:
+            if (
+                prev_e2ld == curr_e2ld
+                and prev_sub == curr_sub
+                and prev_ratio == curr_ratio
+                and (paths.processed_dir / "domains_fqdn.parquet").exists()
+                and (paths.processed_dir / "domains_apex.parquet").exists()
+            ):
                 can_skip = True
         except Exception:
             can_skip = False

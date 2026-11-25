@@ -71,11 +71,11 @@ def _get_hub_nodes(data: HeteroData, threshold: int = 500) -> Set[Tuple[str, int
                 continue
             src_counts = np.bincount(e_arr[0], minlength=data[src_t].num_nodes)
             for node_idx, deg in enumerate(src_counts):
-                if deg > threshold and src_t != "domain":
+                if deg > threshold and src_t not in ("domain", "fqdn"):
                     hubs.add((src_t, node_idx))
             dst_counts = np.bincount(e_arr[1], minlength=data[dst_t].num_nodes)
             for node_idx, deg in enumerate(dst_counts):
-                if deg > threshold and dst_t != "domain":
+                if deg > threshold and dst_t not in ("domain", "fqdn"):
                     hubs.add((dst_t, node_idx))
         data._latency_hub_nodes = hubs
     return data._latency_hub_nodes
@@ -98,11 +98,12 @@ def build_ego_subgraph(
     sub_data = HeteroData()
     adj_csr = _get_adj_csr(data)
     hub_nodes = _get_hub_nodes(data, threshold=hub_degree_threshold) if use_hub_cache else set()
+    primary_nt = "fqdn" if "fqdn" in data.node_types else "domain"
 
     # Track visited node IDs per node type
     visited: Dict[str, Set[int]] = {nt: set() for nt in data.node_types}
     for d_idx in target_domain_indices:
-        visited["domain"].add(d_idx)
+        visited[primary_nt].add(d_idx)
 
     # Multi-hop neighbor expansion using CSR slices
     for hop in range(num_hops):
@@ -137,13 +138,13 @@ def build_ego_subgraph(
     # Create sorted local ID mappings: target domains are mapped to the first consecutive local indices
     local_maps: Dict[str, Dict[int, int]] = {}
     d_targets_set = set(target_domain_indices)
-    other_domains = sorted(list(visited["domain"] - d_targets_set))
+    other_domains = sorted(list(visited[primary_nt] - d_targets_set))
     domain_order = target_domain_indices + other_domains
-    local_maps["domain"] = {orig: idx for idx, orig in enumerate(domain_order)}
-    local_target_indices = [local_maps["domain"][t] for t in target_domain_indices]
+    local_maps[primary_nt] = {orig: idx for idx, orig in enumerate(domain_order)}
+    local_target_indices = [local_maps[primary_nt][t] for t in target_domain_indices]
 
     for nt in data.node_types:
-        if nt == "domain":
+        if nt == primary_nt:
             orig_indices = np.array(domain_order, dtype=int)
         else:
             orig_indices = np.array(sorted(list(visited[nt])), dtype=int)
@@ -152,17 +153,25 @@ def build_ego_subgraph(
         if len(orig_indices) > 0:
             sub_data[nt].x = data[nt].x[orig_indices].clone()
             sub_data[nt].num_nodes = len(orig_indices)
+            if nt == primary_nt and hasattr(data[nt], "char_bytes") and data[nt].char_bytes is not None:
+                sub_data[nt].char_bytes = data[nt].char_bytes[orig_indices].clone()
         else:
-            dim = data[nt].x.shape[1] if hasattr(data[nt], "x") and data[nt].x is not None else 1
+            from src.hdg.data.features import INFRA_TOTAL_DIMS
+            dim = data[nt].x.shape[1] if hasattr(data[nt], "x") and data[nt].x is not None else INFRA_TOTAL_DIMS.get(nt, 1)
             sub_data[nt].x = torch.empty((0, dim), dtype=torch.float)
             sub_data[nt].num_nodes = 0
+            if nt == primary_nt and hasattr(data[nt], "char_bytes") and data[nt].char_bytes is not None:
+                sub_data[nt].char_bytes = torch.empty((0, data[nt].char_bytes.shape[1]), dtype=torch.uint8)
 
     # Remap edges that connect nodes within the visited ego subgraph using CSR
     for et in data.edge_types:
         src_t, rel, dst_t = et
         indptr, indices = adj_csr.get(et, (None, None))
+        has_ew = hasattr(data[et], "edge_weight") and data[et].edge_weight is not None
         if indptr is None or len(indices) == 0:
             sub_data[et].edge_index = torch.empty((2, 0), dtype=torch.long)
+            if has_ew:
+                sub_data[et].edge_weight = torch.empty((0,), dtype=torch.float)
             continue
 
         src_map = local_maps[src_t]
@@ -170,6 +179,7 @@ def build_ego_subgraph(
 
         sub_src: List[int] = []
         sub_dst: List[int] = []
+        sub_e_pos: List[int] = []
 
         for u in visited[src_t]:
             start = indptr[u]
@@ -178,16 +188,29 @@ def build_ego_subgraph(
                 continue
             nbrs = indices[start:end]
             u_mapped = src_map[u]
-            for v in nbrs:
+            for offset, v in enumerate(nbrs):
                 v_mapped = dst_map.get(v)
                 if v_mapped is not None:
                     sub_src.append(u_mapped)
                     sub_dst.append(v_mapped)
+                    if has_ew:
+                        sub_e_pos.append(int(start + offset))
 
         if sub_src:
             sub_data[et].edge_index = torch.tensor([sub_src, sub_dst], dtype=torch.long)
+            if has_ew:
+                # Recompute or slice from CSR order
+                if not hasattr(data, "_latency_ew_csr"):
+                    data._latency_ew_csr = {}
+                if et not in data._latency_ew_csr:
+                    e_arr = data[et].edge_index.cpu().numpy()
+                    order = np.argsort(e_arr[0], kind="stable")
+                    data._latency_ew_csr[et] = data[et].edge_weight.cpu()[torch.from_numpy(order)]
+                sub_data[et].edge_weight = data._latency_ew_csr[et][sub_e_pos].clone()
         else:
             sub_data[et].edge_index = torch.empty((2, 0), dtype=torch.long)
+            if has_ew:
+                sub_data[et].edge_weight = torch.empty((0,), dtype=torch.float)
 
     return sub_data, local_target_indices
 
@@ -253,7 +276,14 @@ def benchmark_cpu_query_latency(
 
         # 3. Model forward pass on local ego-subgraph
         with torch.no_grad():
-            out = model(ego_data.x_dict, ego_data.edge_index_dict)
+            ew_ego = {
+                et: ego_data[et].edge_weight
+                for et in ego_data.edge_types
+                if hasattr(ego_data[et], "edge_weight") and ego_data[et].edge_weight is not None
+            } or None
+            e_nt = "fqdn" if "fqdn" in ego_data.node_types else "domain"
+            cb_ego = getattr(ego_data[e_nt], "char_bytes", None)
+            out = model(ego_data.x_dict, ego_data.edge_index_dict, edge_weight_dict=ew_ego, char_bytes=cb_ego)
             _ = out[local_targets]
         t3 = time.perf_counter()
 

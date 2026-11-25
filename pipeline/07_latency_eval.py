@@ -115,10 +115,11 @@ def main() -> None:
     print(f"[{'FIXTURE' if args.fixture else 'REAL'}] Loading aligned graph and dataset...")
     data, df, manifest = load_aligned_graph_cohort(paths.processed_dir)
 
-    if len(df) != data["domain"].num_nodes:
+    primary_nt = "fqdn" if "fqdn" in data.node_types else "domain"
+    if len(df) != data[primary_nt].num_nodes:
         raise ValueError(
             "Aligned dataframe size does not match graph domain-node count: "
-            f"dataframe={len(df)}, graph={data['domain'].num_nodes}"
+            f"dataframe={len(df)}, graph={data[primary_nt].num_nodes}"
         )
 
     if "_graph_idx" in df.columns:
@@ -235,7 +236,12 @@ def main() -> None:
                 num_heads=num_heads,
                 dropout=dropout,
                 prune_threshold=prune_threshold,
-                use_edges=use_edges
+                use_edges=use_edges,
+                use_gated_agg=bool(ckpt_cfg.get("use_gated_agg", True)),
+                use_char_cnn=bool(ckpt_cfg.get("use_char_cnn", False)),
+                char_cnn_dim=int(ckpt_cfg.get("char_cnn_dim", 16)),
+                use_completeness_gate=bool(ckpt_cfg.get("use_completeness_gate", False)),
+                num_envs=int(ckpt_cfg.get("num_envs", 0)),
             )
             cand_model.load_state_dict(state_dict)
             model = cand_model
@@ -291,7 +297,10 @@ def main() -> None:
     with torch.no_grad():
         for d_idx in probe_indices:
             ego_ref, loc = build_ego_subgraph(scaled_data, [d_idx], num_hops=2, max_neighbors=None, use_hub_cache=False)
-            out_ref = model(ego_ref.x_dict, ego_ref.edge_index_dict)
+            ew_ref = {et: ego_ref[et].edge_weight for et in ego_ref.edge_types if hasattr(ego_ref[et], "edge_weight") and ego_ref[et].edge_weight is not None} or None
+            ref_nt = "fqdn" if "fqdn" in ego_ref.node_types else "domain"
+            cb_ref = getattr(ego_ref[ref_nt], "char_bytes", None)
+            out_ref = model(ego_ref.x_dict, ego_ref.edge_index_dict, edge_weight_dict=ew_ref, char_bytes=cb_ref)
             prob_ref = float(torch.softmax(out_ref[loc], dim=-1)[0, 1].item())
             ref_preds.append(prob_ref)
     ref_arr = np.array(ref_preds)
@@ -325,7 +334,10 @@ def main() -> None:
                                 ego_b, loc_b = build_ego_subgraph(
                                     scaled_data, [d_idx], num_hops=2, max_neighbors=nbrs, use_hub_cache=(nbrs is not None)
                                 )
-                                out_b = model(ego_b.x_dict, ego_b.edge_index_dict)
+                                ew_b = {et: ego_b[et].edge_weight for et in ego_b.edge_types if hasattr(ego_b[et], "edge_weight") and ego_b[et].edge_weight is not None} or None
+                                b_nt = "fqdn" if "fqdn" in ego_b.node_types else "domain"
+                                cb_b = getattr(ego_b[b_nt], "char_bytes", None)
+                                out_b = model(ego_b.x_dict, ego_b.edge_index_dict, edge_weight_dict=ew_b, char_bytes=cb_b)
                                 prob_b = float(torch.softmax(out_b[loc_b], dim=-1)[0, 1].item())
                                 bounded_preds.append(prob_b)
 

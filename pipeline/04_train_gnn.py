@@ -62,8 +62,14 @@ from src.hdg.data.splits import (
     single_chronological_holdout_split,
     group_split_bipartite,
     group_split_by_asn,
+    stratified_apex_cluster_split,
+    within_apex_sibling_split,
 )
-from src.hdg.data.temporal import analyze_temporal_eligibility
+from src.hdg.data.temporal import (
+    analyze_temporal_eligibility,
+    extract_month_str,
+    registration_birth_cohort_split,
+)
 from src.hdg.cache import compute_experiment_fingerprint
 from src.hdg.training.train import train_eval_gnn
 
@@ -76,7 +82,11 @@ def main() -> None:
     parser.add_argument("--device", type=str, default="cpu", help="Device to use ('cpu', 'cuda', 'cuda:N')")
     parser.add_argument("--out-dir", type=str, default=None, help="Override results output directory")
     parser.add_argument("--variant", type=str, default="both", choices=["sage", "attn", "sage_guard", "both", "all"], help="GNN variant")
-    parser.add_argument("--split-type", type=str, default="random", choices=["random", "time", "group"], help="Split type")
+    parser.add_argument("--split-type", type=str, default="random", choices=["random", "time", "group", "apex_cluster", "within_apex"], help="Split type")
+    parser.add_argument("--loss-type", type=str, default=None, choices=["ce", "class_weighted", "effective_samples", "focal"], help="Override training classification loss type")
+    parser.add_argument("--threshold-criterion", type=str, default=None, choices=["f1", "f0.5", "f_beta", "constrained_fpr"], help="Override validation threshold optimization criterion")
+    parser.add_argument("--temporal-axis", type=str, default="sourced_on", choices=["sourced_on", "evaluated_on", "t_reg"], help="Temporal evaluation axis for time splits")
+    parser.add_argument("--t-reg-cutoff-year", type=int, default=2022, help="Cutoff year for t_reg birth-cohort split")
     parser.add_argument("--single-seed", type=int, default=None, help="Run single seed")
     parser.add_argument("--epochs", type=int, default=None, help="Override training epochs")
     parser.add_argument("--max-domains", type=int, default=None, help="Cap total domains")
@@ -209,69 +219,113 @@ def main() -> None:
             if args.split_type == "random":
                 splits = random_stratified_split(df["label"].to_numpy(), seed=s)
             elif args.split_type == "time":
-                # Analyze temporal eligibility on complete chronological cohort
-                min_months = cfg.get("temporal", {}).get("min_distinct_months", 3)
-                if args.fixture or args.smoke:
-                    min_p_class = 10
-                elif len(df) < 500:
-                    # Adaptive threshold for small testing subsamples of real dataset
-                    min_p_class = 2
+                if args.temporal_axis == "t_reg":
+                    min_p = 2 if len(df) < 500 else (5 if (args.fixture or args.smoke) else 20)
+                    try:
+                        splits = registration_birth_cohort_split(
+                            df,
+                            train_cutoff_year=args.t_reg_cutoff_year,
+                            min_per_class=min_p,
+                            seed=s,
+                        )
+                        temporal_mode = "t_reg_birth_cohort"
+                        temp_meta = {
+                            "temporal_axis": "t_reg",
+                            "temporal_mode": temporal_mode,
+                            "train_cutoff_year": args.t_reg_cutoff_year,
+                        }
+                        print(f"  [TEMPORAL t_reg] Birth-Cohort Holdout (<= {args.t_reg_cutoff_year} -> > {args.t_reg_cutoff_year})")
+                    except ValueError as e:
+                        print(f"  [BLOCKED] Insufficient t_reg evidence: {e}")
+                        save_run_result(paths.results_dir, run_name, {
+                            "experiment": "gnn_evaluation",
+                            "status": "BLOCKED_INSUFFICIENT_DATA",
+                            "experiment_fingerprint": exp_fp,
+                            "variant": var,
+                            "split_type": "time",
+                            "temporal_axis": "t_reg",
+                            "seed": s,
+                            "reasons": [str(e)],
+                        })
+                        continue
                 else:
-                    min_p_class = cfg.get("temporal", {}).get("min_per_class_per_window", 200)
+                    # Analyze temporal eligibility on sourced_on (t) or evaluated_on (t_eval)
+                    if args.temporal_axis == "evaluated_on" and "t_eval" in df.columns:
+                        if "t_eval_month" not in df.columns:
+                            df["t_eval_month"] = df["t_eval"].fillna(df["t"]).apply(extract_month_str)
+                        t_month_col = "t_eval_month"
+                        t_eff_col = "t_eval"
+                    else:
+                        t_month_col = "t_month"
+                        t_eff_col = "t"
 
-                elig = analyze_temporal_eligibility(
-                    df,
-                    min_distinct_months=min_months,
-                    min_per_class=min_p_class
-                )
+                    min_months = cfg.get("temporal", {}).get("min_distinct_months", 3)
+                    if args.fixture or args.smoke:
+                        min_p_class = 10
+                    elif len(df) < 500:
+                        min_p_class = 2
+                    else:
+                        min_p_class = cfg.get("temporal", {}).get("min_per_class_per_window", 200)
 
-                if elig.rolling_origin_available:
-                    transitions = rolling_origin_temporal_splits(
+                    elig = analyze_temporal_eligibility(
                         df,
                         min_distinct_months=min_months,
-                        min_per_class_per_window=min_p_class,
-                        seed=s,
-                        allow_empty=True
+                        min_per_class=min_p_class,
+                        effective_time_col=t_eff_col,
+                        month_col=t_month_col,
                     )
-                    if transitions:
-                        trans_name, splits = transitions[0]
-                        temporal_mode = "rolling_origin"
-                        print(f"  [TEMPORAL] Rolling-Origin Transition: {trans_name}")
-                    else:
-                        elig.rolling_origin_available = False
 
-                if not elig.rolling_origin_available and elig.single_holdout_available:
-                    target_m = elig.eligible_target_months[0]
-                    min_hist = 2 if len(df) < 500 else (10 if (args.fixture or args.smoke) else 50)
-                    min_tgt = 2 if len(df) < 500 else (10 if (args.fixture or args.smoke) else 50)
-                    splits = single_chronological_holdout_split(
-                        df,
-                        target_month=target_m,
-                        min_historical_per_class=min_hist,
-                        min_target_per_class=min_tgt,
-                        seed=s
-                    )
-                    temporal_mode = "single_chronological_holdout"
-                    print(f"  [TEMPORAL] Single Chronological Holdout (Historical Prefix -> Target {target_m})")
-                elif not elig.rolling_origin_available and not elig.single_holdout_available:
-                    print(f"  [BLOCKED] Insufficient temporal evidence: {elig.reasons}")
-                    blocked_payload = {
-                        "experiment": "gnn_evaluation",
-                        "status": "BLOCKED_INSUFFICIENT_DATA",
-                        "experiment_fingerprint": exp_fp,
-                        "variant": var,
-                        "split_type": "time",
-                        "seed": s,
-                        "reasons": elig.reasons,
-                        "temporal_diagnostics": elig.to_dict()
+                    if elig.rolling_origin_available:
+                        transitions = rolling_origin_temporal_splits(
+                            df,
+                            min_distinct_months=min_months,
+                            min_per_class_per_window=min_p_class,
+                            seed=s,
+                            allow_empty=True
+                        ) if t_month_col == "t_month" else []
+                        if transitions:
+                            trans_name, splits = transitions[0]
+                            temporal_mode = "rolling_origin"
+                            print(f"  [TEMPORAL] Rolling-Origin Transition: {trans_name}")
+                        else:
+                            elig.rolling_origin_available = False
+
+                    if not elig.rolling_origin_available and elig.single_holdout_available:
+                        target_m = elig.eligible_target_months[0]
+                        min_hist = 2 if len(df) < 500 else (10 if (args.fixture or args.smoke) else 50)
+                        min_tgt = 2 if len(df) < 500 else (10 if (args.fixture or args.smoke) else 50)
+                        splits = single_chronological_holdout_split(
+                            df,
+                            target_month=target_m,
+                            min_historical_per_class=min_hist,
+                            min_target_per_class=min_tgt,
+                            effective_time_col=t_eff_col,
+                            month_col=t_month_col,
+                            seed=s
+                        )
+                        temporal_mode = "single_chronological_holdout"
+                        print(f"  [TEMPORAL {args.temporal_axis}] Single Chronological Holdout (Historical Prefix -> Target {target_m})")
+                    elif not elig.rolling_origin_available and not elig.single_holdout_available:
+                        print(f"  [BLOCKED] Insufficient temporal evidence: {elig.reasons}")
+                        blocked_payload = {
+                            "experiment": "gnn_evaluation",
+                            "status": "BLOCKED_INSUFFICIENT_DATA",
+                            "experiment_fingerprint": exp_fp,
+                            "variant": var,
+                            "split_type": "time",
+                            "temporal_axis": args.temporal_axis,
+                            "seed": s,
+                            "reasons": elig.reasons,
+                            "temporal_diagnostics": elig.to_dict()
+                        }
+                        save_run_result(paths.results_dir, run_name, blocked_payload)
+                        continue
+                    temp_meta = {
+                        "temporal_axis": args.temporal_axis,
+                        "temporal_mode": temporal_mode,
+                        "transition": trans_name if temporal_mode == "rolling_origin" else None,
+                        "target_month": str(target_m) if temporal_mode == "single_chronological_holdout" else None,
                     }
-                    save_run_result(paths.results_dir, run_name, blocked_payload)
-                    continue
-                temp_meta = {
-                    "temporal_mode": temporal_mode,
-                    "transition": trans_name if temporal_mode == "rolling_origin" else None,
-                    "target_month": str(target_m) if temporal_mode == "single_chronological_holdout" else None,
-                }
             elif args.split_type == "group":
                 temp_meta = {}
                 joint_grp = cfg.get("group", {}).get("joint_grouping", False)
@@ -281,15 +335,26 @@ def main() -> None:
                     print("  [INFO] Giant component > 50%; providing group split by primary ASN...")
                     splits, asn_meta = group_split_by_asn(df, seed=s)
                     asn_fallback_meta = asn_meta.get("leakage_report")
+            elif args.split_type == "apex_cluster":
+                splits = stratified_apex_cluster_split(df, seed=s)
+                temp_meta = dict(splits.metadata)
+                print(
+                    f"  [APEX CLUSTER] Train apex={temp_meta.get('train_apex_count')}, "
+                    f"Val apex={temp_meta.get('val_apex_count')}, Test apex={temp_meta.get('test_apex_count')} (Zero leakage verified)"
+                )
+            elif args.split_type == "within_apex":
+                splits = within_apex_sibling_split(df, seed=s)
+                temp_meta = dict(splits.metadata)
+                print(f"  [WITHIN APEX SIBLING] Multi-tenant apexes={temp_meta.get('multi_tenant_apex_count')}")
             else:
                 temp_meta = {}
                 splits = random_stratified_split(df["label"].to_numpy(), seed=s)
 
             # 2. Scale features & mask graph topology per split to eliminate leakage
             is_time_split = (args.split_type == "time")
-            is_group_split = (args.split_type == "group")
-            # For temporal split, degree mode must strictly be train_visible to prevent future degree exposure
+            is_group_split = (args.split_type in ("group", "apex_cluster"))
             deg_mode = "train_visible" if is_time_split else cfg.get("graph", {}).get("degree_mode", "transductive")
+            max_hub_fanout = cfg.get("graph", {}).get("max_hub_fanout")
 
             scaled_data, scaler_stats = apply_split_scaling(
                 base=base_graph,
@@ -298,7 +363,8 @@ def main() -> None:
                 test_indices=splits.test_indices,
                 degree_mode=deg_mode,
                 mask_future_domains=is_time_split,
-                mask_disjoint_groups=is_group_split
+                mask_disjoint_groups=is_group_split,
+                max_hub_fanout=max_hub_fanout,
             )
 
             # 3. Instantiate Model (seeded prior to construction for exact weight reproducibility)
@@ -309,6 +375,17 @@ def main() -> None:
                 torch.cuda.manual_seed_all(s)
 
             in_channels = {nt: scaled_data[nt].x.shape[1] for nt in scaled_data.node_types}
+            m_cfg = cfg.get("model", {})
+            tr_cfg = m_cfg.get("training", {})
+            p_nt = "fqdn" if "fqdn" in scaled_data.node_types else "domain"
+            has_cb = hasattr(scaled_data[p_nt], "char_bytes") and scaled_data[p_nt].char_bytes is not None
+            use_char_cnn = bool(m_cfg.get("use_char_cnn", False) and has_cb)
+            char_cnn_dim = int(m_cfg.get("char_cnn_dim", 16))
+            use_comp_gate = bool(m_cfg.get("use_completeness_gate", False))
+            use_gated_agg = bool(var_cfg.get("use_gated_agg", True))
+            use_grl_flag = bool(tr_cfg.get("use_grl", False))
+            num_envs = 2 if use_grl_flag else 0
+
             model = HeteroGNN(
                 metadata=scaled_data.metadata(),
                 in_channels_dict=in_channels,
@@ -318,7 +395,12 @@ def main() -> None:
                 num_heads=num_heads,
                 dropout=dropout,
                 variant=var,
-                prune_threshold=prune_thresh
+                prune_threshold=prune_thresh,
+                use_gated_agg=use_gated_agg,
+                use_char_cnn=use_char_cnn,
+                char_cnn_dim=char_cnn_dim,
+                use_completeness_gate=use_comp_gate,
+                num_envs=num_envs,
             )
 
             ckpt_path = ckpt_dir / f"{run_name}.pt"
@@ -353,11 +435,12 @@ def main() -> None:
                 splits=splits,
                 df=df,
                 epochs=train_epochs,
-                lr=cfg.get("model", {}).get("training", {}).get("lr", 0.005),
-                lr_grid=cfg.get("model", {}).get("training", {}).get("lr_grid", [0.001, 0.003, 0.005]),
+                lr=tr_cfg.get("lr", 0.005),
+                lr_grid=tr_cfg.get("lr_grid", [0.001, 0.003, 0.005]),
                 patience=patience,
                 min_epochs=min_epochs,
                 bootstrap_samples=boot_samples,
+                use_class_weights=bool(tr_cfg.get("use_class_weights", False)),
                 checkpoint_path=ckpt_path,
                 log_file=log_path,
                 device=device,
@@ -365,7 +448,23 @@ def main() -> None:
                 experiment_fingerprint=exp_fp,
                 split_type=args.split_type,
                 split_metadata=split_meta_payload,
-                eval_data=eval_data
+                eval_data=eval_data,
+                use_grl=use_grl_flag,
+                grl_weight=float(tr_cfg.get("grl_weight", 0.2)),
+                use_coral=bool(tr_cfg.get("use_coral", False)) and is_time_split,
+                coral_weight=float(tr_cfg.get("coral_weight", 0.1)),
+                coral_max_samples=int(tr_cfg.get("coral_max_samples", 8192)),
+                use_group_dro=bool(tr_cfg.get("use_group_dro", False)),
+                dro_eta=float(tr_cfg.get("dro_eta", 0.05)),
+                drop_drift_shortcuts=bool(tr_cfg.get("drop_drift_shortcuts_on_shift", False)) and is_time_split,
+                co_primary_cross_source=bool(tr_cfg.get("co_primary_cross_source", False)) and is_time_split,
+                loss_type=str(args.loss_type or tr_cfg.get("loss_type", "ce")),
+                focal_alpha=float(tr_cfg.get("focal_alpha", 0.75)),
+                focal_gamma=float(tr_cfg.get("focal_gamma", 2.0)),
+                effective_beta=float(tr_cfg.get("effective_beta", 0.9999)),
+                threshold_criterion=str(args.threshold_criterion or tr_cfg.get("threshold_criterion", "f1")),
+                max_validation_fpr=float(tr_cfg.get("max_validation_fpr", 0.015)),
+                use_temperature_scaling=bool(tr_cfg.get("use_temperature_scaling", False)),
             )
 
             if asn_fallback_meta:

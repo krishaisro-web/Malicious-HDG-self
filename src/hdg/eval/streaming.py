@@ -74,7 +74,10 @@ def evaluate_on_indices(
     """
     model.eval()
     with torch.no_grad():
-        out = model(data.x_dict, data.edge_index_dict)
+        ew_s = {et: data[et].edge_weight for et in data.edge_types if hasattr(data[et], "edge_weight") and data[et].edge_weight is not None} or None
+        p_nt = "fqdn" if "fqdn" in data.node_types else "domain"
+        cb_s = getattr(data[p_nt], "char_bytes", None)
+        out = model(data.x_dict, data.edge_index_dict, edge_weight_dict=ew_s, char_bytes=cb_s) if hasattr(model, "forward_with_aux") else model(data.x_dict, data.edge_index_dict)
         probs = F.softmax(out[eval_indices], dim=-1)[:, 1].cpu().numpy()
 
     y_eval = y_true_all[eval_indices]
@@ -142,10 +145,14 @@ def train_step(
     best_loss = float("inf")
     best_weights = deepcopy(model.state_dict())
 
+    ew_tr = {et: data[et].edge_weight for et in data.edge_types if hasattr(data[et], "edge_weight") and data[et].edge_weight is not None} or None
+    p_nt = "fqdn" if "fqdn" in data.node_types else "domain"
+    cb_tr = getattr(data[p_nt], "char_bytes", None)
+
     for _ in range(epochs):
         model.train()
         optimizer.zero_grad(set_to_none=True)
-        out = model(data.x_dict, data.edge_index_dict)
+        out = model(data.x_dict, data.edge_index_dict, edge_weight_dict=ew_tr, char_bytes=cb_tr) if hasattr(model, "forward_with_aux") else model(data.x_dict, data.edge_index_dict)
         loss = F.cross_entropy(out[train_indices], y_tensor[train_indices])
         loss.backward()
         optimizer.step()
@@ -153,7 +160,7 @@ def train_step(
         # Simple validation loss tracking
         model.eval()
         with torch.no_grad():
-            v_out = model(data.x_dict, data.edge_index_dict)
+            v_out = model(data.x_dict, data.edge_index_dict, edge_weight_dict=ew_tr, char_bytes=cb_tr) if hasattr(model, "forward_with_aux") else model(data.x_dict, data.edge_index_dict)
             v_loss = F.cross_entropy(v_out[val_indices], y_tensor[val_indices]).item()
             if v_loss < best_loss:
                 best_loss = v_loss
@@ -162,7 +169,7 @@ def train_step(
     model.load_state_dict(best_weights)
     model.eval()
     with torch.no_grad():
-        v_out = model(data.x_dict, data.edge_index_dict)
+        v_out = model(data.x_dict, data.edge_index_dict, edge_weight_dict=ew_tr, char_bytes=cb_tr) if hasattr(model, "forward_with_aux") else model(data.x_dict, data.edge_index_dict)
         v_probs = F.softmax(v_out[val_indices], dim=-1)[:, 1].cpu().numpy()
         v_true = y_true_all[val_indices]
 
@@ -187,7 +194,10 @@ def calibrate_operating_threshold(
     """Calibrates low-FPR operating threshold strictly on validation negatives."""
     model.eval()
     with torch.no_grad():
-        out = model(data.x_dict, data.edge_index_dict)
+        ew_c = {et: data[et].edge_weight for et in data.edge_types if hasattr(data[et], "edge_weight") and data[et].edge_weight is not None} or None
+        p_nt = "fqdn" if "fqdn" in data.node_types else "domain"
+        cb_c = getattr(data[p_nt], "char_bytes", None)
+        out = model(data.x_dict, data.edge_index_dict, edge_weight_dict=ew_c, char_bytes=cb_c) if hasattr(model, "forward_with_aux") else model(data.x_dict, data.edge_index_dict)
         probs = F.softmax(out[val_indices], dim=-1)[:, 1].cpu().numpy()
     val_negs = probs[y_true_all[val_indices] == 0]
     if len(val_negs) == 0:
@@ -279,7 +289,8 @@ def run_streaming_evaluation(
             "message": "Streaming evaluation blocked due to lack of multiple consecutive multi-class months."
         }
 
-    y_tensor = data["domain"].y
+    p_nt = "fqdn" if "fqdn" in data.node_types else "domain"
+    y_tensor = data[p_nt].y
     y_true_all = y_tensor.cpu().numpy()
 
     # Month 0 initialization

@@ -140,9 +140,10 @@ def run_subsample_benchmark(
     from src.hdg.models.hetero_gnn import HeteroGNN
 
     data = torch.load(graph_path, weights_only=False)
+    p_nt = "fqdn" if "fqdn" in data.node_types else "domain"
 
-    n_domains = data["domain"].num_nodes
-    y = data["domain"].y.numpy()
+    n_domains = data[p_nt].num_nodes
+    y = data[p_nt].y.numpy()
 
     # Stratified subsample
     sss = StratifiedShuffleSplit(n_splits=1, test_size=(1.0 - sample_ratio), random_state=42)
@@ -165,7 +166,7 @@ def run_subsample_benchmark(
     optimizer.zero_grad(set_to_none=True)
     t0 = time.perf_counter()
     out = model(data.x_dict, data.edge_index_dict)
-    loss = F.cross_entropy(out[sample_tensor], data["domain"].y[sample_tensor])
+    loss = F.cross_entropy(out[sample_tensor], data[p_nt].y[sample_tensor])
     loss.backward()
     optimizer.step()
     t1 = time.perf_counter()

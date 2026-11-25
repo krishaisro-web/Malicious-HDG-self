@@ -30,7 +30,8 @@ profiling:
   max_profile_markdown_lines: 200
 
 parsing:
-  normalize_to_e2LD: true
+  normalize_to_e2LD: false # Superseded when preserve_subdomains is true
+  preserve_subdomains: true # RFC-001: Preserve all ~931k FQDNs alongside dual-tier apex_domain table
   include_has_subdomain: false # Default false: only enable if shortcut audit proves not a proxy
   benign_ratio: null # null keeps all ~830k benign records (ratio ~8.24:1 against 100k malware), set to 2.0 or 3.0 for smaller negative-to-positive sampling
   max_per_class: null # null keeps all records
@@ -39,6 +40,8 @@ parsing:
 
 graph:
   hub_degree: 500
+  max_hub_fanout: 500 # RFC-003 Section 3.3 bounded reverse message fan-out cap (set null to disable)
+  hierarchical_subdomains: true # RFC-001: Build dual-tier fqdn -> apex_domain HeteroData when preserve_subdomains is active
   hub_percentile: 99.9
   max_domains: null # null preserves all 9.3 Lakh domains (set to 100000 for capped quick experiments)
   node_types:
@@ -77,11 +80,15 @@ group:
   max_prevalence_discrepancy: 0.05 # Stratified split tolerance (within 5 percentage points)
 
 model:
+  use_char_cnn: true
+  char_cnn_dim: 16
+  use_completeness_gate: true
   sage:
     hidden_dim: 64
     out_dim: 32
     num_layers: 2
     dropout: 0.2
+    use_gated_agg: true
   attn:
     hidden_dim: 64
     out_dim: 32
@@ -102,7 +109,27 @@ model:
     weight_decay: 0.0001
     batch_size: 1024 # Note: GNN training is full-batch transductive; this parameter is unused for graph training
     use_class_weights: false
+    loss_type: "focal" # "ce", "class_weighted", "effective_samples", or "focal"
+    focal_gamma: 2.0 # Modulation factor for easy negative down-weighting
+    focal_alpha: 0.75 # Minority class weight balance
+    effective_beta: 0.9999 # Cui et al. effective number of samples smoothing
+    threshold_criterion: "f0.5" # "f1", "f0.5", or "constrained_fpr"
+    max_validation_fpr: 0.015 # Maximum allowed validation FPR for constrained thresholding
+    use_temperature_scaling: true # Guo et al. validation NLL temperature calibration
+    pauc_k_fraction: 0.01 # CVaR top-K fraction for Stage 6d fine-tuning
+    pauc_margin: 0.20 # Pairwise margin gamma for pAUC loss
+    pauc_lambda: 0.50 # Weight of CVaR pAUC loss during Stage 6d fine-tuning
+    pauc_lr: 0.0005 # Fine-tuning learning rate for Stage 6d
     scheduler: "plateau" # "plateau" or null
+    use_grl: true
+    grl_weight: 0.2
+    use_coral: true
+    coral_weight: 0.1
+    coral_max_samples: 8192
+    use_group_dro: true
+    dro_eta: 0.05
+    drop_drift_shortcuts_on_shift: true
+    co_primary_cross_source: true
 
 baselines:
   tfidf:

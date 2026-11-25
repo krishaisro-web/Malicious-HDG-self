@@ -76,12 +76,18 @@ def main() -> None:
     base_graph = build_base_graph(df, config=cfg)
 
     # For standard inspecting/compat, also provide unscaled x if needed
-    if not hasattr(base_graph["domain"], "x") or base_graph["domain"].x is None:
-        base_graph["domain"].x = base_graph["domain"].raw_x.clone()
+    primary_nt = "fqdn" if "fqdn" in base_graph.node_types else "domain"
+    if not hasattr(base_graph[primary_nt], "x") or base_graph[primary_nt].x is None:
+        base_graph[primary_nt].x = base_graph[primary_nt].raw_x.clone()
 
-    for nt in ["ip", "nameserver", "registrar", "asn", "certificate"]:
+    from src.hdg.data.features import INFRA_TOTAL_DIMS
+    for nt in ["apex_domain", "ip", "nameserver", "registrar", "asn", "certificate", "prefix"]:
         if nt in base_graph.node_types and (not hasattr(base_graph[nt], "x") or base_graph[nt].x is None):
-            base_graph[nt].x = torch.zeros((base_graph[nt].num_nodes, 1), dtype=torch.float)
+            if hasattr(base_graph[nt], "raw_x") and base_graph[nt].raw_x is not None:
+                zeros_split = torch.zeros((base_graph[nt].num_nodes, 2), dtype=torch.float)
+                base_graph[nt].x = torch.cat([zeros_split, base_graph[nt].raw_x], dim=1)
+            else:
+                base_graph[nt].x = torch.zeros((base_graph[nt].num_nodes, INFRA_TOTAL_DIMS.get(nt, 2)), dtype=torch.float)
 
     # Save base graph artifact and aligned cohort bundle atomically
     save_graph_cohort_bundle(

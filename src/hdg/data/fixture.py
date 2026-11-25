@@ -123,7 +123,11 @@ def make_fixture(
                     "registrar": [{
                         "name": reg_info[0],
                         "handle": reg_info[1],
-                        "organization": reg_info[2]
+                        "organization": reg_info[2],
+                        "url": f"https://www.{reg_info[2].lower().replace(' ', '')}.com",
+                        "whois_server": f"whois.{reg_info[2].lower().replace(' ', '')}.com",
+                        "email": f"support@{reg_info[2].lower().replace(' ', '')}.com" if rng.random() > 0.3 else None,
+                        "tel": "+1.5555551234" if rng.random() > 0.5 else None,
                     }],
                     "abuse": [{"email": f"abuse@{reg_info[2].lower().replace(' ', '')}.com"}]
                 }
@@ -183,10 +187,12 @@ def make_fixture(
         asn_choice = rng.choice(asns)
         # Randomize ASN key structure to test robustness against candidate keys
         asn_key_variant = rng.choice(["number", "asn", "autonomous_system_number"])
+        net_addr = f"198.51.{rng.randint(1, 250)}.0"
         asn_obj = {
             asn_key_variant: asn_choice[0],
-            "organization": asn_choice[2],
-            "network": f"198.51.{rng.randint(1, 250)}.0/24"
+            "as_org": asn_choice[2],
+            "network_address": net_addr,
+            "prefix_len": 24,
         }
 
         for ip in selected_ips:
@@ -195,7 +201,15 @@ def make_fixture(
                 "from_record": "A",
                 "remarks": {"is_alive": True, "average_rtt": round(rng.uniform(10.0, 80.0), 2)},
                 "rdap": {"handle": f"NET-{asn_choice[0]}"},
-                "geo": {"country": "US", "city": "Ashburn"},
+                "geo": {
+                    "country": "United States",
+                    "country_code": "US",
+                    "city": "Ashburn",
+                    "latitude": 39.0438,
+                    "longitude": -77.4874,
+                    "isp": asn_choice[2],
+                    "org": asn_choice[2],
+                },
                 "asn": asn_obj
             })
         
@@ -207,7 +221,14 @@ def make_fixture(
                 "ip": ns_ip,
                 "from_record": "NS",
                 "remarks": {"is_alive": True},
-                "geo": {"country": "US"},
+                "geo": {
+                    "country": "United States",
+                    "country_code": "US",
+                    "latitude": 37.7749,
+                    "longitude": -122.4194,
+                    "isp": asn_choice[2],
+                    "org": asn_choice[2],
+                },
                 "asn": asn_obj
             })
 

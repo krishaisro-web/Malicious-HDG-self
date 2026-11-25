@@ -7,7 +7,7 @@ and source proxies.
 from collections import Counter
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 from sklearn.metrics import roc_auc_score
@@ -165,3 +165,76 @@ def run_shortcut_audit(
         f.write(md_text)
 
     return audit_summary, md_text
+
+
+def audit_source_drift(
+    df: pd.DataFrame,
+    output_dir: Optional[Path] = None,
+    auc_threshold: float = 0.70,
+) -> Dict[str, Any]:
+    """
+    Evaluates single-feature KS statistic and ROC-AUC predicting Umbrella vs CESNET
+    strictly within benign records (`label == 0`) to detect scanner/collection drift.
+    Writes `drift_audit.json` if `output_dir` is provided.
+    """
+    from scipy.stats import ks_2samp
+    from src.hdg.data.features import (
+        extract_domain_features_vectorized,
+        get_domain_feature_names,
+    )
+
+    benign_df = df[df["label"] == 0].copy().reset_index(drop=True)
+    if len(benign_df) == 0 or "source" not in benign_df.columns:
+        return {"status": "INSUFFICIENT_DATA", "flagged_drift_features": [], "feature_drift": {}}
+
+    src_lower = benign_df["source"].astype(str).str.lower()
+    is_umb = src_lower.str.contains("umbrella")
+    is_ces = src_lower.str.contains("cesnet|groundtruth")
+    both_mask = (is_umb | is_ces).to_numpy()
+    if np.sum(is_umb) < 5 or np.sum(is_ces) < 5:
+        return {"status": "SINGLE_BENIGN_SOURCE", "flagged_drift_features": [], "feature_drift": {}}
+
+    sub_df = benign_df[both_mask].copy().reset_index(drop=True)
+    y_feed = sub_df["source"].astype(str).str.lower().str.contains("umbrella").astype(int).to_numpy()
+
+    X = extract_domain_features_vectorized(sub_df, use_lexical=True, include_has_subdomain=False)
+    feat_names = get_domain_feature_names(use_lexical=True, include_has_subdomain=False)
+
+    drift_stats: Dict[str, Dict[str, float]] = {}
+    flagged: List[str] = []
+
+    for col_idx, name in enumerate(feat_names):
+        vals = X[:, col_idx]
+        auc = compute_binary_feature_auc(y_feed, vals)
+        v_umb = vals[y_feed == 1]
+        v_ces = vals[y_feed == 0]
+        try:
+            ks_stat, ks_p = ks_2samp(v_umb, v_ces)
+        except Exception:
+            ks_stat, ks_p = 0.0, 1.0
+        is_flagged = auc >= auc_threshold
+        if is_flagged:
+            flagged.append(name)
+        drift_stats[name] = {
+            "source_auc": round(float(auc), 4),
+            "ks_stat": round(float(ks_stat), 4),
+            "ks_pvalue": round(float(ks_p), 6),
+            "flagged": is_flagged,
+        }
+
+    report = {
+        "status": "OK",
+        "auc_threshold": auc_threshold,
+        "umbrella_count": int(np.sum(y_feed == 1)),
+        "cesnet_count": int(np.sum(y_feed == 0)),
+        "flagged_drift_features": flagged,
+        "feature_drift": drift_stats,
+    }
+
+    if output_dir is not None:
+        output_dir = Path(output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        with open(output_dir / "drift_audit.json", "w", encoding="utf-8") as f:
+            json.dump(report, f, indent=2)
+
+    return report

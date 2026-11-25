@@ -37,6 +37,7 @@ from torch_geometric.data import HeteroData
 
 from src.hdg.metrics import evaluate_predictions
 from src.hdg.data.splits import DataSplits
+from src.hdg.data.features import get_feature_indices, get_primary_domain_node_type
 
 
 def generate_structural_attack(
@@ -56,7 +57,8 @@ def generate_structural_attack(
         surfaces = ["ip", "nameserver", "registrar", "certificate"]
 
     # Adhere to Constraint #6: Construct perturbations on CPU, then transfer atomically
-    orig_device = clean_data["domain"].y.device
+    primary_nt = get_primary_domain_node_type(clean_data)
+    orig_device = clean_data[primary_nt].y.device
     # Clone prior to transfer to prevent in-place mutation of caller's clean_data
     clean_cpu = clean_data.clone().to("cpu")
     attacked_data = clean_cpu.clone()
@@ -64,7 +66,7 @@ def generate_structural_attack(
     rng = np.random.default_rng(seed)
 
     test_idx = splits.test_indices
-    mal_test_idx = [idx for idx in test_idx if clean_cpu["domain"].y[idx].item() == 1]
+    mal_test_idx = [idx for idx in test_idx if clean_cpu[primary_nt].y[idx].item() == 1]
 
     if not mal_test_idx:
         return attacked_data.to(orig_device)
@@ -74,8 +76,8 @@ def generate_structural_attack(
     controlled_domains = rng.choice(mal_test_idx, size=n_controlled, replace=False).tolist()
 
     # Identify candidate target nodes strictly from TRAIN benign domains with purity ranking
-    train_benign = [idx for idx in splits.train_indices if clean_cpu["domain"].y[idx].item() == 0]
-    train_malicious = [idx for idx in splits.train_indices if clean_cpu["domain"].y[idx].item() == 1]
+    train_benign = [idx for idx in splits.train_indices if clean_cpu[primary_nt].y[idx].item() == 0]
+    train_malicious = [idx for idx in splits.train_indices if clean_cpu[primary_nt].y[idx].item() == 1]
 
     def get_top_train_benign_targets(edge_type: Tuple[str, str, str], min_purity: float = 0.99) -> List[int]:
         if edge_type not in clean_cpu.edge_types:
@@ -98,11 +100,9 @@ def generate_structural_attack(
         mal_counts = np.bincount(mal_targets, minlength=num_targets)
         total_counts = benign_counts + mal_counts
 
-        # Train-benign purity: benign_degree / total_train_degree
         with np.errstate(divide="ignore", invalid="ignore"):
             purity = np.where(total_counts > 0, benign_counts / total_counts, 0.0)
 
-        # Select targets satisfying purity >= min_purity (or fallback if none meet threshold)
         pure_mask = (purity >= min_purity) & (benign_counts > 0)
         if not np.any(pure_mask):
             pure_mask = (benign_counts > 0)
@@ -114,10 +114,12 @@ def generate_structural_attack(
         valid = [int(idx) for idx in ranked if scores[idx] > 0][:20]
         return valid
 
-    top_ips = get_top_train_benign_targets(("domain", "resolves_to", "ip"))
-    top_ns = get_top_train_benign_targets(("domain", "uses_ns", "nameserver"))
-    top_regs = get_top_train_benign_targets(("domain", "registered_by", "registrar"))
-    top_certs = get_top_train_benign_targets(("domain", "uses_cert", "certificate"))
+    top_ips = get_top_train_benign_targets((primary_nt, "resolves_to", "ip"))
+    ns_src = "apex_domain" if ("apex_domain", "uses_ns", "nameserver") in clean_cpu.edge_types else primary_nt
+    reg_src = "apex_domain" if ("apex_domain", "registered_by", "registrar") in clean_cpu.edge_types else primary_nt
+    top_ns = get_top_train_benign_targets((ns_src, "uses_ns", "nameserver")) if ns_src == primary_nt else []
+    top_regs = get_top_train_benign_targets((reg_src, "registered_by", "registrar")) if reg_src == primary_nt else []
+    top_certs = get_top_train_benign_targets((primary_nt, "uses_cert", "certificate"))
 
     def inject_edges(edge_type: Tuple[str, str, str], rev_type: Tuple[str, str, str], target_pool: List[int]) -> None:
         if not target_pool or edge_type not in attacked_data.edge_types:
@@ -134,36 +136,45 @@ def generate_structural_attack(
         if new_src:
             new_e = torch.tensor([new_src, new_dst], dtype=torch.long, device="cpu")
             combined_e = torch.cat([cur_e, new_e], dim=1)
-            # Vectorized C++ deduplication via torch.unique to eliminate Python tuple overhead
             unique_e = torch.unique(combined_e, dim=1)
             attacked_data[edge_type].edge_index = unique_e
             if rev_type in attacked_data.edge_types:
                 attacked_data[rev_type].edge_index = torch.stack([unique_e[1], unique_e[0]], dim=0)
 
+            dst_t = edge_type[2]
+            if hasattr(attacked_data[edge_type], "edge_weight") and attacked_data[edge_type].edge_weight is not None:
+                if hasattr(attacked_data[dst_t], "iif_weight") and attacked_data[dst_t].iif_weight is not None:
+                    new_w = attacked_data[dst_t].iif_weight[unique_e[1]]
+                    attacked_data[edge_type].edge_weight = new_w
+                    if rev_type in attacked_data.edge_types:
+                        attacked_data[rev_type].edge_weight = new_w.clone()
+                else:
+                    delattr(attacked_data[edge_type], "edge_weight")
+                    if rev_type in attacked_data.edge_types and hasattr(attacked_data[rev_type], "edge_weight"):
+                        delattr(attacked_data[rev_type], "edge_weight")
+
     # Inject edges across requested surfaces
     if "ip" in surfaces and top_ips:
-        inject_edges(("domain", "resolves_to", "ip"), ("ip", "rev_resolves_to", "domain"), top_ips)
+        inject_edges((primary_nt, "resolves_to", "ip"), ("ip", "rev_resolves_to", primary_nt), top_ips)
     if "nameserver" in surfaces and top_ns:
-        inject_edges(("domain", "uses_ns", "nameserver"), ("nameserver", "rev_uses_ns", "domain"), top_ns)
+        inject_edges((primary_nt, "uses_ns", "nameserver"), ("nameserver", "rev_uses_ns", primary_nt), top_ns)
     if "registrar" in surfaces and top_regs:
-        inject_edges(("domain", "registered_by", "registrar"), ("registrar", "rev_registered_by", "domain"), top_regs)
+        inject_edges((primary_nt, "registered_by", "registrar"), ("registrar", "rev_registered_by", primary_nt), top_regs)
     if "certificate" in surfaces and top_certs:
-        inject_edges(("domain", "uses_cert", "certificate"), ("certificate", "rev_uses_cert", "domain"), top_certs)
+        inject_edges((primary_nt, "uses_cert", "certificate"), ("certificate", "rev_uses_cert", primary_nt), top_certs)
 
-    # Optional feature manipulation
+    # Optional feature manipulation (resolved dynamically via named feature schema registry)
     if manipulate_features:
-        # Controllable feature indices:
-        # mx_count (3), has_spf (4), has_dmarc (5), has_dkim (6), ttl_a (8), ttl_ns (9), tls_cert_count (10), cert_valid_len (11)
-        controllable_indices = [3, 4, 5, 6, 8, 9, 10, 11]
-        x_domain = attacked_data["domain"].x.clone()
+        x_domain = attacked_data[primary_nt].x.clone()
+        controllable_indices = get_feature_indices(primary_nt, group="controllable", dim=x_domain.shape[1])
         benign_train_x = x_domain[train_benign]
 
-        if len(train_benign) > 0:
+        if len(train_benign) > 0 and controllable_indices:
             medians = torch.median(benign_train_x[:, controllable_indices], dim=0).values
             for m_idx in controlled_domains:
                 x_domain[m_idx, controllable_indices] = medians
 
-        attacked_data["domain"].x = x_domain
+        attacked_data[primary_nt].x = x_domain
 
     return attacked_data.to(orig_device)
 
@@ -179,14 +190,21 @@ def evaluate_attacked_model(
     """Evaluates model predictions on attacked graph at clean validation thresholds."""
     model.eval()
     device = next(model.parameters()).device
-    if data["domain"].y.device != device:
+    primary_nt = get_primary_domain_node_type(data)
+    if data[primary_nt].y.device != device:
         data = data.to(device)
 
     test_idx = splits.test_indices
-    y_test = data["domain"].y[test_idx].cpu().numpy()
+    y_test = data[primary_nt].y[test_idx].cpu().numpy()
 
     with torch.no_grad():
-        out = model(data.x_dict, data.edge_index_dict)
+        ew_atk = {
+            et: data[et].edge_weight
+            for et in data.edge_types
+            if hasattr(data[et], "edge_weight") and data[et].edge_weight is not None
+        } or None
+        cb_atk = getattr(data[primary_nt], "char_bytes", None)
+        out = model(data.x_dict, data.edge_index_dict, edge_weight_dict=ew_atk, char_bytes=cb_atk) if hasattr(model, "forward_with_aux") else model(data.x_dict, data.edge_index_dict)
         probs = F.softmax(out[test_idx], dim=-1)[:, 1].cpu().numpy()
 
     eval_res = evaluate_predictions(y_test, probs, threshold=threshold)

@@ -22,6 +22,8 @@ cd "${REPO_ROOT}"
 
 # Default to GPU 0 (NVIDIA A100-80GB) and protect secondary cards (e.g. NVIDIA T400-4GB)
 export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0}"
+export HDG_GPU_MEMORY_FRACTION="${HDG_GPU_MEMORY_FRACTION:-0.95}"
+export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"
 
 GPU_DEVICE="cuda"
 CONFIG_OVERRIDE=""
@@ -207,8 +209,11 @@ ${PYTHON_BIN} -m pipeline.04_train_gnn --config "${CONFIG_FILE}" --device "${GPU
 log "STAGE 6c: Training & Evaluating HeteroGNN on GPU (Group Split - Infrastructure Component Holdout)..."
 ${PYTHON_BIN} -m pipeline.04_train_gnn --config "${CONFIG_FILE}" --device "${GPU_DEVICE}" --out-dir "${OUT_DIR}" --split-type group --variant both ${EXTRA_PIPELINE_FLAGS[@]+"${EXTRA_PIPELINE_FLAGS[@]}"}
 
-log "STAGE 6d: Evaluating Pre-Committed Stop Rules (Post-Hoc Stacker & pAUC Fine-Tuning)..."
-${PYTHON_BIN} -m pipeline.04b_stop_rules --config "${CONFIG_FILE}" --out-dir "${OUT_DIR}/tables" ${EXTRA_PIPELINE_FLAGS[@]+"${EXTRA_PIPELINE_FLAGS[@]}"}
+log "STAGE 6c-bis: Training & Evaluating HeteroGNN on GPU (RFC-001 Leak-Free Apex-Cluster Split)..."
+${PYTHON_BIN} -m pipeline.04_train_gnn --config "${CONFIG_FILE}" --device "${GPU_DEVICE}" --out-dir "${OUT_DIR}" --split-type apex_cluster --variant both ${EXTRA_PIPELINE_FLAGS[@]+"${EXTRA_PIPELINE_FLAGS[@]}"}
+
+log "STAGE 6d: Evaluating Pre-Committed Stop Rules (Hybrid Stacker & Chunked CVaR pAUC Fine-Tuning)..."
+${PYTHON_BIN} -m pipeline.04b_stop_rules --config "${CONFIG_FILE}" --device "${GPU_DEVICE}" --out-dir "${OUT_DIR}/tables" ${EXTRA_PIPELINE_FLAGS[@]+"${EXTRA_PIPELINE_FLAGS[@]}"}
 success "Stage 6 (HeteroGNN Random, Time, Group, Stop Rules on GPU) PASSED."
 
 # ------------------------------------------------------------------------------

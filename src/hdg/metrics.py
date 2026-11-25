@@ -13,10 +13,12 @@ Implements:
 
 from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
+from scipy.optimize import minimize_scalar
 from sklearn.metrics import (
     average_precision_score,
     confusion_matrix,
     f1_score,
+    fbeta_score,
     precision_score,
     recall_score,
     roc_auc_score,
@@ -138,6 +140,11 @@ def compare_at_matched_fpr(
     Compares two models (e.g. SAGE vs ATTN) at exactly matched realised FPR on the test negatives.
     Eliminates threshold bias where one model appears superior only because its realised FPR is inflated.
     """
+    if len(y_prob_a) != len(y_prob_b) or len(y_test_true) != len(y_prob_a):
+        raise ValueError(
+            f"Array length mismatch: true={len(y_test_true)}, a={len(y_prob_a)}, b={len(y_prob_b)}"
+        )
+
     neg_mask = (y_test_true == 0)
     pos_mask = (y_test_true == 1)
 
@@ -149,7 +156,15 @@ def compare_at_matched_fpr(
     n_negs = len(negs_a)
     n_pos = len(pos_a)
     if n_negs == 0 or n_pos == 0:
-        return {"tpr_a": 0.0, "tpr_b": 0.0, "realised_fpr": 0.0, "delta_tpr": 0.0}
+        return {
+            "target_fpr": target_realised_fpr,
+            "model_a": {"threshold": 1.0, "realised_fpr": 0.0, "tpr": 0.0},
+            "model_b": {"threshold": 1.0, "realised_fpr": 0.0, "tpr": 0.0},
+            "delta_tpr": 0.0,
+            "tpr_a": 0.0,
+            "tpr_b": 0.0,
+            "realised_fpr": 0.0,
+        }
 
     if target_realised_fpr <= 0.0:
         th_a = float(np.max(negs_a)) + 1e-6
@@ -187,21 +202,97 @@ def compute_prevalence_adjusted_precision(tpr: float, fpr: float, pi: float) -> 
     return float((tpr * pi) / denom)
 
 
+def fit_temperature_scaling(val_logits: np.ndarray, y_val_true: np.ndarray) -> float:
+    """
+    Fits a scalar temperature T > 0 strictly on validation logits (Guo et al. 2017)
+    minimizing negative log-likelihood (cross-entropy) without touching test data.
+    """
+    logits = np.asarray(val_logits, dtype=np.float64)
+    y_true = np.asarray(y_val_true, dtype=np.int64)
+    if logits.ndim != 2 or logits.shape[1] != 2 or len(logits) == 0:
+        return 1.0
+    if len(logits) != len(y_true):
+        raise ValueError(f"Array length mismatch: logits={len(logits)}, true={len(y_true)}")
+    if len(np.unique(y_true)) < 2:
+        return 1.0
+
+    def nll_fn(temp: float) -> float:
+        scaled = logits / max(temp, 1e-3)
+        scaled = scaled - np.max(scaled, axis=1, keepdims=True)
+        log_probs = scaled - np.log(np.sum(np.exp(scaled), axis=1, keepdims=True))
+        return float(-np.mean(log_probs[np.arange(len(y_true)), y_true]))
+
+    res = minimize_scalar(nll_fn, bounds=(0.05, 10.0), method="bounded")
+    t_opt = float(res.x) if res.success else 1.0
+    return float(max(0.05, min(10.0, t_opt)))
+
+
+def apply_temperature_scaling(logits: np.ndarray, temperature: float = 1.0) -> np.ndarray:
+    """Applies fitted scalar temperature `T` to `[N, 2]` logits and returns class-1 probabilities."""
+    arr = np.asarray(logits, dtype=np.float64) / max(float(temperature), 1e-3)
+    arr = arr - np.max(arr, axis=1, keepdims=True)
+    exp_arr = np.exp(arr)
+    probs = exp_arr[:, 1] / np.sum(exp_arr, axis=1)
+    return probs.astype(np.float32)
+
+
 def choose_optimal_threshold(
     y_val_true: np.ndarray,
     y_val_prob: np.ndarray,
-    criterion: str = "f1"
+    criterion: str = "f1",
+    beta: float = 0.5,
+    max_val_fpr: float = 0.015,
 ) -> float:
-    """Selects decision threshold optimizing F1 strictly on validation predictions."""
-    thresholds = np.linspace(0.05, 0.95, 91)
+    """
+    Selects decision threshold strictly on validation predictions.
+    Supports:
+    - `'f1'`: Standard F1 maximization (beta=1.0).
+    - `'f0.5'` / `'f_beta'`: Cost-sensitive F_beta optimization (default beta=0.5, weights Precision 2x Recall).
+    - `'constrained_fpr'`: Maximizes validation recall (tie-broken by F1) subject to val FPR <= max_val_fpr.
+    """
+    if len(y_val_true) != len(y_val_prob):
+        raise ValueError(f"Array length mismatch: true={len(y_val_true)}, prob={len(y_val_prob)}")
+    if len(y_val_true) == 0:
+        return 0.5
+
+    thresholds = np.linspace(0.05, 0.95, 181)
+    crit = (criterion or "f1").lower()
+
+    if crit == "constrained_fpr":
+        val_negs = y_val_prob[y_val_true == 0]
+        val_pos = y_val_prob[y_val_true == 1]
+        best_feasible_th = None
+        best_feasible_rec = -1.0
+        best_feasible_f1 = -1.0
+        min_fpr = 2.0
+        min_fpr_th = 0.95
+
+        for th in thresholds:
+            fpr = float(np.mean(val_negs >= th)) if len(val_negs) > 0 else 0.0
+            if fpr < min_fpr:
+                min_fpr = fpr
+                min_fpr_th = float(th)
+            if fpr <= max_val_fpr:
+                rec = float(np.mean(val_pos >= th)) if len(val_pos) > 0 else 0.0
+                f1 = float(f1_score(y_val_true, (y_val_prob >= th).astype(int), zero_division=0))
+                if (rec > best_feasible_rec) or (rec == best_feasible_rec and f1 > best_feasible_f1):
+                    best_feasible_rec = rec
+                    best_feasible_f1 = f1
+                    best_feasible_th = float(th)
+        return best_feasible_th if best_feasible_th is not None else min_fpr_th
+
+    eff_beta = 0.5 if crit == "f0.5" else (beta if crit == "f_beta" else 1.0)
     best_thresh = 0.5
-    best_f1 = -1.0
+    best_score = -1.0
 
     for th in thresholds:
         pred = (y_val_prob >= th).astype(int)
-        score = f1_score(y_val_true, pred, zero_division=0)
-        if score > best_f1:
-            best_f1 = score
+        if crit in ("f0.5", "f_beta"):
+            score = float(fbeta_score(y_val_true, pred, beta=eff_beta, zero_division=0))
+        else:
+            score = float(f1_score(y_val_true, pred, zero_division=0))
+        if score > best_score:
+            best_score = score
             best_thresh = float(th)
 
     return best_thresh
@@ -251,6 +342,8 @@ def evaluate_predictions(
     prevalence_pis: List[float] = [0.01, 0.001]
 ) -> Dict[str, Any]:
     """Computes comprehensive binary classification metrics including operating points and prevalence adjustments."""
+    if len(y_true) != len(y_prob):
+        raise ValueError(f"Array length mismatch: true={len(y_true)}, prob={len(y_prob)}")
     y_pred = (y_prob >= threshold).astype(int)
 
     roc_auc = float(roc_auc_score(y_true, y_prob)) if len(np.unique(y_true)) > 1 else 0.5

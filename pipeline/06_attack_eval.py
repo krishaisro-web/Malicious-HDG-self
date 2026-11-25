@@ -144,13 +144,28 @@ def main() -> None:
         clean_scaled, _ = apply_split_scaling(base_graph, splits.train_indices, val_indices=splits.val_indices)
 
         in_channels = {nt: clean_scaled[nt].x.shape[1] for nt in clean_scaled.node_types}
+        m_cfg = cfg.get("model", {})
+        p_nt = "fqdn" if "fqdn" in clean_scaled.node_types else "domain"
+        has_cb = hasattr(clean_scaled[p_nt], "char_bytes") and clean_scaled[p_nt].char_bytes is not None
+        use_char_cnn = bool(m_cfg.get("use_char_cnn", False) and has_cb)
+        char_cnn_dim = int(m_cfg.get("char_cnn_dim", 16))
+        use_comp_gate = bool(m_cfg.get("use_completeness_gate", False))
+        use_gated_agg = bool(m_cfg.get("sage", {}).get("use_gated_agg", True))
 
         # Model A: Standard SAGE (undefended)
         print(f"  Training clean SAGE model (Seed {s})...")
         torch.manual_seed(s)
         np.random.seed(s)
         random.seed(s)
-        model_sage = HeteroGNN(metadata=clean_scaled.metadata(), in_channels_dict=in_channels, variant="sage")
+        model_sage = HeteroGNN(
+            metadata=clean_scaled.metadata(),
+            in_channels_dict=in_channels,
+            variant="sage",
+            use_gated_agg=use_gated_agg,
+            use_char_cnn=use_char_cnn,
+            char_cnn_dim=char_cnn_dim,
+            use_completeness_gate=use_comp_gate,
+        )
         eval_sage_clean, y_test, p_sage_clean, trained_sage = train_eval_gnn(
             model=model_sage, data=clean_scaled, splits=splits, df=df, epochs=train_epochs, patience=patience, device=device, seed=s
         )
@@ -160,7 +175,14 @@ def main() -> None:
         torch.manual_seed(s)
         np.random.seed(s)
         random.seed(s)
-        model_guard = HeteroGNN(metadata=clean_scaled.metadata(), in_channels_dict=in_channels, variant="sage_guard")
+        model_guard = HeteroGNN(
+            metadata=clean_scaled.metadata(),
+            in_channels_dict=in_channels,
+            variant="sage_guard",
+            use_char_cnn=use_char_cnn,
+            char_cnn_dim=char_cnn_dim,
+            use_completeness_gate=use_comp_gate,
+        )
         eval_guard_clean, _, p_guard_clean, trained_guard = train_eval_gnn(
             model=model_guard, data=clean_scaled, splits=splits, df=df, epochs=train_epochs, patience=patience, device=device, seed=s
         )

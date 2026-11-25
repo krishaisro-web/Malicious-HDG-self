@@ -634,8 +634,9 @@ def main() -> None:
                     np.array(a_preds["y_prob"]),
                     target_realised_fpr=target_fpr_base
                 )
-                matched_tprs_sage.append(m_res["model_a"]["tpr"])
-                matched_tprs_attn.append(m_res["model_b"]["tpr"])
+                if "model_a" in m_res and "model_b" in m_res:
+                    matched_tprs_sage.append(m_res["model_a"]["tpr"])
+                    matched_tprs_attn.append(m_res["model_b"]["tpr"])
 
     if matched_tprs_sage and matched_tprs_attn:
         m_sage_tpr = float(np.mean(matched_tprs_sage))

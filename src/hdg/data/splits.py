@@ -111,13 +111,43 @@ def random_stratified_split(
     indices = np.arange(n_total)
 
     test_ratio = 1.0 - train_ratio - val_ratio
-    sss1 = StratifiedShuffleSplit(n_splits=1, test_size=(val_ratio + test_ratio), random_state=seed)
-    train_idx, temp_idx = next(sss1.split(indices, labels))
+    holdout_size = val_ratio + test_ratio
+    can_sss1 = (
+        len(np.unique(labels)) > 1
+        and np.min(np.bincount(labels)) >= 2
+        and int(round(holdout_size * n_total)) >= 2
+        and (n_total - int(round(holdout_size * n_total))) >= 2
+    )
+    if can_sss1:
+        try:
+            sss1 = StratifiedShuffleSplit(n_splits=1, test_size=holdout_size, random_state=seed)
+            train_idx, temp_idx = next(sss1.split(indices, labels))
+        except ValueError:
+            can_sss1 = False
+    if not can_sss1:
+        rng = np.random.RandomState(seed)
+        perm = rng.permutation(n_total)
+        cut = max(1, int(round(train_ratio * n_total)))
+        train_idx, temp_idx = perm[:cut], perm[cut:]
 
     temp_labels = labels[temp_idx]
-    val_relative_size = val_ratio / (val_ratio + test_ratio)
-    sss2 = StratifiedShuffleSplit(n_splits=1, test_size=(1.0 - val_relative_size), random_state=seed)
-    sub_val_idx, sub_test_idx = next(sss2.split(temp_idx, temp_labels))
+    val_relative_size = val_ratio / max(val_ratio + test_ratio, 1e-8)
+    can_sss2 = (
+        len(temp_idx) >= 4
+        and len(np.unique(temp_labels)) > 1
+        and np.min(np.bincount(temp_labels)) >= 2
+    )
+    if can_sss2:
+        try:
+            sss2 = StratifiedShuffleSplit(n_splits=1, test_size=(1.0 - val_relative_size), random_state=seed)
+            sub_val_idx, sub_test_idx = next(sss2.split(temp_idx, temp_labels))
+        except ValueError:
+            can_sss2 = False
+    if not can_sss2:
+        rng2 = np.random.RandomState(seed + 1)
+        perm2 = rng2.permutation(len(temp_idx))
+        cut2 = max(1, int(round(val_relative_size * len(temp_idx))))
+        sub_val_idx, sub_test_idx = perm2[:cut2], perm2[cut2:]
 
     val_idx = temp_idx[sub_val_idx]
     test_idx = temp_idx[sub_test_idx]
@@ -648,7 +678,7 @@ def compute_asn_leakage_report(
     train_regs = set(train_df["registrar"].dropna().unique())
     train_certs = set(train_df["leaf_cert_key"].dropna().unique())
 
-    # Check test domains
+    # Check test domains via vectorized list access (zero iterrows)
     n_test = len(test_df)
     if n_test == 0:
         return {"ns_leakage_share": 0.0, "reg_leakage_share": 0.0, "cert_leakage_share": 0.0, "any_infra_leakage_share": 0.0}
@@ -658,20 +688,17 @@ def compute_asn_leakage_report(
     leak_cert = 0
     leak_any = 0
 
-    for _, row in test_df.iterrows():
-        has_l_ns, has_l_reg, has_l_cert = False, False, False
+    t_ns_col = test_df["nameservers"].tolist() if "nameservers" in test_df.columns else [None] * n_test
+    t_reg_col = test_df["registrar"].tolist() if "registrar" in test_df.columns else [None] * n_test
+    t_cert_col = test_df["leaf_cert_key"].tolist() if "leaf_cert_key" in test_df.columns else [None] * n_test
 
-        test_ns_list = row.get("nameservers")
-        if isinstance(test_ns_list, (list, np.ndarray)) and any(ns in train_ns for ns in test_ns_list):
-            has_l_ns = True
-
-        r_reg = row.get("registrar")
-        if r_reg and r_reg in train_regs:
-            has_l_reg = True
-
-        r_cert = row.get("leaf_cert_key")
-        if r_cert and r_cert in train_certs:
-            has_l_cert = True
+    for idx in range(n_test):
+        test_ns_list = t_ns_col[idx]
+        has_l_ns = isinstance(test_ns_list, (list, np.ndarray)) and any(ns in train_ns for ns in test_ns_list)
+        r_reg = t_reg_col[idx]
+        has_l_reg = bool(r_reg and r_reg in train_regs)
+        r_cert = t_cert_col[idx]
+        has_l_cert = bool(r_cert and r_cert in train_certs)
 
         if has_l_ns:
             leak_ns += 1
@@ -704,13 +731,13 @@ def group_split_by_asn(
     """
     labels = df["label"].to_numpy()
 
-    # Map missing ASNs to individual negative unique IDs
+    # Map missing ASNs to individual negative unique IDs (flat list indexing, zero iterrows)
     asn_groups: Dict[int, List[int]] = {}
     missing_counter = -1
+    asn_col = df["primary_asn"].tolist() if "primary_asn" in df.columns else [None] * len(df)
 
-    for idx, row in df.iterrows():
-        asn = row.get("primary_asn")
-        if asn is not None and not np.isnan(asn):
+    for idx, asn in enumerate(asn_col):
+        if asn is not None and not (isinstance(asn, float) and np.isnan(asn)):
             asn_groups.setdefault(int(asn), []).append(idx)
         else:
             asn_groups.setdefault(missing_counter, []).append(idx)
@@ -745,6 +772,246 @@ def group_split_by_asn(
     return splits, {"leakage_report": leakage, "stratification_stats": stat}
 
 
+def stratified_apex_cluster_split(
+    df: pd.DataFrame,
+    train_ratio: float = 0.70,
+    val_ratio: float = 0.15,
+    test_ratio: float = 0.15,
+    seed: int = 42
+) -> DataSplits:
+    """
+    RFC-001 Leak-Free Apex-Cluster Stratified Split.
+    Partitions FQDNs strictly by Apex Domain Equivalence Classes so that all
+    subdomains sharing an apex domain are assigned to the exact same partition.
+    Pre-allocates 50% of validation negatives into cert_indices for FPR calibration.
+    """
+    n_total = len(df)
+    if n_total == 0:
+        raise ValueError("Cannot split an empty DataFrame.")
+
+    if "apex_domain" in df.columns:
+        apex_series = df["apex_domain"].fillna(df["domain"]).astype(str).str.lower()
+    elif "e2LD" in df.columns:
+        apex_series = df["e2LD"].fillna(df["domain"]).astype(str).str.lower()
+    else:
+        import tldextract
+        ext = tldextract.TLDExtract(suffix_list_urls=())
+        apex_vals = []
+        for d in df["domain"].astype(str).tolist():
+            r = ext(d.strip().lower())
+            apex_vals.append(f"{r.domain}.{r.suffix}" if (r.domain and r.suffix) else d.strip().lower())
+        apex_series = pd.Series(apex_vals, index=df.index)
+
+    labels = df["label"].to_numpy().astype(int)
+    tmp_df = pd.DataFrame({
+        "row_pos": np.arange(n_total, dtype=int),
+        "apex_domain": apex_series.to_numpy(),
+        "label": labels,
+    })
+
+    apex_summary = tmp_df.groupby("apex_domain", sort=True).agg(
+        has_malware=("label", "max"),
+        fqdn_count=("row_pos", "count"),
+    ).reset_index()
+
+    n_apex = len(apex_summary)
+    if n_apex < 3:
+        raise ValueError(f"Need at least 3 distinct apex domains for train/val/test split, found {n_apex}.")
+
+    apex_labels = apex_summary["has_malware"].to_numpy().astype(int)
+    holdout_size = float(val_ratio + test_ratio)
+    can_sss1 = len(np.unique(apex_labels)) > 1 and np.min(np.bincount(apex_labels)) >= 2
+    if can_sss1:
+        try:
+            sss1 = StratifiedShuffleSplit(n_splits=1, test_size=holdout_size, random_state=seed)
+            train_apex_idx, holdout_apex_idx = next(sss1.split(apex_summary, apex_labels))
+        except ValueError:
+            can_sss1 = False
+    if not can_sss1:
+        rng_fb = np.random.RandomState(seed)
+        perm = rng_fb.permutation(n_apex)
+        cut = max(1, int(round(train_ratio * n_apex)))
+        train_apex_idx, holdout_apex_idx = perm[:cut], perm[cut:]
+
+    holdout_summary = apex_summary.iloc[holdout_apex_idx].reset_index(drop=True)
+    holdout_labels = holdout_summary["has_malware"].to_numpy().astype(int)
+    val_rel_size = float(val_ratio / max(holdout_size, 1e-8))
+    can_sss2 = (
+        len(holdout_summary) >= 4
+        and len(np.unique(holdout_labels)) > 1
+        and np.min(np.bincount(holdout_labels)) >= 2
+    )
+    if can_sss2:
+        try:
+            sss2 = StratifiedShuffleSplit(n_splits=1, test_size=(1.0 - val_rel_size), random_state=seed)
+            val_sub_idx, test_sub_idx = next(sss2.split(holdout_summary, holdout_labels))
+        except ValueError:
+            can_sss2 = False
+    if not can_sss2:
+        rng_fb2 = np.random.RandomState(seed + 1)
+        perm2 = rng_fb2.permutation(len(holdout_summary))
+        cut2 = max(1, len(perm2) // 2)
+        val_sub_idx, test_sub_idx = perm2[:cut2], perm2[cut2:]
+
+    train_apexes = set(apex_summary.iloc[train_apex_idx]["apex_domain"].tolist())
+    val_apexes = set(holdout_summary.iloc[val_sub_idx]["apex_domain"].tolist())
+    test_apexes = set(holdout_summary.iloc[test_sub_idx]["apex_domain"].tolist())
+
+    # Formal Leakage Invariant Assertions (RFC-001 Section 4)
+    assert len(train_apexes.intersection(test_apexes)) == 0, "Apex leakage detected (Train vs Test)!"
+    assert len(train_apexes.intersection(val_apexes)) == 0, "Apex leakage detected (Train vs Val)!"
+    assert len(val_apexes.intersection(test_apexes)) == 0, "Apex leakage detected (Val vs Test)!"
+
+    apex_arr = tmp_df["apex_domain"].to_numpy()
+    train_indices = np.where(np.isin(apex_arr, list(train_apexes)))[0]
+    val_indices = np.where(np.isin(apex_arr, list(val_apexes)))[0]
+    test_indices = np.where(np.isin(apex_arr, list(test_apexes)))[0]
+
+    # 50% negative certification holdout strictly from val_indices
+    val_labels = labels[val_indices]
+    val_neg_indices = val_indices[val_labels == 0]
+    val_pos_indices = val_indices[val_labels == 1]
+
+    if len(val_neg_indices) >= 2:
+        rng = np.random.RandomState(seed)
+        shuffled_negs = rng.permutation(val_neg_indices)
+        half = len(val_neg_indices) // 2
+        calib_negs = shuffled_negs[:half]
+        cert_negs = shuffled_negs[half:]
+        model_val_indices = np.concatenate([val_pos_indices, calib_negs])
+        model_val_indices.sort()
+        cert_indices = cert_negs
+        cert_indices.sort()
+    else:
+        model_val_indices = val_indices
+        cert_indices = np.array([], dtype=int)
+
+    splits = DataSplits(
+        train_indices=train_indices,
+        val_indices=model_val_indices,
+        test_indices=test_indices,
+        split_type="apex_cluster",
+        metadata={
+            "train_apex_count": len(train_apexes),
+            "val_apex_count": len(val_apexes),
+            "test_apex_count": len(test_apexes),
+            "total_apex_count": n_apex,
+            "train_count": len(train_indices),
+            "val_count": len(model_val_indices),
+            "cert_count": len(cert_indices),
+            "test_count": len(test_indices),
+            "apex_leakage_count": 0,
+        },
+        cert_indices=cert_indices,
+    )
+    splits.assert_disjoint()
+    return splits
+
+
+def within_apex_sibling_split(
+    df: pd.DataFrame,
+    train_ratio: float = 0.70,
+    val_ratio: float = 0.15,
+    seed: int = 42,
+) -> DataSplits:
+    """
+    RFC-001 Threat Scenario 2 (Sibling Exploitation on Multi-Tenant / Compromised Apexes):
+    Identifies apex domains with >= 2 FQDNs and partitions FQDNs *within* shared apexes
+    across train/val/test so the model must rely on FQDN lexical + IP telemetry to catch
+    malicious siblings under otherwise benign/multi-tenant apexes.
+    """
+    n_total = len(df)
+    if "apex_domain" in df.columns:
+        apex_series = df["apex_domain"].fillna(df["domain"]).astype(str).str.lower()
+    elif "e2LD" in df.columns:
+        apex_series = df["e2LD"].fillna(df["domain"]).astype(str).str.lower()
+    else:
+        apex_series = df["domain"].astype(str).str.lower()
+
+    counts = apex_series.value_counts()
+    multi_apexes = set(counts[counts >= 2].index.tolist())
+    labels = df["label"].to_numpy().astype(int)
+
+    if len(multi_apexes) == 0:
+        # Fallback cleanly to standard random stratified split if no multi-tenant apexes exist
+        fallback = random_stratified_split(labels, train_ratio=train_ratio, val_ratio=val_ratio, seed=seed)
+        fallback.split_type = "within_apex_sibling"
+        fallback.metadata["multi_tenant_apex_count"] = 0
+        return fallback
+
+    multi_mask = apex_series.isin(multi_apexes).to_numpy()
+    single_indices = np.where(~multi_mask)[0]
+
+    # Place at least one benign or earliest sibling per multi-tenant apex into train, stratify remaining
+    rng = np.random.RandomState(seed)
+    train_list: List[int] = list(single_indices.tolist())
+    holdout_pool: List[int] = []
+
+    apex_groups: Dict[str, List[int]] = {}
+    for idx in np.where(multi_mask)[0]:
+        apex_groups.setdefault(apex_series.iloc[idx], []).append(int(idx))
+
+    for a_dom, idxs in apex_groups.items():
+        idxs_sorted = sorted(idxs, key=lambda i: (labels[i], i))  # prefer benign anchor in train
+        train_list.append(idxs_sorted[0])
+        holdout_pool.extend(idxs_sorted[1:])
+
+    holdout_arr = np.array(holdout_pool, dtype=int)
+    target_train_total = int(round(train_ratio * n_total))
+    need_extra_train = max(0, min(len(holdout_arr) - 2, target_train_total - len(train_list)))
+    if need_extra_train > 0 and len(holdout_arr) > need_extra_train:
+        perm = rng.permutation(len(holdout_arr))
+        train_list.extend(holdout_arr[perm[:need_extra_train]].tolist())
+        rem_arr = holdout_arr[perm[need_extra_train:]]
+    else:
+        rem_arr = holdout_arr
+
+    rem_labels = labels[rem_arr]
+    val_frac = float(val_ratio / max(1.0 - train_ratio, 1e-6))
+    if len(rem_arr) >= 4 and len(np.unique(rem_labels)) > 1 and np.min(np.bincount(rem_labels)) >= 2:
+        sss = StratifiedShuffleSplit(n_splits=1, test_size=(1.0 - val_frac), random_state=seed)
+        v_rel, t_rel = next(sss.split(rem_arr, rem_labels))
+        val_indices = rem_arr[v_rel]
+        test_indices = rem_arr[t_rel]
+    else:
+        perm_r = rng.permutation(len(rem_arr))
+        cut_r = max(1, int(round(val_frac * len(perm_r))))
+        val_indices = rem_arr[perm_r[:cut_r]]
+        test_indices = rem_arr[perm_r[cut_r:]]
+
+    train_indices = np.sort(np.array(train_list, dtype=int))
+    val_indices = np.sort(val_indices)
+    test_indices = np.sort(test_indices)
+
+    val_negs = val_indices[labels[val_indices] == 0]
+    val_pos = val_indices[labels[val_indices] == 1]
+    if len(val_negs) >= 2:
+        shuf = rng.permutation(val_negs)
+        half = len(val_negs) // 2
+        model_val = np.sort(np.concatenate([val_pos, shuf[:half]]))
+        cert_idx = np.sort(shuf[half:])
+    else:
+        model_val = val_indices
+        cert_idx = np.array([], dtype=int)
+
+    splits = DataSplits(
+        train_indices=train_indices,
+        val_indices=model_val,
+        test_indices=test_indices,
+        split_type="within_apex_sibling",
+        metadata={
+            "multi_tenant_apex_count": len(multi_apexes),
+            "train_count": len(train_indices),
+            "val_count": len(model_val),
+            "cert_count": len(cert_idx),
+            "test_count": len(test_indices),
+        },
+        cert_indices=cert_idx,
+    )
+    splits.assert_disjoint()
+    return splits
+
+
 # Re-export temporal diagnostics and holdout split for unified consumption
 from src.hdg.data.temporal import (
     single_chronological_holdout_split,
@@ -760,6 +1027,8 @@ __all__ = [
     "time_split",
     "group_split_bipartite",
     "group_split_by_asn",
+    "stratified_apex_cluster_split",
+    "within_apex_sibling_split",
     "compute_asn_leakage_report",
     "single_chronological_holdout_split",
     "analyze_temporal_eligibility",

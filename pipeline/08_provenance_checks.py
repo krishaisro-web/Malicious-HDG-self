@@ -45,6 +45,8 @@ import xgboost as xgb
 
 from src.hdg.models.hetero_gnn import HeteroGNN
 from src.hdg.data.graph import extract_domain_features_vectorized, apply_split_scaling
+from src.hdg.data.features import get_feature_indices
+from src.hdg.data.audit import audit_source_drift
 from src.hdg.data.splits import DataSplits
 from src.hdg.training.train import train_eval_gnn
 
@@ -168,10 +170,36 @@ def run_cross_source_eval(
             tr_idx, val_idx = shuff[val_size:], shuff[:val_size]
 
             splits = DataSplits(train_indices=tr_idx, val_indices=val_idx, test_indices=test_idx, split_type="cross_source")
-            scaled_g, _ = apply_split_scaling(base_graph, tr_idx)
+            scaled_g, _ = apply_split_scaling(base_graph, tr_idx, val_indices=val_idx, test_indices=test_idx, degree_mode="train_visible", mask_future_domains=True)
             in_ch = {nt: scaled_g[nt].x.shape[1] for nt in scaled_g.node_types}
-            model = HeteroGNN(metadata=scaled_g.metadata(), in_channels_dict=in_ch, variant="sage")
-            res_gnn, _, _, _ = train_eval_gnn(model, scaled_g, splits, df, epochs=10, seed=seed)
+            m_cfg = cfg.get("model", {})
+            tr_cfg = m_cfg.get("training", {})
+            p_nt = "fqdn" if "fqdn" in scaled_g.node_types else "domain"
+            has_cb = hasattr(scaled_g[p_nt], "char_bytes") and scaled_g[p_nt].char_bytes is not None
+            model = HeteroGNN(
+                metadata=scaled_g.metadata(),
+                in_channels_dict=in_ch,
+                variant="sage",
+                use_gated_agg=bool(m_cfg.get("sage", {}).get("use_gated_agg", True)),
+                use_char_cnn=bool(m_cfg.get("use_char_cnn", False) and has_cb),
+                char_cnn_dim=int(m_cfg.get("char_cnn_dim", 16)),
+                use_completeness_gate=bool(m_cfg.get("use_completeness_gate", False)),
+                num_envs=2 if bool(tr_cfg.get("use_grl", False)) else 0,
+            )
+            res_gnn, _, _, _ = train_eval_gnn(
+                model,
+                scaled_g,
+                splits,
+                df,
+                epochs=10,
+                seed=seed,
+                use_grl=bool(tr_cfg.get("use_grl", False)),
+                grl_weight=float(tr_cfg.get("grl_weight", 0.2)),
+                use_coral=bool(tr_cfg.get("use_coral", False)),
+                coral_weight=float(tr_cfg.get("coral_weight", 0.1)),
+                drop_drift_shortcuts=bool(tr_cfg.get("drop_drift_shortcuts_on_shift", False)),
+                co_primary_cross_source=bool(tr_cfg.get("co_primary_cross_source", False)),
+            )
             gnn_res = {"roc_auc": res_gnn["roc_auc"], "f1": res_gnn["f1"]}
         except Exception as e:
             gnn_res = {"error": str(e)}
@@ -189,9 +217,11 @@ def run_cross_source_eval(
 def run_feature_group_ablation(df: pd.DataFrame, seed: int = 42) -> Dict[str, Any]:
     """Measures performance sensitivity when dropping missingness/null-rate features."""
     X_full = extract_domain_features_vectorized(df, use_lexical=True)
-    # Drop null rate flags (indices 0, 1, 2)
+    # Drop null rate flags dynamically via named feature schema registry
     X_dropped = X_full.copy()
-    X_dropped[:, :3] = 0.0
+    miss_indices = get_feature_indices("domain", group="missingness", dim=X_full.shape[1])
+    if miss_indices:
+        X_dropped[:, miss_indices] = 0.0
 
     y = df["label"].to_numpy().astype(int)
     X_tr_f, X_te_f, y_tr, y_te = train_test_split(X_full, y, test_size=0.20, random_state=seed, stratify=y)
@@ -222,11 +252,14 @@ def run_connectivity_audit(graph: Any, df: pd.DataFrame) -> Dict[str, Any]:
     n_domains = len(df)
     results = {}
 
+    p_nt = "fqdn" if "fqdn" in graph.node_types else "domain"
+    ns_src = "apex_domain" if ("apex_domain", "uses_ns", "nameserver") in graph.edge_types else p_nt
+    reg_src = "apex_domain" if ("apex_domain", "registered_by", "registrar") in graph.edge_types else p_nt
     relations = [
-        ("resolves_to", ("domain", "resolves_to", "ip"), "ip"),
-        ("uses_ns", ("domain", "uses_ns", "nameserver"), "nameserver"),
-        ("registered_by", ("domain", "registered_by", "registrar"), "registrar"),
-        ("uses_cert", ("domain", "uses_cert", "certificate"), "certificate")
+        ("resolves_to", (p_nt, "resolves_to", "ip"), "ip"),
+        ("uses_ns", (ns_src, "uses_ns", "nameserver"), "nameserver"),
+        ("registered_by", (reg_src, "registered_by", "registrar"), "registrar"),
+        ("uses_cert", (p_nt, "uses_cert", "certificate"), "certificate")
     ]
 
     for rel_name, edge_type, dst_type in relations:
@@ -320,12 +353,17 @@ def main() -> None:
         print(f"{pfx}4. Performing graph infrastructure connectivity & reuse audit...")
         conn_audit = run_connectivity_audit(base_graph, df)
 
+    # 5. Source Drift Audit (Umbrella vs CESNET KS + single-feature AUC)
+    print(f"{pfx}5. Auditing cross-feed feature drift (Umbrella vs CESNET)...")
+    drift_audit = audit_source_drift(df, output_dir=out_dir)
+
     report = {
         "is_fixture": args.fixture,
         "benign_vs_benign": b_vs_b,
         "cross_source_transfer": cross_src,
         "feature_group_ablation": feat_ablation,
-        "graph_connectivity_audit": conn_audit
+        "graph_connectivity_audit": conn_audit,
+        "source_drift_audit": drift_audit,
     }
 
     # Save JSON

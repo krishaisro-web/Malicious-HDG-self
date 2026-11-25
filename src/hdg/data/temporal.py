@@ -469,3 +469,88 @@ def save_temporal_eligibility_report(
         f.write("\n".join(lines))
 
     return json_path, md_path
+
+
+def registration_birth_cohort_split(
+    df: pd.DataFrame,
+    train_cutoff_year: int = 2022,
+    train_val_split_ratio: float = 0.85,
+    min_per_class: int = 10,
+    seed: int = 42,
+) -> DataSplits:
+    """
+    Constructs an RDAP domain-birth cohort temporal split (`t_reg`, RFC-003 Section 5.5):
+      - History: domains with valid `t_reg` registered on or before `train_cutoff_year` (e.g. <= 2022)
+      - Target: domains newly registered after `train_cutoff_year` (e.g. 2023-2024)
+    Both classes span historical registrations continuously, eliminating ingestion-date confounding.
+    """
+    if "t_reg" not in df.columns:
+        raise ValueError("DataFrame missing 't_reg' column required for registration birth-cohort split.")
+
+    reg_dt = pd.to_datetime(df["t_reg"], errors="coerce", utc=True)
+    valid_mask = reg_dt.notna().to_numpy()
+    reg_years = reg_dt.dt.year.fillna(-1).astype(int).to_numpy()
+
+    hist_indices = np.where(valid_mask & (reg_years <= train_cutoff_year))[0]
+    test_indices = np.where(valid_mask & (reg_years > train_cutoff_year))[0]
+
+    if len(hist_indices) == 0 or len(test_indices) == 0:
+        raise ValueError(
+            f"Insufficient t_reg cohorts around cutoff year {train_cutoff_year}: "
+            f"history={len(hist_indices)}, target={len(test_indices)}."
+        )
+
+    hist_y = df.iloc[hist_indices]["label"].to_numpy().astype(int)
+    test_y = df.iloc[test_indices]["label"].to_numpy().astype(int)
+    hist_pos, hist_neg = int((hist_y == 1).sum()), int((hist_y == 0).sum())
+    test_pos, test_neg = int((test_y == 1).sum()), int((test_y == 0).sum())
+
+    if min(hist_pos, hist_neg, test_pos, test_neg) < min_per_class:
+        raise ValueError(
+            f"Insufficient class balance for t_reg birth-cohort split (cutoff <= {train_cutoff_year}): "
+            f"hist=(pos={hist_pos}, neg={hist_neg}), test=(pos={test_pos}, neg={test_neg}), min={min_per_class}."
+        )
+
+    val_size = 1.0 - train_val_split_ratio
+    sss = StratifiedShuffleSplit(n_splits=1, test_size=val_size, random_state=seed)
+    sub_tr, sub_va = next(sss.split(hist_indices, hist_y))
+    train_indices = hist_indices[sub_tr]
+    val_indices = hist_indices[sub_va]
+
+    val_labels = df.iloc[val_indices]["label"].to_numpy().astype(int)
+    val_neg = val_indices[val_labels == 0]
+    val_pos = val_indices[val_labels == 1]
+
+    if len(val_neg) >= 2:
+        rng = np.random.RandomState(seed)
+        shuff = rng.permutation(val_neg)
+        half = len(val_neg) // 2
+        calib_negs = shuff[:half]
+        cert_negs = shuff[half:]
+        model_val_indices = np.sort(np.concatenate([val_pos, calib_negs]))
+        cert_indices = np.sort(cert_negs)
+    else:
+        model_val_indices = val_indices
+        cert_indices = np.array([], dtype=int)
+
+    splits = DataSplits(
+        train_indices=train_indices,
+        val_indices=model_val_indices,
+        test_indices=test_indices,
+        split_type="t_reg_birth_cohort",
+        metadata={
+            "train_cutoff_year": train_cutoff_year,
+            "train_size": len(train_indices),
+            "val_size": len(model_val_indices),
+            "test_size": len(test_indices),
+            "cert_size": len(cert_indices),
+            "history_malware": hist_pos,
+            "history_benign": hist_neg,
+            "test_malware": test_pos,
+            "test_benign": test_neg,
+            "seed": seed,
+        },
+        cert_indices=cert_indices,
+    )
+    splits.assert_disjoint()
+    return splits

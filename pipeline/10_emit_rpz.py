@@ -48,6 +48,8 @@ from src.hdg.data.splits import (
     random_stratified_split,
     single_chronological_holdout_split,
     group_split_bipartite,
+    stratified_apex_cluster_split,
+    within_apex_sibling_split,
 )
 from src.hdg.data.graph import apply_split_scaling
 
@@ -57,7 +59,7 @@ def main() -> None:
     parser.add_argument("--fixture", action="store_true", help="Run against data_fixture/")
     parser.add_argument("--smoke", action="store_true", help="Run in fast smoke mode")
     parser.add_argument("--config", type=str, default=None, help="Path to config YAML")
-    parser.add_argument("--split-type", type=str, default="time", choices=["time", "random", "group"],
+    parser.add_argument("--split-type", type=str, default="time", choices=["time", "random", "group", "apex_cluster", "within_apex"],
                         help="Deployment split protocol to use for evaluation and certification (default: 'time')")
     parser.add_argument("--checkpoint", type=str, default=None, help="Path to trained model checkpoint .pt")
     parser.add_argument("--target-fpr", type=float, default=0.001, help="Operating target FPR (default: 0.001 = 0.1%%)")
@@ -232,7 +234,12 @@ def main() -> None:
                 num_heads=num_heads,
                 dropout=dropout,
                 prune_threshold=prune_threshold,
-                use_edges=use_edges
+                use_edges=use_edges,
+                use_gated_agg=bool(ckpt_cfg.get("use_gated_agg", True)),
+                use_char_cnn=bool(ckpt_cfg.get("use_char_cnn", False)),
+                char_cnn_dim=int(ckpt_cfg.get("char_cnn_dim", 16)),
+                use_completeness_gate=bool(ckpt_cfg.get("use_completeness_gate", False)),
+                num_envs=int(ckpt_cfg.get("num_envs", 0)),
             )
             cand_model.load_state_dict(state_dict)
             model = cand_model
@@ -274,6 +281,10 @@ def main() -> None:
         name_lower = resolved_ckpt_path.name.lower()
         if "time" in name_lower:
             ckpt_split_type = "time"
+        elif "apex_cluster" in name_lower:
+            ckpt_split_type = "apex_cluster"
+        elif "within_apex" in name_lower:
+            ckpt_split_type = "within_apex"
         elif "group" in name_lower:
             ckpt_split_type = "group"
         else:
@@ -383,6 +394,10 @@ def main() -> None:
                 json.dump(blocked_summary, f, indent=2)
             save_run_result(paths, run_name, blocked_summary)
             return
+    elif ckpt_split_type == "apex_cluster":
+        splits = stratified_apex_cluster_split(df, seed=ckpt_seed)
+    elif ckpt_split_type == "within_apex":
+        splits = within_apex_sibling_split(df, seed=ckpt_seed)
     else:
         splits = random_stratified_split(df["label"].to_numpy(), seed=ckpt_seed)
 
@@ -393,17 +408,20 @@ def main() -> None:
         base=data,
         train_indices=splits.train_indices,
         val_indices=splits.val_indices,
+        test_indices=splits.test_indices,
         degree_mode="train_visible" if ckpt_split_type == "time" else cfg.get("graph", {}).get("degree_mode", "transductive"),
         mask_future_domains=(ckpt_split_type == "time"),
-        mask_disjoint_groups=(ckpt_split_type == "group")
+        mask_disjoint_groups=(ckpt_split_type in ("group", "apex_cluster")),
+        max_hub_fanout=cfg.get("graph", {}).get("max_hub_fanout"),
     )
 
+    primary_nt = "fqdn" if "fqdn" in data.node_types else "domain"
     # Retrieve pre-allocated certification holdout negatives (reserved prior to model selection / early stopping)
     # Fail-closed: missing cert_indices must strictly block emission without ad-hoc post-hoc partitioning
     ckpt_cert_idx = ckpt_obj.get("cert_indices") if isinstance(ckpt_obj, dict) else None
     if ckpt_cert_idx is not None and len(ckpt_cert_idx) > 0:
         cert_idx = np.array(ckpt_cert_idx, dtype=int)
-        num_domain_nodes = int(data["domain"].num_nodes)
+        num_domain_nodes = int(data[primary_nt].num_nodes)
         if np.any(cert_idx < 0) or np.any(cert_idx >= num_domain_nodes):
             print("[BLOCKED_INVALID_CERT_METADATA] RPZ rule generation blocked: 'cert_indices' contains out-of-bounds node indices.")
             blocked_summary = {
@@ -440,9 +458,12 @@ def main() -> None:
 
 
     model.eval()
+    ckpt_temp = float(ckpt_obj.get("temperature", 1.0)) if isinstance(ckpt_obj, dict) else 1.0
     with torch.no_grad():
-        out = model(scaled_data.x_dict, scaled_data.edge_index_dict)
-        all_probs = F.softmax(out, dim=-1)[:, 1].cpu().numpy()
+        ew_rpz = {et: scaled_data[et].edge_weight for et in scaled_data.edge_types if hasattr(scaled_data[et], "edge_weight") and scaled_data[et].edge_weight is not None} or None
+        cb_rpz = getattr(scaled_data[primary_nt], "char_bytes", None)
+        out = model(scaled_data.x_dict, scaled_data.edge_index_dict, edge_weight_dict=ew_rpz, char_bytes=cb_rpz)
+        all_probs = F.softmax(out / max(ckpt_temp, 1e-3), dim=-1)[:, 1].cpu().numpy()
         del out, scaled_data  # Free intermediate tensors and graph inputs from memory
 
     if np.isnan(all_probs).any() or np.isinf(all_probs).any():
@@ -463,7 +484,7 @@ def main() -> None:
         return
 
     # Use checkpoint's recorded validation and test indices if available to guarantee exact cohort alignment
-    num_domain_nodes = int(data["domain"].num_nodes)
+    num_domain_nodes = int(data[primary_nt].num_nodes)
     ckpt_val_idx = ckpt_obj.get("val_indices") if isinstance(ckpt_obj, dict) else None
     if ckpt_val_idx is not None and len(ckpt_val_idx) > 0:
         val_idx = np.array(ckpt_val_idx, dtype=int)
@@ -480,12 +501,12 @@ def main() -> None:
     else:
         test_idx = splits.test_indices
 
-    y_val = data["domain"].y[val_idx].cpu().numpy()
+    y_val = data[primary_nt].y[val_idx].cpu().numpy()
     val_probs = all_probs[val_idx]
     calib_negs = val_probs[y_val == 0]
     n_calib = len(calib_negs)
 
-    y_cert = data["domain"].y[cert_idx].cpu().numpy() if len(cert_idx) > 0 else np.array([])
+    y_cert = data[primary_nt].y[cert_idx].cpu().numpy() if len(cert_idx) > 0 else np.array([])
     cert_probs = all_probs[cert_idx] if len(cert_idx) > 0 else np.array([])
     cert_negs = cert_probs[y_cert == 0] if len(cert_probs) > 0 else np.array([])
     n_cert = len(cert_negs)

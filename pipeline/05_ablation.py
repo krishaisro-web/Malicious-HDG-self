@@ -258,6 +258,10 @@ def main() -> None:
             random.seed(s)
 
             in_channels = {nt: scaled_data[nt].x.shape[1] for nt in scaled_data.node_types}
+            m_cfg = cfg.get("model", {})
+            tr_cfg = m_cfg.get("training", {})
+            p_nt = "fqdn" if "fqdn" in scaled_data.node_types else "domain"
+            has_cb = hasattr(scaled_data[p_nt], "char_bytes") and scaled_data[p_nt].char_bytes is not None
             model = HeteroGNN(
                 metadata=scaled_data.metadata(),
                 in_channels_dict=in_channels,
@@ -265,7 +269,11 @@ def main() -> None:
                 out_dim=32,
                 num_layers=2,
                 variant=a_spec["variant"],
-                use_edges=a_spec["use_edges"]
+                use_edges=a_spec["use_edges"],
+                use_gated_agg=bool(m_cfg.get("sage", {}).get("use_gated_agg", True)),
+                use_char_cnn=bool(m_cfg.get("use_char_cnn", False) and a_spec["use_lex"] and has_cb),
+                char_cnn_dim=int(m_cfg.get("char_cnn_dim", 16)),
+                use_completeness_gate=bool(m_cfg.get("use_completeness_gate", False)),
             )
 
             min_epochs = 1 if (args.smoke or args.fixture) else 50
@@ -278,7 +286,15 @@ def main() -> None:
                 patience=patience,
                 min_epochs=min_epochs,
                 device=device,
-                seed=s
+                seed=s,
+                use_class_weights=bool(tr_cfg.get("use_class_weights", False)),
+                loss_type=str(tr_cfg.get("loss_type", "ce")),
+                focal_alpha=float(tr_cfg.get("focal_alpha", 0.75)),
+                focal_gamma=float(tr_cfg.get("focal_gamma", 2.0)),
+                effective_beta=float(tr_cfg.get("effective_beta", 0.9999)),
+                threshold_criterion=str(tr_cfg.get("threshold_criterion", "f1")),
+                max_validation_fpr=float(tr_cfg.get("max_validation_fpr", 0.015)),
+                use_temperature_scaling=bool(tr_cfg.get("use_temperature_scaling", False)),
             )
 
             run_payload = {

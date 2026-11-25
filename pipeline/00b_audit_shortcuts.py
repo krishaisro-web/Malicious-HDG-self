@@ -20,7 +20,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from src.hdg.config import load_config, get_resolved_paths
-from src.hdg.data.audit import run_shortcut_audit
+from src.hdg.data.audit import run_shortcut_audit, audit_source_drift
 
 
 def main() -> None:
@@ -46,6 +46,8 @@ def main() -> None:
 
     print(f"{pfx}Running shortcut audit on: {parquet_file}...")
     summary, md_text = run_shortcut_audit(parquet_file, out_dir, is_fixture=args.fixture)
+    import pandas as pd
+    drift_report = audit_source_drift(pd.read_parquet(parquet_file), output_dir=out_dir)
 
     pfx = "[FIXTURE - meaningless] " if args.fixture else ""
     print(f"\n{pfx}=== SHORTCUT AUDIT COMPLETE ===")
@@ -58,6 +60,8 @@ def main() -> None:
         print(f"[WARNING] Features with AUC >= 0.90: {summary['features_with_auc_ge_0_90']}")
     else:
         print("[PASS] Verdict: No single domain feature has AUC >= 0.90.")
+    if drift_report.get("flagged_drift_features"):
+        print(f"[DRIFT AUDIT] Flagged Umbrella-vs-CESNET drift features (AUC >= 0.70): {drift_report['flagged_drift_features']}")
 
 
 if __name__ == "__main__":

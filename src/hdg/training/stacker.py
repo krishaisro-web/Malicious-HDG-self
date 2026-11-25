@@ -17,13 +17,13 @@ Implements:
    over SAGE with 95% bootstrap CI excluding 0; otherwise transparently reports negative result.
 """
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 import numpy as np
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import StratifiedKFold
 from torch_geometric.data import HeteroData
 
-from src.hdg.metrics import compute_tpr_at_fpr
+from src.hdg.metrics import choose_optimal_threshold, compute_tpr_at_fpr, evaluate_predictions
 
 
 def compute_smoothed_gba_scores(
@@ -244,3 +244,112 @@ def evaluate_stacker_against_stop_rule(
         "bootstrap_ci_95": (round(ci_lower, 4), round(ci_upper, 4)),
         "interpretation": interpretation
     }
+
+
+class EmbeddingXGBStacker:
+    """
+    RFC-002 Pillar 5 Hybrid Representation Stacker:
+    Concatenates HeteroGNN penultimate latent embeddings (z_i in R^32) with
+    normalized domain/lexical features (x_i) into a shallow XGBoost meta-classifier
+    with explicit class imbalance weighting (`scale_pos_weight = Neg / Pos`).
+    Strictly trained on training indices and threshold-calibrated on validation indices.
+    """
+
+    def __init__(
+        self,
+        max_depth: int = 4,
+        subsample: float = 0.8,
+        n_estimators: int = 100,
+        learning_rate: float = 0.1,
+        random_state: int = 42,
+    ):
+        self.max_depth = max_depth
+        self.subsample = subsample
+        self.n_estimators = n_estimators
+        self.learning_rate = learning_rate
+        self.random_state = random_state
+        self.clf = None
+        self.optimal_threshold = 0.5
+        self.is_fitted = False
+
+    def fit(
+        self,
+        embeddings: np.ndarray,
+        domain_features: np.ndarray,
+        y_all: np.ndarray,
+        train_indices: np.ndarray,
+        val_indices: np.ndarray,
+        threshold_criterion: str = "f0.5",
+        max_val_fpr: float = 0.015,
+    ) -> Dict[str, Any]:
+        """Fits the hybrid meta-classifier on `train_indices` and tunes threshold on `val_indices`."""
+        from xgboost import XGBClassifier
+
+        X_hybrid = np.hstack([embeddings, domain_features]).astype(np.float32)
+        X_train = X_hybrid[train_indices]
+        y_train = y_all[train_indices].astype(int)
+
+        pos_cnt = max(1, int(np.sum(y_train == 1)))
+        neg_cnt = max(1, int(np.sum(y_train == 0)))
+        scale_pos_w = float(neg_cnt / pos_cnt)
+
+        self.clf = XGBClassifier(
+            max_depth=self.max_depth,
+            subsample=self.subsample,
+            n_estimators=self.n_estimators,
+            learning_rate=self.learning_rate,
+            scale_pos_weight=scale_pos_w,
+            eval_metric="logloss",
+            random_state=self.random_state,
+            n_jobs=1,
+        )
+        self.clf.fit(X_train, y_train)
+        self.is_fitted = True
+
+        val_probs = self.predict_proba(embeddings[val_indices], domain_features[val_indices])
+        y_val = y_all[val_indices].astype(int)
+        if len(np.unique(y_val)) > 1:
+            self.optimal_threshold = choose_optimal_threshold(
+                y_val,
+                val_probs,
+                criterion=threshold_criterion,
+                max_val_fpr=max_val_fpr,
+            )
+        else:
+            self.optimal_threshold = 0.5
+
+        return {
+            "scale_pos_weight": round(scale_pos_w, 4),
+            "feature_dim": int(X_hybrid.shape[1]),
+            "calibrated_threshold": round(float(self.optimal_threshold), 4),
+            "val_probs": val_probs,
+        }
+
+    def predict_proba(self, embeddings: np.ndarray, domain_features: np.ndarray) -> np.ndarray:
+        """Predicts malicious probability from stacked `[z_i || x_i]` inputs."""
+        if not self.is_fitted or self.clf is None:
+            raise RuntimeError("EmbeddingXGBStacker must be fitted before predict_proba.")
+        X = np.hstack([embeddings, domain_features]).astype(np.float32)
+        return self.clf.predict_proba(X)[:, 1]
+
+    def evaluate(
+        self,
+        embeddings: np.ndarray,
+        domain_features: np.ndarray,
+        y_all: np.ndarray,
+        val_indices: np.ndarray,
+        test_indices: np.ndarray,
+    ) -> Tuple[Dict[str, Any], np.ndarray, np.ndarray]:
+        """Evaluates fitted hybrid stacker on test indices against validation-calibrated operating points."""
+        val_probs = self.predict_proba(embeddings[val_indices], domain_features[val_indices])
+        test_probs = self.predict_proba(embeddings[test_indices], domain_features[test_indices])
+        metrics = evaluate_predictions(
+            y_true=y_all[test_indices].astype(int),
+            y_prob=test_probs,
+            threshold=self.optimal_threshold,
+            y_val_true=y_all[val_indices].astype(int),
+            y_val_prob=val_probs,
+            target_fprs=[0.01, 0.001],
+            prevalence_pis=[0.01, 0.001],
+        )
+        return metrics, val_probs, test_probs
