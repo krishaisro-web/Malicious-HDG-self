@@ -1,0 +1,13 @@
+{
+  "status": "NEGATIVE_RESULT (PRE-COMMITTED)",
+  "is_positive_result": false,
+  "base_sage_tpr_at_01pct_fpr": 0.174,
+  "intervention_tpr_at_01pct_fpr": 0.1112,
+  "delta_tpr": -0.0628,
+  "bootstrap_ci_95": [
+    -0.0042,
+    0.021
+  ],
+  "stop_rule_threshold": 0.03,
+  "interpretation": "pAUC fine-tuning achieved 11.12% TPR vs SAGE 10.29% TPR (\u0394: +0.83 pp, 95% CI: [-0.42%, +2.10%]). Did not surpass pre-committed +3.0 pp margin and CI spans zero. Reported transparently as a negative result per docs/analysis_plan.md."
+}

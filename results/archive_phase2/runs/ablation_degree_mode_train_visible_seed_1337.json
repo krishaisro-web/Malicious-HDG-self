@@ -1,0 +1,322 @@
+{
+  "experiment": "ablation",
+  "name": "degree_mode_train_visible",
+  "seed": 1337,
+  "metrics": {
+    "roc_auc": 0.9242,
+    "pr_auc": 0.7562,
+    "f1": 0.6862,
+    "precision": 0.6122,
+    "recall": 0.7807,
+    "specificity": 0.9017,
+    "threshold": 0.22,
+    "test_counts": {
+      "total": 75439,
+      "positives": 12503,
+      "negatives": 62936,
+      "sample_prevalence": 0.1657
+    },
+    "confusion_matrix": {
+      "tp": 9761,
+      "tn": 56752,
+      "fp": 6184,
+      "fn": 2742
+    },
+    "operating_points": {
+      "tpr_at_1.0pct_fpr": {
+        "tpr": 0.3248,
+        "threshold": 0.6931,
+        "realised_test_fpr": 0.008564,
+        "f1_at_operating_point": 0.4749,
+        "precision_at_operating_point": 0.8828,
+        "recall_at_operating_point": 0.3248,
+        "prevalence_adjusted_precision": {
+          "pi_1.0pct": 0.277,
+          "pi_0.1pct": 0.0366
+        },
+        "expected_fp": 629,
+        "warning": null
+      },
+      "tpr_at_0.1pct_fpr": {
+        "tpr": 0.1504,
+        "threshold": 0.8364,
+        "realised_test_fpr": 0.000572,
+        "f1_at_operating_point": 0.2608,
+        "precision_at_operating_point": 0.9812,
+        "recall_at_operating_point": 0.1504,
+        "prevalence_adjusted_precision": {
+          "pi_1.0pct": 0.7264,
+          "pi_0.1pct": 0.2083
+        },
+        "expected_fp": 63,
+        "warning": null
+      }
+    },
+    "bootstrap_ci": {
+      "roc_auc": {
+        "point": 0.9242,
+        "ci_lower": 0.9218,
+        "ci_upper": 0.9267,
+        "std": 0.0012
+      },
+      "pr_auc": {
+        "point": 0.7565,
+        "ci_lower": 0.7495,
+        "ci_upper": 0.7633,
+        "std": 0.0035
+      },
+      "f1": {
+        "point": 0.6865,
+        "ci_lower": 0.6803,
+        "ci_upper": 0.6926,
+        "std": 0.0031
+      }
+    },
+    "breakdowns": {
+      "by_resolution": {
+        "resolved": {
+          "count": 62573,
+          "roc_auc": 0.9194,
+          "f1": 0.6471
+        },
+        "no_ip": {
+          "count": 12866,
+          "roc_auc": 0.8719,
+          "f1": 0.7372
+        }
+      },
+      "by_source": {
+        "../../virus-total/finished_collections/benign_groundtruth2312.txt": {
+          "count": 48608,
+          "accuracy": 0.8852
+        },
+        "Github": {
+          "count": 1814,
+          "accuracy": 0.6946
+        },
+        "MISP": {
+          "count": 373,
+          "accuracy": 0.7721
+        },
+        "Spam404": {
+          "count": 155,
+          "accuracy": 0.6839
+        },
+        "Steven Black": {
+          "count": 2478,
+          "accuracy": 0.7893
+        },
+        "The Firebog": {
+          "count": 2389,
+          "accuracy": 0.8552
+        },
+        "ThreatFox": {
+          "count": 4938,
+          "accuracy": 0.7955
+        },
+        "URLhaus": {
+          "count": 356,
+          "accuracy": 0.5056
+        },
+        "data/alexa.csv": {
+          "count": 7460,
+          "accuracy": 0.9836
+        },
+        "data/cisco_umbrella_year_filtered_domains.csv": {
+          "count": 6868,
+          "accuracy": 0.9295
+        }
+      },
+      "by_malware_family": {
+        "Amadey": {
+          "count": 14,
+          "detection_rate_recall": 0.8571
+        },
+        "Astaroth": {
+          "count": 170,
+          "detection_rate_recall": 0.9294
+        },
+        "Aurora Stealer": {
+          "count": 5,
+          "detection_rate_recall": 1.0
+        },
+        "BazarBackdoor": {
+          "count": 19,
+          "detection_rate_recall": 1.0
+        },
+        "Choziosi": {
+          "count": 5,
+          "detection_rate_recall": 1.0
+        },
+        "Chrysaor": {
+          "count": 105,
+          "detection_rate_recall": 0.9048
+        },
+        "Cobalt Strike": {
+          "count": 382,
+          "detection_rate_recall": 0.7958
+        },
+        "CryptBot": {
+          "count": 223,
+          "detection_rate_recall": 0.9776
+        },
+        "FAKEUPDATES": {
+          "count": 12,
+          "detection_rate_recall": 0.8333
+        },
+        "Ficker Stealer": {
+          "count": 5,
+          "detection_rate_recall": 1.0
+        },
+        "Formbook": {
+          "count": 16,
+          "detection_rate_recall": 0.75
+        },
+        "Gozi": {
+          "count": 18,
+          "detection_rate_recall": 0.9444
+        },
+        "Hook": {
+          "count": 6,
+          "detection_rate_recall": 0.6667
+        },
+        "Hydra": {
+          "count": 65,
+          "detection_rate_recall": 0.9538
+        },
+        "IRATA": {
+          "count": 19,
+          "detection_rate_recall": 1.0
+        },
+        "ISFB": {
+          "count": 51,
+          "detection_rate_recall": 0.9412
+        },
+        "IcedID": {
+          "count": 276,
+          "detection_rate_recall": 0.9674
+        },
+        "IcedID Downloader": {
+          "count": 50,
+          "detection_rate_recall": 0.94
+        },
+        "Joker": {
+          "count": 11,
+          "detection_rate_recall": 0.8182
+        },
+        "Loki Password Stealer (PWS)": {
+          "count": 6,
+          "detection_rate_recall": 0.6667
+        },
+        "Lu0Bot": {
+          "count": 8,
+          "detection_rate_recall": 1.0
+        },
+        "Lumma Stealer": {
+          "count": 14,
+          "detection_rate_recall": 1.0
+        },
+        "Meduza Stealer": {
+          "count": 6,
+          "detection_rate_recall": 0.1667
+        },
+        "Mirai": {
+          "count": 13,
+          "detection_rate_recall": 0.6154
+        },
+        "Prometei": {
+          "count": 226,
+          "detection_rate_recall": 0.9956
+        },
+        "QakBot": {
+          "count": 2643,
+          "detection_rate_recall": 0.7064
+        },
+        "Raccoon": {
+          "count": 15,
+          "detection_rate_recall": 0.9333
+        },
+        "Raspberry Robin": {
+          "count": 24,
+          "detection_rate_recall": 0.7917
+        },
+        "RedLine Stealer": {
+          "count": 30,
+          "detection_rate_recall": 0.7
+        },
+        "Remcos": {
+          "count": 7,
+          "detection_rate_recall": 0.5714
+        },
+        "SMSspy": {
+          "count": 40,
+          "detection_rate_recall": 1.0
+        },
+        "ServHelper": {
+          "count": 6,
+          "detection_rate_recall": 1.0
+        },
+        "SharkBot": {
+          "count": 10,
+          "detection_rate_recall": 1.0
+        },
+        "SilverFish": {
+          "count": 8,
+          "detection_rate_recall": 0.75
+        },
+        "SmokeLoader": {
+          "count": 34,
+          "detection_rate_recall": 0.9118
+        },
+        "TrickBot": {
+          "count": 8,
+          "detection_rate_recall": 1.0
+        },
+        "Vidar": {
+          "count": 126,
+          "detection_rate_recall": 0.8254
+        },
+        "XOR DDoS": {
+          "count": 6,
+          "detection_rate_recall": 1.0
+        },
+        "Zloader": {
+          "count": 18,
+          "detection_rate_recall": 1.0
+        },
+        "magecart": {
+          "count": 23,
+          "detection_rate_recall": 0.9565
+        },
+        "unknown": {
+          "count": 7671,
+          "detection_rate_recall": 0.7719
+        }
+      }
+    },
+    "training_metadata": {
+      "chosen_lr": 0.005,
+      "lr_grid": null,
+      "epochs_trained": 200,
+      "best_val_auc": 0.9318,
+      "use_class_weights": false,
+      "checkpoint_path": null
+    }
+  },
+  "provenance": {
+    "device": "cuda",
+    "device_type": "cuda",
+    "torch_version": "2.5.1+cu121",
+    "cuda_available": true,
+    "cuda_version": "12.1",
+    "git_commit": "1672c0a662ed197a31d1d33fc2ad85936decfa0e",
+    "hostname": "odpd-lcws-a100-2024-01",
+    "platform": "Linux-5.14.0-427.13.1.el9_4.x86_64-x86_64-with-glibc2.34",
+    "precision": "FP32",
+    "tf32_matmul_enabled": false,
+    "tf32_cudnn_enabled": false,
+    "device_name": "NVIDIA A100 80GB PCIe",
+    "vram_free_gb": 78.47,
+    "vram_total_gb": 79.254
+  }
+}

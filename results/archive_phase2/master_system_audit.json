@@ -1,0 +1,522 @@
+{
+  "title": "Malicious-HDG Master System, Hardware, GPU & Dataset Audit Manifest",
+  "system": {
+    "timestamp_utc": "2026-11-25T10:35:02Z",
+    "hostname": "odpd-lcws-a100-2024-01",
+    "platform": "Linux-5.14.0-427.13.1.el9_4.x86_64-x86_64-with-glibc2.34",
+    "system": "Linux",
+    "release": "5.14.0-427.13.1.el9_4.x86_64",
+    "architecture": "x86_64",
+    "libc_ver": [
+      "glibc",
+      "2.34"
+    ],
+    "uptime": {
+      "uptime_seconds": 597423,
+      "uptime_human": "165h 57m 3s",
+      "boot_timestamp": "2026-11-18T12:37:59Z"
+    },
+    "current_user": "rohit",
+    "python_version": "3.10.20",
+    "python_compiler": "GCC 14.3.0",
+    "python_executable": "/home/rohit/miniconda3/envs/zeekGNN/bin/python",
+    "working_directory": "/home/rohit/Malicious-HDG-self"
+  },
+  "cpu": {
+    "model_brand": "Intel(R) Xeon(R) Gold 6430",
+    "architecture": "x86_64",
+    "logical_cores": 128,
+    "physical_cores": 64,
+    "frequency_mhz": {
+      "current_mhz": 3399.9,
+      "min_mhz": 800.0,
+      "max_mhz": 3400.0
+    },
+    "load_average_1_5_15": [
+      10.41,
+      15.74,
+      9.85
+    ],
+    "lscpu_summary": "Architecture:                       x86_64\nCPU op-mode(s):                     32-bit, 64-bit\nAddress sizes:                      46 bits physical, 57 bits virtual\nByte Order:                         Little Endian\nCPU(s):                             128\nOn-line CPU(s) list:                0-127\nVendor ID:                          GenuineIntel\nModel name:                         Intel(R) Xeon(R) Gold 6430\nCPU family:                         6\nModel:                              143\nThread(s) per core:                 2\nCore(s) per socket:                 32\nSocket(s):                          2\nStepping:                           8\nCPU(s) scaling MHz:                 100%\nCPU max MHz:                        3400.0000\nCPU min MHz:                        800.0000\nBogoMIPS:                           4200.00\nFlags:                              fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush dts acpi mmx fxsr sse sse2 ss ht tm pbe syscall nx pdpe1gb rdtscp lm constant_tsc art arch_perfmon pebs bts rep_good nopl xtopology nonstop_tsc cpuid aperfmperf tsc_known_freq pni pclmulqdq dtes64 monitor ds_cpl vmx smx est tm2 ssse3 sdbg fma cx16 xtpr pdcm pcid dca sse4_1 sse4_2 x2apic movbe popcnt tsc_deadline_timer aes xsave avx f16c rdrand lahf_lm abm 3dnowprefetch cpuid_fault epb cat_l3 cat_l2 cdp_l3 intel_ppin cdp_l2 ssbd mba ibrs ibpb stibp ibrs_enhanced tpr_shadow flexpriority ept vpid ept_ad fsgsbase tsc_adjust bmi1 avx2 smep bmi2 erms invpcid cqm rdt_a avx512f avx512dq rdseed adx smap avx512ifma clflushopt clwb intel_pt avx512cd sha_ni avx512bw avx512vl xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local split_lock_detect avx_vnni avx512_bf16 wbnoinvd dtherm ida arat pln pts vnmi avx512vbmi umip pku ospke waitpkg avx512_vbmi2 gfni vaes vpclmulqdq avx512_vnni avx512_bitalg tme avx512_vpopcntdq la57 rdpid bus_lock_detect cldemote movdiri movdir64b enqcmd fsrm md_clear serialize tsxldtrk pconfig arch_lbr ibt amx_bf16 avx512_fp16 amx_tile amx_int8 flush_l1d arch_capabilities\nVirtualization:                     VT-x\nL1d cache:                          3 MiB (64 instances)\nL1i cache:                          2 MiB (64 instances)\nL2 cache:                           128 MiB (64 instances)\nL3 cache:                           120 MiB (2 instances)\nNUMA node(s):                       2\nNUMA node0 CPU(s):                  0-31,64-95\nNUMA node1 CPU(s):                  32-63,96-127\nVulnerability Gather data sampling: Not affected\nVulnerability Itlb multihit:        Not affected\nVulnerability L1tf:                 Not affected\nVulnerability Mds:                  Not affected\nVulnerability Meltdown:             Not affected\nVulnerability Mmio stale data:      Not affected\nVulnerability Retbleed:             Not affected\nVulnerability Spec rstack overflow: Not affected\nVulnerability Spec store bypass:    Mitigation; Speculative Store Bypass disabled via prctl\nVulnerability Spectre v1:           Mitigation; usercopy/swapgs barriers and __user pointer sanitization\nVulnerability Spectre v2:           Mitigation; Enhanced / Automatic IBRS, IBPB conditional, RSB filling, PBRSB-eIBRS SW sequence\nVulnerability Srbds:                Not affected\nVulnerability Tsx async abort:      Not affected"
+  },
+  "memory": {
+    "ram_total_gb": 503.57,
+    "ram_available_gb": 484.68,
+    "ram_used_gb": 18.89,
+    "ram_free_gb": 9.91,
+    "ram_percent_used": 3.8,
+    "swap_total_gb": 64.0,
+    "swap_used_gb": 0.8,
+    "swap_free_gb": 63.2,
+    "raw_free_output": "total        used        free      shared  buff/cache   available\nMem:           503Gi        18Gi       9.9Gi       434Mi       478Gi       484Gi\nSwap:           63Gi       823Mi        63Gi"
+  },
+  "storage": {
+    "workspace_root": "/home/rohit/Malicious-HDG-self",
+    "partitions": {
+      "root": {
+        "mount": "/",
+        "total_gb": 279.86,
+        "used_gb": 74.55,
+        "free_gb": 205.31
+      },
+      "home": {
+        "mount": "/home",
+        "total_gb": 299.85,
+        "used_gb": 275.95,
+        "free_gb": 23.9
+      }
+    },
+    "raw_df_output": "Filesystem      Size  Used Avail Use% Mounted on\n/dev/md126p3    280G   75G  206G  27% /\n/dev/md126p6    300G  276G   24G  93% /home",
+    "write_latency_ms": 5.99,
+    "workspace": {
+      "path": "/home/rohit/Malicious-HDG-self",
+      "total_gb": 299.85,
+      "used_gb": 275.95,
+      "free_gb": 23.9,
+      "percent_used": 92.0,
+      "write_accessible": true
+    }
+  },
+  "gpu": {
+    "cuda_available": true,
+    "cuda_version": "12.1",
+    "cudnn_version": 90100,
+    "device_count": 1,
+    "devices": [
+      {
+        "index": 0,
+        "name": "NVIDIA A100 80GB PCIe",
+        "compute_capability": "8.0",
+        "multi_processor_count": 108,
+        "total_vram_gb": 79.25,
+        "free_vram_gb": 78.83,
+        "used_vram_gb": 0.43,
+        "allocated_vram_gb": 0.0,
+        "reserved_vram_gb": 0.0,
+        "total_vram_mb": 81155.8,
+        "free_vram_mb": 80719.2,
+        "used_vram_mb": 436.5,
+        "bf16_supported": true,
+        "fp16_supported": true,
+        "tf32_supported": true
+      }
+    ],
+    "nvidia_smi_detected": true,
+    "nvidia_smi_output": "0, NVIDIA A100 80GB PCIe, 565.57.01, 81920 MiB, 81142 MiB, 14 MiB, 45, 0 %, 46.46 W, 300.00 W\n1, NVIDIA T400 4GB, 565.57.01, 4096 MiB, 3468 MiB, 249 MiB, 64, 22 %, [N/A], 31.32 W",
+    "active_gpu_processes": [],
+    "execution_sanity_test": {
+      "passed": true,
+      "test_device": "cuda:0",
+      "matmul_1024_latency_ms": 25.05
+    },
+    "precision_safeguards": {
+      "tf32_matmul_enabled": false,
+      "tf32_cudnn_enabled": true,
+      "strict_fp32_enforced": false,
+      "deterministic_algorithms": false
+    }
+  },
+  "libraries": {
+    "torch": {
+      "description": "Core PyTorch deep learning runtime",
+      "installed": true,
+      "version": "2.5.1+cu121"
+    },
+    "torch_geometric": {
+      "description": "PyG heterogeneous graph neural network framework",
+      "installed": true,
+      "version": "2.7.0"
+    },
+    "torch_scatter": {
+      "description": "PyG GPU scatter aggregation (optional C++ kernel)",
+      "installed": false,
+      "version": null
+    },
+    "torch_sparse": {
+      "description": "PyG sparse operations (optional C++ kernel)",
+      "installed": false,
+      "version": null
+    },
+    "torch_cluster": {
+      "description": "PyG graph clustering (optional C++ kernel)",
+      "installed": false,
+      "version": null
+    },
+    "torch_spline_conv": {
+      "description": "PyG spline conv (optional C++ kernel)",
+      "installed": false,
+      "version": null
+    },
+    "numpy": {
+      "description": "Numerical vector and matrix computing",
+      "installed": true,
+      "version": "2.2.6"
+    },
+    "scipy": {
+      "description": "Scientific computing, statistical tests & bootstrapping",
+      "installed": true,
+      "version": "1.15.3"
+    },
+    "pandas": {
+      "description": "Dataframe ingestion, tabular processing & dataset alignment",
+      "installed": true,
+      "version": "2.3.3"
+    },
+    "sklearn": {
+      "description": "Machine learning baselines, ROC-AUC, threshold metrics",
+      "installed": true,
+      "version": "1.7.2"
+    },
+    "xgboost": {
+      "description": "Gradient boosted decision tree baseline",
+      "installed": true,
+      "version": "3.2.0"
+    },
+    "yaml": {
+      "description": "YAML configuration parser (PyYAML)",
+      "installed": true,
+      "version": "6.0.3"
+    },
+    "pyarrow": {
+      "description": "Fast columnar Parquet dataset read/write",
+      "installed": true,
+      "version": "25.0.1"
+    },
+    "psutil": {
+      "description": "Hardware, RAM, Swap and process monitoring",
+      "installed": true,
+      "version": "7.2.2"
+    },
+    "pytest": {
+      "description": "Automated test suite execution",
+      "installed": false,
+      "version": null
+    },
+    "requests": {
+      "description": "HTTP client for external dataset downloads",
+      "installed": true,
+      "version": "2.33.0"
+    }
+  },
+  "datasets": {
+    "raw_datasets": {
+      "malware.json": {
+        "present": true,
+        "file_name": "malware.json",
+        "file_path": "/home/rohit/Malicious-HDG-self/data/raw/zenodo/malware.json",
+        "size_bytes": 1084514082,
+        "size_mb": 1034.273,
+        "num_records": 100809,
+        "detected_schema_keys": [
+          "_id",
+          "domain_name",
+          "category",
+          "dns",
+          "evaluated_on",
+          "ip_data",
+          "label",
+          "rdap",
+          "remarks",
+          "source",
+          "sourced_on",
+          "tls",
+          "url",
+          "malware_type"
+        ],
+        "sample_domains": [
+          "irradiateher.com",
+          "eloquentcs.com",
+          "www.neutralsystemsolution.space",
+          "www.drshiwanijainpainclinic.com",
+          "mkt9136.com",
+          "www.ninjacondoms.com",
+          "gabbyloans.com",
+          "www.poczta-polska.e-kei.pl",
+          "xinchaocfcddl.org",
+          "siwakuposo.com"
+        ]
+      },
+      "benign_umbrella.json": {
+        "present": true,
+        "file_name": "benign_umbrella.json",
+        "file_path": "/home/rohit/Malicious-HDG-self/data/raw/zenodo/benign_umbrella.json",
+        "size_bytes": 6075400719,
+        "size_mb": 5793.954,
+        "num_records": 368956,
+        "detected_schema_keys": [
+          "_id",
+          "domain_name",
+          "dns",
+          "evaluated_on",
+          "ip_data",
+          "label",
+          "rdap",
+          "remarks",
+          "sourced_on",
+          "tls",
+          "category",
+          "source"
+        ],
+        "sample_domains": [
+          "stepstone.at",
+          "m.ladies.de",
+          "www.4digitalsignage.com",
+          "hme-live-nitro-feedback-service.hmecloud.com",
+          "www.douyin.com.bytedns1.com",
+          "booking.almasriaairlines.com",
+          "hr.hit.gemius.pl",
+          "essex.ac.uk",
+          "megamailservers.com",
+          "autohero.com"
+        ]
+      },
+      "benign_cesnet.json": {
+        "present": true,
+        "file_name": "benign_cesnet.json",
+        "file_path": "/home/rohit/Malicious-HDG-self/data/raw/zenodo/benign_cesnet.json",
+        "size_bytes": 6437047412,
+        "size_mb": 6138.847,
+        "num_records": 461388,
+        "detected_schema_keys": [
+          "_id",
+          "domain_name",
+          "category",
+          "dns",
+          "evaluated_on",
+          "ip_data",
+          "label",
+          "rdap",
+          "remarks",
+          "source",
+          "sourced_on",
+          "tls",
+          "url"
+        ],
+        "sample_domains": [
+          "000000.pn01.edugroup.at",
+          "000000.tpn01.edugroup.at",
+          "00000.cz",
+          "00000fs3085d.han2.savba.sk",
+          "0000100b00e9.han2.savba.sk",
+          "0000100b01bd.han2.savba.sk",
+          "0000100m0030.han2.savba.sk",
+          "0000100q012c.han2.savba.sk",
+          "0000100q0296.han2.savba.sk",
+          "0000101m0051.han2.savba.sk"
+        ]
+      }
+    },
+    "processed_cohort": {
+      "present": true,
+      "directory": "/home/rohit/Malicious-HDG-self/data/processed/real",
+      "parquet_cohort": {
+        "present": true,
+        "file_path": "/home/rohit/Malicious-HDG-self/data/processed/real/domains.parquet",
+        "size_mb": 105.533,
+        "num_rows": 502920,
+        "num_columns": 37,
+        "column_names": [
+          "domain",
+          "raw_domain",
+          "e2LD",
+          "has_subdomain",
+          "label",
+          "source",
+          "family",
+          "t",
+          "t_month",
+          "t_source",
+          "t_eval",
+          "t_reg",
+          "no_ip",
+          "no_rdap",
+          "no_tls",
+          "mx_count",
+          "has_spf",
+          "has_dmarc",
+          "has_dkim",
+          "dnssec",
+          "ttl_a",
+          "ttl_ns",
+          "nameservers",
+          "registrar",
+          "tls_protocol",
+          "tls_cipher",
+          "tls_cert_count",
+          "leaf_cert_key",
+          "leaf_cert_key_cn",
+          "leaf_cert_key_coissue",
+          "cert_valid_len",
+          "primary_asn",
+          "asns",
+          "resolved_ips",
+          "ip_records",
+          "ns_ip_pairs",
+          "in_time_matched"
+        ],
+        "label_distribution": {
+          "0": 419566,
+          "1": 83354
+        },
+        "distinct_sources": [
+          "Github",
+          "Steven Black",
+          "MISP",
+          "ThreatFox",
+          "The Firebog",
+          "Spam404",
+          "URLhaus",
+          "data/alexa.csv",
+          "data/cisco_umbrella_year_filtered_domains.csv",
+          "../../virus-total/finished_collections/benign_groundtruth2312.txt"
+        ]
+      },
+      "hetero_graph": {
+        "present": true,
+        "file_path": "/home/rohit/Malicious-HDG-self/data/processed/real/heterodata.pt",
+        "size_mb": 263.044,
+        "total_nodes": 1433112,
+        "total_edges": 6632866,
+        "node_types": [
+          "domain",
+          "ip",
+          "nameserver",
+          "registrar",
+          "asn",
+          "certificate"
+        ],
+        "node_counts": {
+          "domain": 502920,
+          "ip": 465225,
+          "nameserver": 144468,
+          "registrar": 5237,
+          "asn": 13227,
+          "certificate": 302035
+        },
+        "edge_types": [
+          [
+            "domain",
+            "resolves_to",
+            "ip"
+          ],
+          [
+            "ip",
+            "rev_resolves_to",
+            "domain"
+          ],
+          [
+            "nameserver",
+            "ns_ip",
+            "ip"
+          ],
+          [
+            "ip",
+            "rev_ns_ip",
+            "nameserver"
+          ],
+          [
+            "domain",
+            "uses_ns",
+            "nameserver"
+          ],
+          [
+            "nameserver",
+            "rev_uses_ns",
+            "domain"
+          ],
+          [
+            "domain",
+            "registered_by",
+            "registrar"
+          ],
+          [
+            "registrar",
+            "rev_registered_by",
+            "domain"
+          ],
+          [
+            "ip",
+            "belongs_to_asn",
+            "asn"
+          ],
+          [
+            "asn",
+            "rev_belongs_to_asn",
+            "ip"
+          ],
+          [
+            "domain",
+            "uses_cert",
+            "certificate"
+          ],
+          [
+            "certificate",
+            "rev_uses_cert",
+            "domain"
+          ]
+        ],
+        "edge_counts": {
+          "domain__resolves_to__ip": 799885,
+          "ip__rev_resolves_to__domain": 799885,
+          "nameserver__ns_ip__ip": 153121,
+          "ip__rev_ns_ip__nameserver": 153121,
+          "domain__uses_ns__nameserver": 1265180,
+          "nameserver__rev_uses_ns__domain": 1265180,
+          "domain__registered_by__registrar": 331664,
+          "registrar__rev_registered_by__domain": 331664,
+          "ip__belongs_to_asn__asn": 364770,
+          "asn__rev_belongs_to_asn__ip": 364770,
+          "domain__uses_cert__certificate": 401813,
+          "certificate__rev_uses_cert__domain": 401813
+        },
+        "domain_feature_tensor_shape": [
+          502920,
+          17
+        ]
+      },
+      "manifest": {
+        "present": true,
+        "file_path": "/home/rohit/Malicious-HDG-self/data/processed/real/graph_manifest.json",
+        "size_kb": 1.14,
+        "payload": {
+          "schema_version": "2.1.0",
+          "domain_count": 502920,
+          "domain_names_sha256": "8a5982ca2f5750218a7a2c4af9dd90c6c08fc97f76a2819d770bcb5ab0248a35",
+          "labels_sha256": "4856fb0844d9553214f8e2f8ebaedbc1f4c176e0a8358924e3e00490acabe50b",
+          "node_counts": {
+            "domain": 502920,
+            "ip": 465225,
+            "nameserver": 144468,
+            "registrar": 5237,
+            "asn": 13227,
+            "certificate": 302035
+          },
+          "edge_counts": {
+            "domain__resolves_to__ip": 799885,
+            "ip__rev_resolves_to__domain": 799885,
+            "nameserver__ns_ip__ip": 153121,
+            "ip__rev_ns_ip__nameserver": 153121,
+            "domain__uses_ns__nameserver": 1265180,
+            "nameserver__rev_uses_ns__domain": 1265180,
+            "domain__registered_by__registrar": 331664,
+            "registrar__rev_registered_by__domain": 331664,
+            "ip__belongs_to_asn__asn": 364770,
+            "asn__rev_belongs_to_asn__ip": 364770,
+            "domain__uses_cert__certificate": 401813,
+            "certificate__rev_uses_cert__domain": 401813
+          },
+          "feature_dim": 17,
+          "config_hash": "28a39f4440139bea",
+          "created_at": "2026-11-25T05:12:00.280106+00:00",
+          "extra_metadata": {
+            "is_smoke": false,
+            "is_fixture": false
+          },
+          "manifest_id": "0cebbeb2dce772f4"
+        }
+      }
+    },
+    "all_raw_present": true,
+    "processed_ready": true
+  }
+}

@@ -1,0 +1,322 @@
+{
+  "experiment": "ablation",
+  "name": "graph_only_no_lexical",
+  "seed": 1337,
+  "metrics": {
+    "roc_auc": 0.9225,
+    "pr_auc": 0.7245,
+    "f1": 0.6878,
+    "precision": 0.6022,
+    "recall": 0.8017,
+    "specificity": 0.8948,
+    "threshold": 0.26,
+    "test_counts": {
+      "total": 75439,
+      "positives": 12503,
+      "negatives": 62936,
+      "sample_prevalence": 0.1657
+    },
+    "confusion_matrix": {
+      "tp": 10024,
+      "tn": 56314,
+      "fp": 6622,
+      "fn": 2479
+    },
+    "operating_points": {
+      "tpr_at_1.0pct_fpr": {
+        "tpr": 0.2889,
+        "threshold": 0.6548,
+        "realised_test_fpr": 0.01001,
+        "f1_at_operating_point": 0.4314,
+        "precision_at_operating_point": 0.8515,
+        "recall_at_operating_point": 0.2889,
+        "prevalence_adjusted_precision": {
+          "pi_1.0pct": 0.2257,
+          "pi_0.1pct": 0.0281
+        },
+        "expected_fp": 629,
+        "warning": null
+      },
+      "tpr_at_0.1pct_fpr": {
+        "tpr": 0.1415,
+        "threshold": 0.8349,
+        "realised_test_fpr": 0.001049,
+        "f1_at_operating_point": 0.2468,
+        "precision_at_operating_point": 0.964,
+        "recall_at_operating_point": 0.1415,
+        "prevalence_adjusted_precision": {
+          "pi_1.0pct": 0.5768,
+          "pi_0.1pct": 0.119
+        },
+        "expected_fp": 63,
+        "warning": null
+      }
+    },
+    "bootstrap_ci": {
+      "roc_auc": {
+        "point": 0.9225,
+        "ci_lower": 0.9201,
+        "ci_upper": 0.9251,
+        "std": 0.0012
+      },
+      "pr_auc": {
+        "point": 0.7248,
+        "ci_lower": 0.717,
+        "ci_upper": 0.7321,
+        "std": 0.0038
+      },
+      "f1": {
+        "point": 0.6879,
+        "ci_lower": 0.682,
+        "ci_upper": 0.6941,
+        "std": 0.0031
+      }
+    },
+    "breakdowns": {
+      "by_resolution": {
+        "resolved": {
+          "count": 62573,
+          "roc_auc": 0.9204,
+          "f1": 0.6537
+        },
+        "no_ip": {
+          "count": 12866,
+          "roc_auc": 0.8428,
+          "f1": 0.7346
+        }
+      },
+      "by_source": {
+        "../../virus-total/finished_collections/benign_groundtruth2312.txt": {
+          "count": 48608,
+          "accuracy": 0.8773
+        },
+        "Github": {
+          "count": 1814,
+          "accuracy": 0.7249
+        },
+        "MISP": {
+          "count": 373,
+          "accuracy": 0.7909
+        },
+        "Spam404": {
+          "count": 155,
+          "accuracy": 0.6387
+        },
+        "Steven Black": {
+          "count": 2478,
+          "accuracy": 0.8002
+        },
+        "The Firebog": {
+          "count": 2389,
+          "accuracy": 0.8677
+        },
+        "ThreatFox": {
+          "count": 4938,
+          "accuracy": 0.8228
+        },
+        "URLhaus": {
+          "count": 356,
+          "accuracy": 0.5506
+        },
+        "data/alexa.csv": {
+          "count": 7460,
+          "accuracy": 0.9815
+        },
+        "data/cisco_umbrella_year_filtered_domains.csv": {
+          "count": 6868,
+          "accuracy": 0.9243
+        }
+      },
+      "by_malware_family": {
+        "Amadey": {
+          "count": 14,
+          "detection_rate_recall": 0.7857
+        },
+        "Astaroth": {
+          "count": 170,
+          "detection_rate_recall": 0.9294
+        },
+        "Aurora Stealer": {
+          "count": 5,
+          "detection_rate_recall": 1.0
+        },
+        "BazarBackdoor": {
+          "count": 19,
+          "detection_rate_recall": 1.0
+        },
+        "Choziosi": {
+          "count": 5,
+          "detection_rate_recall": 1.0
+        },
+        "Chrysaor": {
+          "count": 105,
+          "detection_rate_recall": 0.9429
+        },
+        "Cobalt Strike": {
+          "count": 382,
+          "detection_rate_recall": 0.8508
+        },
+        "CryptBot": {
+          "count": 223,
+          "detection_rate_recall": 0.9865
+        },
+        "FAKEUPDATES": {
+          "count": 12,
+          "detection_rate_recall": 1.0
+        },
+        "Ficker Stealer": {
+          "count": 5,
+          "detection_rate_recall": 1.0
+        },
+        "Formbook": {
+          "count": 16,
+          "detection_rate_recall": 0.8125
+        },
+        "Gozi": {
+          "count": 18,
+          "detection_rate_recall": 1.0
+        },
+        "Hook": {
+          "count": 6,
+          "detection_rate_recall": 0.8333
+        },
+        "Hydra": {
+          "count": 65,
+          "detection_rate_recall": 0.8923
+        },
+        "IRATA": {
+          "count": 19,
+          "detection_rate_recall": 1.0
+        },
+        "ISFB": {
+          "count": 51,
+          "detection_rate_recall": 0.9804
+        },
+        "IcedID": {
+          "count": 276,
+          "detection_rate_recall": 0.9783
+        },
+        "IcedID Downloader": {
+          "count": 50,
+          "detection_rate_recall": 0.98
+        },
+        "Joker": {
+          "count": 11,
+          "detection_rate_recall": 0.4545
+        },
+        "Loki Password Stealer (PWS)": {
+          "count": 6,
+          "detection_rate_recall": 0.6667
+        },
+        "Lu0Bot": {
+          "count": 8,
+          "detection_rate_recall": 1.0
+        },
+        "Lumma Stealer": {
+          "count": 14,
+          "detection_rate_recall": 1.0
+        },
+        "Meduza Stealer": {
+          "count": 6,
+          "detection_rate_recall": 0.6667
+        },
+        "Mirai": {
+          "count": 13,
+          "detection_rate_recall": 0.6923
+        },
+        "Prometei": {
+          "count": 226,
+          "detection_rate_recall": 1.0
+        },
+        "QakBot": {
+          "count": 2643,
+          "detection_rate_recall": 0.7382
+        },
+        "Raccoon": {
+          "count": 15,
+          "detection_rate_recall": 0.8667
+        },
+        "Raspberry Robin": {
+          "count": 24,
+          "detection_rate_recall": 0.9167
+        },
+        "RedLine Stealer": {
+          "count": 30,
+          "detection_rate_recall": 0.6667
+        },
+        "Remcos": {
+          "count": 7,
+          "detection_rate_recall": 0.7143
+        },
+        "SMSspy": {
+          "count": 40,
+          "detection_rate_recall": 1.0
+        },
+        "ServHelper": {
+          "count": 6,
+          "detection_rate_recall": 1.0
+        },
+        "SharkBot": {
+          "count": 10,
+          "detection_rate_recall": 1.0
+        },
+        "SilverFish": {
+          "count": 8,
+          "detection_rate_recall": 0.75
+        },
+        "SmokeLoader": {
+          "count": 34,
+          "detection_rate_recall": 0.8824
+        },
+        "TrickBot": {
+          "count": 8,
+          "detection_rate_recall": 1.0
+        },
+        "Vidar": {
+          "count": 126,
+          "detection_rate_recall": 0.873
+        },
+        "XOR DDoS": {
+          "count": 6,
+          "detection_rate_recall": 0.8333
+        },
+        "Zloader": {
+          "count": 18,
+          "detection_rate_recall": 1.0
+        },
+        "magecart": {
+          "count": 23,
+          "detection_rate_recall": 0.9565
+        },
+        "unknown": {
+          "count": 7671,
+          "detection_rate_recall": 0.7887
+        }
+      }
+    },
+    "training_metadata": {
+      "chosen_lr": 0.005,
+      "lr_grid": null,
+      "epochs_trained": 200,
+      "best_val_auc": 0.9238,
+      "use_class_weights": false,
+      "checkpoint_path": null
+    }
+  },
+  "provenance": {
+    "device": "cuda",
+    "device_type": "cuda",
+    "torch_version": "2.5.1+cu121",
+    "cuda_available": true,
+    "cuda_version": "12.1",
+    "git_commit": "1672c0a662ed197a31d1d33fc2ad85936decfa0e",
+    "hostname": "odpd-lcws-a100-2024-01",
+    "platform": "Linux-5.14.0-427.13.1.el9_4.x86_64-x86_64-with-glibc2.34",
+    "precision": "FP32",
+    "tf32_matmul_enabled": false,
+    "tf32_cudnn_enabled": false,
+    "device_name": "NVIDIA A100 80GB PCIe",
+    "vram_free_gb": 78.47,
+    "vram_total_gb": 79.254
+  }
+}

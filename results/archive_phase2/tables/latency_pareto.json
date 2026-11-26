@@ -1,0 +1,292 @@
+{
+  "pareto_frontier": [
+    {
+      "batch_size": 1,
+      "threads": 1,
+      "sampling": "[5,2]",
+      "use_hub_cache": true,
+      "num_queries_measured": 500,
+      "feature_lookup": {
+        "mean_ms": 0.188,
+        "median_ms": 0.183,
+        "p95_ms": 0.191,
+        "p99_ms": 0.194,
+        "min_ms": 0.16,
+        "max_ms": 2.739
+      },
+      "ego_subgraph_build": {
+        "mean_ms": 1.827,
+        "median_ms": 0.673,
+        "p95_ms": 7.866,
+        "p99_ms": 9.342,
+        "min_ms": 0.273,
+        "max_ms": 10.427
+      },
+      "model_forward": {
+        "mean_ms": 1.787,
+        "median_ms": 1.836,
+        "p95_ms": 1.96,
+        "p99_ms": 1.992,
+        "min_ms": 1.233,
+        "max_ms": 3.869
+      },
+      "end_to_end": {
+        "mean_ms": 3.802,
+        "median_ms": 2.708,
+        "p95_ms": 9.97,
+        "p99_ms": 11.449,
+        "min_ms": 1.68,
+        "max_ms": 12.566
+      },
+      "prediction_fidelity": {
+        "mean_absolute_difference": 0.06955,
+        "cosine_similarity": 0.94471,
+        "spearman_rank_correlation": 0.75577,
+        "top_tail_overlap": 0.9,
+        "reference_probe_auc": 0.8333,
+        "roc_auc": 0.8006,
+        "auc_difference": -0.0327
+      }
+    },
+    {
+      "batch_size": 1,
+      "threads": 1,
+      "sampling": "[5,5]",
+      "use_hub_cache": true,
+      "num_queries_measured": 500,
+      "feature_lookup": {
+        "mean_ms": 0.183,
+        "median_ms": 0.184,
+        "p95_ms": 0.191,
+        "p99_ms": 0.194,
+        "min_ms": 0.162,
+        "max_ms": 0.205
+      },
+      "ego_subgraph_build": {
+        "mean_ms": 1.841,
+        "median_ms": 0.697,
+        "p95_ms": 7.766,
+        "p99_ms": 10.025,
+        "min_ms": 0.269,
+        "max_ms": 10.75
+      },
+      "model_forward": {
+        "mean_ms": 1.801,
+        "median_ms": 1.852,
+        "p95_ms": 1.986,
+        "p99_ms": 2.013,
+        "min_ms": 1.241,
+        "max_ms": 2.075
+      },
+      "end_to_end": {
+        "mean_ms": 3.825,
+        "median_ms": 2.752,
+        "p95_ms": 9.913,
+        "p99_ms": 12.215,
+        "min_ms": 1.675,
+        "max_ms": 12.878
+      },
+      "prediction_fidelity": {
+        "mean_absolute_difference": 0.09055,
+        "cosine_similarity": 0.90368,
+        "spearman_rank_correlation": 0.79918,
+        "top_tail_overlap": 0.8,
+        "reference_probe_auc": 0.8333,
+        "roc_auc": 0.8571,
+        "auc_difference": 0.0238
+      }
+    },
+    {
+      "batch_size": 1,
+      "threads": 1,
+      "sampling": "[10,5]",
+      "use_hub_cache": true,
+      "num_queries_measured": 500,
+      "feature_lookup": {
+        "mean_ms": 0.181,
+        "median_ms": 0.181,
+        "p95_ms": 0.189,
+        "p99_ms": 0.193,
+        "min_ms": 0.157,
+        "max_ms": 0.196
+      },
+      "ego_subgraph_build": {
+        "mean_ms": 1.855,
+        "median_ms": 0.701,
+        "p95_ms": 7.735,
+        "p99_ms": 9.227,
+        "min_ms": 0.268,
+        "max_ms": 10.398
+      },
+      "model_forward": {
+        "mean_ms": 1.818,
+        "median_ms": 1.856,
+        "p95_ms": 1.996,
+        "p99_ms": 2.055,
+        "min_ms": 1.232,
+        "max_ms": 5.82
+      },
+      "end_to_end": {
+        "mean_ms": 3.854,
+        "median_ms": 2.763,
+        "p95_ms": 9.873,
+        "p99_ms": 11.488,
+        "min_ms": 1.665,
+        "max_ms": 13.582
+      },
+      "prediction_fidelity": {
+        "mean_absolute_difference": 0.0906,
+        "cosine_similarity": 0.90367,
+        "spearman_rank_correlation": 0.79918,
+        "top_tail_overlap": 0.8,
+        "reference_probe_auc": 0.8333,
+        "roc_auc": 0.8571,
+        "auc_difference": 0.0238
+      }
+    },
+    {
+      "batch_size": 1,
+      "threads": 1,
+      "sampling": "[15,10]",
+      "use_hub_cache": true,
+      "num_queries_measured": 500,
+      "feature_lookup": {
+        "mean_ms": 0.181,
+        "median_ms": 0.181,
+        "p95_ms": 0.19,
+        "p99_ms": 0.196,
+        "min_ms": 0.153,
+        "max_ms": 0.533
+      },
+      "ego_subgraph_build": {
+        "mean_ms": 1.92,
+        "median_ms": 0.735,
+        "p95_ms": 8.066,
+        "p99_ms": 9.696,
+        "min_ms": 0.273,
+        "max_ms": 10.584
+      },
+      "model_forward": {
+        "mean_ms": 1.829,
+        "median_ms": 1.874,
+        "p95_ms": 2.048,
+        "p99_ms": 2.206,
+        "min_ms": 1.237,
+        "max_ms": 2.41
+      },
+      "end_to_end": {
+        "mean_ms": 3.93,
+        "median_ms": 2.83,
+        "p95_ms": 10.217,
+        "p99_ms": 11.813,
+        "min_ms": 1.671,
+        "max_ms": 12.851
+      },
+      "prediction_fidelity": {
+        "mean_absolute_difference": 0.09192,
+        "cosine_similarity": 0.90333,
+        "spearman_rank_correlation": 0.80447,
+        "top_tail_overlap": 0.8,
+        "reference_probe_auc": 0.8333,
+        "roc_auc": 0.8601,
+        "auc_difference": 0.0268
+      }
+    },
+    {
+      "batch_size": 1,
+      "threads": 1,
+      "sampling": "[30,20]",
+      "use_hub_cache": true,
+      "num_queries_measured": 500,
+      "feature_lookup": {
+        "mean_ms": 0.176,
+        "median_ms": 0.175,
+        "p95_ms": 0.185,
+        "p99_ms": 0.189,
+        "min_ms": 0.153,
+        "max_ms": 0.194
+      },
+      "ego_subgraph_build": {
+        "mean_ms": 1.993,
+        "median_ms": 0.813,
+        "p95_ms": 8.165,
+        "p99_ms": 9.636,
+        "min_ms": 0.267,
+        "max_ms": 10.631
+      },
+      "model_forward": {
+        "mean_ms": 1.877,
+        "median_ms": 1.914,
+        "p95_ms": 2.194,
+        "p99_ms": 2.367,
+        "min_ms": 1.255,
+        "max_ms": 2.573
+      },
+      "end_to_end": {
+        "mean_ms": 4.045,
+        "median_ms": 2.955,
+        "p95_ms": 10.436,
+        "p99_ms": 11.928,
+        "min_ms": 1.677,
+        "max_ms": 12.868
+      },
+      "prediction_fidelity": {
+        "mean_absolute_difference": 0.09318,
+        "cosine_similarity": 0.89755,
+        "spearman_rank_correlation": 0.78459,
+        "top_tail_overlap": 0.8,
+        "reference_probe_auc": 0.8333,
+        "roc_auc": 0.8214,
+        "auc_difference": -0.0119
+      }
+    },
+    {
+      "batch_size": 1,
+      "threads": 1,
+      "sampling": "unconstrained",
+      "use_hub_cache": false,
+      "num_queries_measured": 500,
+      "feature_lookup": {
+        "mean_ms": 0.237,
+        "median_ms": 0.209,
+        "p95_ms": 0.369,
+        "p99_ms": 0.378,
+        "min_ms": 0.163,
+        "max_ms": 0.671
+      },
+      "ego_subgraph_build": {
+        "mean_ms": 28.804,
+        "median_ms": 6.781,
+        "p95_ms": 162.387,
+        "p99_ms": 182.269,
+        "min_ms": 0.278,
+        "max_ms": 276.635
+      },
+      "model_forward": {
+        "mean_ms": 19.696,
+        "median_ms": 4.224,
+        "p95_ms": 120.132,
+        "p99_ms": 140.302,
+        "min_ms": 1.243,
+        "max_ms": 230.789
+      },
+      "end_to_end": {
+        "mean_ms": 48.737,
+        "median_ms": 11.555,
+        "p95_ms": 282.625,
+        "p99_ms": 320.702,
+        "min_ms": 1.702,
+        "max_ms": 507.678
+      },
+      "prediction_fidelity": {
+        "mean_absolute_difference": 0.0,
+        "cosine_similarity": 1.0,
+        "spearman_rank_correlation": 1.0,
+        "top_tail_overlap": 1.0,
+        "reference_probe_auc": 0.8333,
+        "roc_auc": 0.8333,
+        "auc_difference": 0.0
+      }
+    }
+  ]
+}
